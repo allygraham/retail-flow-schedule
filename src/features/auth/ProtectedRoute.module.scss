@@ -1,0 +1,25 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.loader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: $bg;
+  gap: $sp-4;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid $ink-200;
+  border-top-color: $brand-600;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+  margin: 0 auto $sp-3;
+}
+.label {
+  text-align: center;
+  color: $text-muted;
+  font-size: $fs-sm;
+  letter-spacing: 0.04em;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
