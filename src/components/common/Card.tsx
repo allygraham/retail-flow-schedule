@@ -1,7 +1,7 @@
 import { HTMLAttributes, ReactNode } from 'react';
 import s from './Card.module.scss';
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
+interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
