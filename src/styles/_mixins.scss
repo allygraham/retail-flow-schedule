@@ -1,0 +1,70 @@
+@use './tokens' as *;
+
+@mixin focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba($brand-500, 0.35);
+}
+
+@mixin card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  box-shadow: $shadow-sm;
+}
+
+@mixin surface-2 {
+  background: $surface-2;
+  border-radius: $r-md;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin row { display: flex; align-items: center; }
+@mixin col { display: flex; flex-direction: column; }
+
+@mixin gradient-brand {
+  background: linear-gradient(135deg, $brand-600 0%, $brand-500 50%, $accent-500 130%);
+}
+
+@mixin scrollbar {
+  &::-webkit-scrollbar { width: 10px; height: 10px; }
+  &::-webkit-scrollbar-thumb { background: $ink-300; border-radius: 8px; border: 2px solid $surface; }
+  &::-webkit-scrollbar-thumb:hover { background: $ink-400; }
+}
+
+@mixin md { @media (min-width: $bp-md) { @content; } }
+@mixin lg { @media (min-width: $bp-lg) { @content; } }
+@mixin xl { @media (min-width: $bp-xl) { @content; } }
+
+@mixin text-h1 {
+  font-family: $font-display;
+  font-weight: $fw-extra;
+  font-size: clamp(2.25rem, 4vw + 1rem, 3.75rem);
+  line-height: $lh-tight;
+  letter-spacing: -0.025em;
+}
+@mixin text-h2 {
+  font-family: $font-display;
+  font-weight: $fw-bold;
+  font-size: clamp(1.625rem, 2vw + 0.75rem, 2.5rem);
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+}
+@mixin text-h3 {
+  font-family: $font-display;
+  font-weight: $fw-semibold;
+  font-size: $fs-xl;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+}
+@mixin eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: $fs-xs;
+  font-weight: $fw-semibold;
+  color: $brand-600;
+}

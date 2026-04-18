@@ -1,0 +1,55 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.page { min-height: 100vh; background: linear-gradient(180deg, #fff 0%, $ink-50 100%); }
+.nav {
+  max-width: $container; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: $sp-5 $sp-6;
+}
+.links { display: flex; gap: $sp-5; align-items: center;
+  a { color: $text-soft; font-weight: $fw-medium; font-size: $fs-sm;
+    &:hover { color: $text; }
+  }
+}
+
+.hero {
+  max-width: $container-narrow; margin: 0 auto;
+  padding: $sp-10 $sp-6 $sp-9; text-align: center;
+}
+.eyebrow { @include eyebrow; }
+.h1 {
+  @include text-h1;
+  margin: $sp-4 0 $sp-4;
+  em { font-style: normal; background: linear-gradient(120deg, $brand-600, $accent-500);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+}
+.lead { color: $text-soft; font-size: $fs-lg; line-height: $lh-normal; max-width: 640px; margin: 0 auto; }
+.cta { display: flex; gap: $sp-3; justify-content: center; margin-top: $sp-7; flex-wrap: wrap; }
+
+.demoHint {
+  margin-top: $sp-6; font-size: $fs-xs; color: $text-muted;
+  code { background: $ink-100; padding: 2px 6px; border-radius: 4px; font-family: $font-mono; }
+}
+
+.features {
+  max-width: $container; margin: 0 auto;
+  padding: $sp-9 $sp-6;
+  display: grid; grid-template-columns: 1fr; gap: $sp-4;
+  @include md { grid-template-columns: repeat(2, 1fr); }
+  @include lg { grid-template-columns: repeat(3, 1fr); }
+}
+.feature {
+  @include card; padding: $sp-6;
+  h3 { font-size: $fs-lg; margin: $sp-3 0 6px; font-family: $font-display; }
+  p { color: $text-soft; font-size: $fs-sm; line-height: $lh-normal; }
+}
+.fIcon { width: 36px; height: 36px; border-radius: $r-md; @include gradient-brand; box-shadow: $shadow-glow; }
+
+.foot {
+  max-width: $container; margin: 0 auto;
+  padding: $sp-7 $sp-6;
+  display: flex; justify-content: space-between; align-items: center;
+  color: $text-muted; font-size: $fs-xs;
+  border-top: 1px solid $border;
+}

@@ -1,0 +1,54 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $sp-2;
+  border: 1px solid transparent;
+  border-radius: $r-md;
+  font-weight: $fw-semibold;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all $dur $ease;
+  white-space: nowrap;
+  letter-spacing: -0.005em;
+  &:disabled { opacity: .55; cursor: not-allowed; }
+  &:focus-visible { @include focus-ring; }
+}
+.full { width: 100%; }
+
+.sm { font-size: $fs-sm; padding: 6px 12px; }
+.md { font-size: $fs-base; padding: 9px 16px; }
+.lg { font-size: $fs-md; padding: 12px 22px; }
+
+.primary {
+  background: $brand-600; color: $white;
+  box-shadow: $shadow-sm;
+  &:hover:not(:disabled) { background: $brand-700; box-shadow: $shadow-glow; transform: translateY(-1px); }
+}
+.secondary {
+  background: $ink-100; color: $text;
+  &:hover:not(:disabled) { background: $ink-200; }
+}
+.ghost {
+  background: transparent; color: $text;
+  &:hover:not(:disabled) { background: $ink-100; }
+}
+.outline {
+  background: $surface; color: $text; border-color: $border-strong;
+  &:hover:not(:disabled) { background: $ink-50; border-color: $ink-300; }
+}
+.danger {
+  background: $danger; color: $white;
+  &:hover:not(:disabled) { background: #b91c1c; }
+}
+
+.spin {
+  width: 14px; height: 14px;
+  border: 2px solid currentColor; border-top-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 700ms linear infinite;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }

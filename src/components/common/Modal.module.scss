@@ -1,0 +1,40 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,0.55);
+  backdrop-filter: blur(4px);
+  z-index: $z-modal;
+  display: grid; place-items: center;
+  padding: $sp-4;
+  animation: fade $dur $ease;
+}
+.dialog {
+  background: $surface;
+  border-radius: $r-xl;
+  box-shadow: $shadow-lg;
+  width: 100%; max-height: 90vh;
+  display: flex; flex-direction: column;
+  animation: pop $dur $ease;
+}
+.sm { max-width: 420px; }
+.md { max-width: 560px; }
+.lg { max-width: 760px; }
+
+.head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: $sp-5; border-bottom: 1px solid $border;
+}
+.title { font-weight: $fw-bold; font-size: $fs-lg; font-family: $font-display; }
+.close {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 24px; color: $text-muted; line-height: 1;
+  padding: 4px 8px; border-radius: $r-sm;
+  &:hover { background: $ink-100; color: $text; }
+}
+.body { padding: $sp-5; overflow: auto; @include scrollbar; }
+.foot { padding: $sp-4 $sp-5; border-top: 1px solid $border; display: flex; gap: $sp-2; justify-content: flex-end; }
+
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop  { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }

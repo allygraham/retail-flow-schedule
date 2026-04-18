@@ -1,0 +1,34 @@
+@use './tokens' as *;
+@use './mixins' as *;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+:root {
+  --lv-bg: #{$bg};
+  --lv-surface: #{$surface};
+  --lv-text: #{$text};
+  --lv-brand: #{$brand-600};
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: $font-sans;
+  font-size: $fs-base;
+  color: $text;
+  background: $bg;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button { font-family: inherit; }
+
+h1,h2,h3,h4,h5 { margin: 0; font-family: $font-display; }
+p { margin: 0; }
+
+::selection { background: rgba($brand-500, 0.25); }
