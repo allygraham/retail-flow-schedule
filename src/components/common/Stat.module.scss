@@ -1,0 +1,27 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.stat {
+  @include card;
+  padding: $sp-5;
+  position: relative;
+  overflow: hidden;
+}
+.icon {
+  position: absolute; top: $sp-4; right: $sp-4;
+  width: 36px; height: 36px; border-radius: $r-md;
+  display: grid; place-items: center;
+  background: $brand-50; color: $brand-600;
+}
+.label { color: $text-muted; font-size: $fs-sm; font-weight: $fw-medium; }
+.value {
+  font-family: $font-display; font-weight: $fw-extra;
+  font-size: $fs-3xl; line-height: 1; margin-top: 6px;
+  letter-spacing: -0.02em;
+}
+.hint { color: $text-muted; font-size: $fs-xs; margin-top: 8px; }
+
+.brand   { .icon { background: $brand-50; color: $brand-700; } }
+.warn    { .icon { background: #fef3c7; color: #92400e; } }
+.danger  { .icon { background: #fee2e2; color: #991b1b; } }
+.success { .icon { background: #dcfce7; color: #166534; } }

@@ -1,0 +1,7 @@
+@use '@/styles/tokens' as *;
+
+.empty { padding: $sp-8 $sp-5; text-align: center; color: $text-muted; }
+.icon { width: 48px; height: 48px; border-radius: $r-md; background: $ink-100; margin: 0 auto $sp-3; display: grid; place-items: center; color: $brand-600; }
+.title { font-weight: $fw-semibold; color: $text; margin-bottom: 4px; font-size: $fs-md; }
+.desc { font-size: $fs-sm; max-width: 380px; margin: 0 auto; }
+.action { margin-top: $sp-4; }

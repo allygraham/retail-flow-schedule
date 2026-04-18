@@ -1,0 +1,42 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.wrap {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: $font-display;
+  font-weight: $fw-extra;
+  letter-spacing: -0.022em;
+  color: $text;
+}
+.mark {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 4px);
+  gap: 3px;
+  align-items: end;
+  height: 22px;
+  padding: 4px;
+  background: $ink-900;
+  border-radius: 8px;
+}
+.bar {
+  display: block;
+  width: 4px;
+  background: $accent-500;
+  border-radius: 2px;
+  &:nth-child(1) { height: 8px; background: $brand-300; }
+  &:nth-child(2) { height: 14px; background: $brand-400; }
+  &:nth-child(3) { height: 11px; background: $accent-500; }
+}
+.sm { font-size: $fs-md; .mark { height: 18px; } }
+.md { font-size: $fs-lg; }
+.lg { font-size: $fs-2xl;
+  .mark { height: 28px; padding: 5px;
+    .bar:nth-child(1){ height: 10px; }
+    .bar:nth-child(2){ height: 18px; }
+    .bar:nth-child(3){ height: 14px; }
+  }
+}
+.light { color: $white;
+  .mark { background: rgba(255,255,255,0.12); }
+}
+.word { line-height: 1; }
