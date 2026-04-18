@@ -1,0 +1,39 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.page { min-height: 100vh; background: $bg; }
+.nav {
+  max-width: $container; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: $sp-5 $sp-6;
+  a { color: $text-soft; font-size: $fs-sm; }
+}
+.main { max-width: $container; margin: 0 auto; padding: $sp-8 $sp-6; }
+.eyebrow { @include eyebrow; }
+.main h1 { @include text-h2; margin: $sp-3 0 $sp-7; }
+
+.grid { display: grid; gap: $sp-4; grid-template-columns: 1fr;
+  @include md { grid-template-columns: repeat(2, 1fr); }
+  @include lg { grid-template-columns: repeat(3, 1fr); }
+}
+.item { @include card; padding: $sp-5;
+  h3 { font-family: $font-display; font-size: $fs-lg; margin-bottom: 6px; }
+  p { color: $text-soft; font-size: $fs-sm; line-height: $lh-normal; }
+}
+
+.tiers { display: grid; gap: $sp-4; grid-template-columns: 1fr;
+  @include md { grid-template-columns: repeat(3, 1fr); }
+}
+.tier { @include card; padding: $sp-6; position: relative;
+  h3 { font-family: $font-display; font-size: $fs-xl; }
+  ul { list-style: none; padding: 0; margin: $sp-4 0; display: flex; flex-direction: column; gap: 8px;
+    li { font-size: $fs-sm; color: $text-soft; padding-left: 20px; position: relative;
+      &::before { content: '✓'; position: absolute; left: 0; color: $brand-600; font-weight: $fw-bold; }
+    }
+  }
+}
+.best { border-color: $brand-500; box-shadow: $shadow-glow; }
+.tag { position: absolute; top: -10px; right: $sp-4; background: $brand-600; color: $white; font-size: $fs-xs; padding: 3px 10px; border-radius: $r-pill; font-weight: $fw-semibold; }
+.price { font-family: $font-display; font-size: $fs-3xl; font-weight: $fw-extra; margin-top: $sp-3;
+  small { font-size: $fs-sm; color: $text-muted; font-weight: $fw-medium; margin-left: 6px; }
+}

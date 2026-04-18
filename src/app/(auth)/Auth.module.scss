@@ -1,0 +1,39 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.page {
+  min-height: 100vh;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(800px 500px at 80% -10%, rgba(99,102,241,0.18), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(245,158,11,0.18), transparent 60%),
+    $bg;
+  padding: $sp-5;
+}
+.card {
+  width: 100%; max-width: 440px;
+  background: $surface; border: 1px solid $border;
+  border-radius: $r-xl; box-shadow: $shadow-lg;
+  padding: $sp-7;
+}
+.title { @include text-h3; margin: $sp-5 0 6px; font-size: $fs-2xl; }
+.sub { color: $text-muted; font-size: $fs-sm; margin-bottom: $sp-5; }
+.form { display: flex; flex-direction: column; gap: $sp-4; }
+.foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: $sp-2; margin-top: $sp-5;
+  font-size: $fs-sm; color: $text-muted;
+  a { color: $brand-700; font-weight: $fw-semibold; }
+}
+.err { background: #fee2e2; color: #991b1b; border-radius: $r-md; padding: 10px 12px; font-size: $fs-sm; }
+.ok  { background: #dcfce7; color: #166534; border-radius: $r-md; padding: 10px 12px; font-size: $fs-sm; }
+.demo {
+  margin-top: $sp-5; padding: $sp-3 $sp-4;
+  background: $ink-50; border: 1px dashed $border-strong;
+  border-radius: $r-md; font-size: $fs-xs; color: $text-soft;
+  code { font-family: $font-mono; background: $ink-100; padding: 1px 5px; border-radius: 3px; }
+  button {
+    display: block; width: 100%; text-align: left;
+    background: transparent; border: none; padding: 4px 0;
+    color: $brand-700; font-family: $font-mono; cursor: pointer; font-size: $fs-xs;
+    &:hover { text-decoration: underline; }
+  }
+}
