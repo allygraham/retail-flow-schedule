@@ -601,6 +601,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_business: {
+        Args: { _name: string; _slug: string }
+        Returns: string
+      }
       current_business_id: { Args: never; Returns: string }
       has_role: {
         Args: {
