@@ -1,0 +1,15 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.page { @include col; gap: $sp-5; }
+.header { display: flex; align-items: end; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
+.eye { @include eyebrow; }
+.h1 { @include text-h2; margin-top: 6px; }
+.grid { display: grid; gap: $sp-4; grid-template-columns: 1fr;
+  @include md { grid-template-columns: repeat(2, 1fr); }
+  @include lg { grid-template-columns: repeat(3, 1fr); }
+}
+.meta { color: $text-soft; font-size: $fs-sm; line-height: $lh-normal; }
+.form { @include col; gap: $sp-4; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
+.err { background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
