@@ -293,6 +293,7 @@ export default function Rota() {
                 <div className={s.dayDate}>{format(d, 'd MMM')}</div>
               </div>
             ))}
+            <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
             {/* per-employee rows */}
             {people.map(p => (
               <div key={p.user_id} className={s.contents}>
