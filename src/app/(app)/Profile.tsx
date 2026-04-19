@@ -7,10 +7,13 @@ import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
 import { fmtDate, fmtTime, isoDate } from '@/lib/datetime';
+import { useLeaveBalance } from '@/features/leave/useLeaveBalance';
+import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import s from './Profile.module.scss';
 
 export default function Profile() {
   const { user, fullName, role, business, refresh } = useAuth();
+  const { balance, loading: balanceLoading } = useLeaveBalance();
   const [name, setName] = useState(fullName ?? '');
   const [phone, setPhone] = useState('');
   const [shifts, setShifts] = useState<any[]>([]);
@@ -56,6 +59,8 @@ export default function Profile() {
             <Button onClick={save} loading={saving}>Save changes</Button>
           </div>
         </Card>
+        <div className={s.col}>
+          <LeaveBalanceCard balance={balance} loading={balanceLoading} />
         <Card title="Upcoming shifts" subtitle="Next 10 published">
           {shifts.length === 0 ? (
             <div className={s.empty}>No upcoming shifts.</div>
@@ -76,6 +81,7 @@ export default function Profile() {
             </ul>
           )}
         </Card>
+        </div>
       </div>
     </div>
   );
