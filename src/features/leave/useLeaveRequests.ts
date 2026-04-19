@@ -50,6 +50,7 @@ export function useLeaveRequests() {
               .from('employee_profiles')
               .select('user_id, store_locations:primary_store_id(name)')
               .eq('business_id', business.id)
+              .eq('memberships.is_active', true)
               .in('user_id', userIds)
           : Promise.resolve({ data: [] as any[] }),
       ]);
