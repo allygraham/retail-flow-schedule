@@ -71,8 +71,9 @@ export default function Rota() {
         c.push('Overlap'); break;
       }
     }
-    // leave conflict
+    // leave conflict — only approved leave is a real conflict
     for (const l of leave) {
+      if (l.status !== 'approved') continue;
       if (l.user_id === sh.assigned_user_id && inRange(sh.shift_date, l.start_date, l.end_date)) {
         c.push(l.leave_type === 'sick' ? 'Sick' : 'On leave'); break;
       }
