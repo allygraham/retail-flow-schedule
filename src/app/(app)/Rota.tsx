@@ -82,6 +82,15 @@ export default function Rota() {
   const storeById = useMemo(() => Object.fromEntries(stores.map(s => [s.id, s])), [stores]);
   const roleById = useMemo(() => Object.fromEntries(roles.map(r => [r.id, r])), [roles]);
 
+  // People shown as rows: filtered by selected store (membership OR a shift in that store this week).
+  const visiblePeople = useMemo(() => {
+    if (storeFilter === 'all') return people;
+    const assignedHere = new Set(
+      shifts.filter(sh => sh.store_id === storeFilter && sh.assigned_user_id).map(sh => sh.assigned_user_id),
+    );
+    return people.filter(p => p.store_ids?.includes(storeFilter) || assignedHere.has(p.user_id));
+  }, [people, shifts, storeFilter]);
+
   // Total scheduled hours per employee for the visible week (respects store filter).
   const hoursByUser = useMemo(() => {
     const map = new Map<string, number>();
