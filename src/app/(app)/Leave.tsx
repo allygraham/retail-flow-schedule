@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
+import { STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -10,44 +11,79 @@ import { Field, Input, Select, TextArea } from '@/components/common/Field';
 import { EmptyState } from '@/components/common/EmptyState';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema } from '@/lib/validation';
+import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
-const TONE: Record<string, any> = { pending: 'pending', approved: 'success', rejected: 'danger', cancelled: 'neutral' };
+type Filter = 'pending' | 'reviewed' | 'all';
 
 export default function Leave() {
-  const { business, role, user } = useAuth();
-  const isMgr = role === 'owner' || role === 'manager';
-  const [requests, setRequests] = useState<any[]>([]);
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState<any>({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
-  const [err, setErr] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { requests, loading, isMgr, submit, cancelOwn, review } = useLeaveRequests();
 
-  const load = async () => {
-    if (!business) return;
-    let q = supabase.from('leave_requests')
-      .select('*, profiles!leave_requests_user_id_fkey(full_name)')
-      .eq('business_id', business.id).order('created_at', { ascending: false });
-    if (!isMgr) q = q.eq('user_id', user!.id);
-    const { data } = await q;
-    setRequests(data ?? []);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, role]);
+  const [requestModal, setRequestModal] = useState(false);
+  const [form, setForm] = useState<any>({
+    leave_type: 'annual',
+    start_date: isoDate(new Date()),
+    end_date: isoDate(new Date()),
+    reason: '',
+  });
+  const [formErr, setFormErr] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<{ row: LeaveRequestRow; action: 'approved' | 'rejected' } | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
 
-  const submit = async () => {
-    setErr(null);
+  const [filter, setFilter] = useState<Filter>('pending');
+
+  const filtered = useMemo(() => {
+    if (!isMgr) return requests; // employees see everything chronologically
+    if (filter === 'pending') return requests.filter(r => r.status === 'pending');
+    if (filter === 'reviewed') return requests.filter(r => r.status === 'approved' || r.status === 'rejected');
+    return requests;
+  }, [requests, filter, isMgr]);
+
+  const pendingCount = requests.filter(r => r.status === 'pending').length;
+
+  const submitRequest = async () => {
+    setFormErr(null);
     const parsed = leaveSchema.safeParse(form);
-    if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
-    const { error } = await supabase.from('leave_requests').insert({
-      ...parsed.data, business_id: business!.id, user_id: user!.id,
-    } as any);
-    if (error) { setErr(error.message); return; }
-    setModal(false); setForm({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
-    load();
+    if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
+    try {
+      await submit(parsed.data);
+      setRequestModal(false);
+      setForm({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
+      toast.success('Request submitted. Your manager has been notified.');
+    } catch (e: any) {
+      setFormErr(e.message ?? 'Could not submit');
+    }
   };
 
-  const decide = async (id: string, status: 'approved' | 'rejected') => {
-    await supabase.from('leave_requests').update({ status, reviewed_by: user!.id, reviewed_at: new Date().toISOString() }).eq('id', id);
-    load();
+  const openReview = (row: LeaveRequestRow, action: 'approved' | 'rejected') => {
+    setReviewing({ row, action });
+    setReviewNote('');
+  };
+  const confirmReview = async () => {
+    if (!reviewing) return;
+    try {
+      await review({ id: reviewing.row.id, status: reviewing.action, review_notes: reviewNote.trim() || null });
+      const verb = reviewing.action === 'approved' ? 'Approved' : 'Declined';
+      toast.success(
+        reviewing.action === 'approved'
+          ? `${verb} — any clashing shifts were unassigned.`
+          : verb,
+      );
+      setReviewing(null);
+    } catch (e: any) {
+      toast.error(e.message ?? 'Could not save decision');
+    }
+  };
+
+  const cancel = async (id: string) => {
+    toast('Cancel this request?', {
+      action: { label: 'Cancel request', onClick: async () => {
+        try { await cancelOwn(id); toast.success('Request cancelled'); }
+        catch (e: any) { toast.error(e.message ?? 'Could not cancel'); }
+      }},
+      cancel: { label: 'Keep', onClick: () => {} },
+    });
   };
 
   return (
@@ -56,47 +92,119 @@ export default function Leave() {
         <div>
           <span className={s.eye}>Leave</span>
           <h1 className={s.h1}>{isMgr ? 'Leave & sickness' : 'My time off'}</h1>
+          {isMgr && pendingCount > 0 && (
+            <p className={s.sub}>
+              <Badge tone="pending" dot>{pendingCount} pending</Badge> awaiting your review
+            </p>
+          )}
         </div>
-        <Button onClick={() => setModal(true)}>Request time off</Button>
+        <Button onClick={() => setRequestModal(true)}>Request time off</Button>
       </header>
 
+      {isMgr && (
+        <div className={s.tabs} role="tablist">
+          {(['pending','reviewed','all'] as Filter[]).map(f => (
+            <button
+              key={f}
+              role="tab"
+              aria-selected={filter === f}
+              className={`${s.tab} ${filter === f ? s.tabActive : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f === 'pending' ? `Pending (${pendingCount})` : f === 'reviewed' ? 'Reviewed' : 'All'}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Card padded={false}>
-        {requests.length === 0 ? (
-          <EmptyState title="Nothing here yet" description="Submit a request to get started." />
+        {loading ? (
+          <div className={s.loading}>Loading…</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title={isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}
+            description={isMgr && filter === 'pending'
+              ? 'No requests are waiting for review.'
+              : 'Submit a request to get started.'}
+          />
         ) : (
           <table className={s.table}>
-            <thead><tr>
-              {isMgr && <th>Employee</th>}
-              <th>Type</th><th>Dates</th><th>Reason</th><th>Status</th>{isMgr && <th></th>}
-            </tr></thead>
+            <thead>
+              <tr>
+                {isMgr && <th>Employee</th>}
+                {isMgr && <th>Store</th>}
+                <th>Type</th>
+                <th>Dates</th>
+                <th>Reason</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th aria-label="Actions" />
+              </tr>
+            </thead>
             <tbody>
-              {requests.map(r => (
-                <tr key={r.id}>
-                  {isMgr && <td><div className={s.who}><Avatar name={r.profiles?.full_name} size="sm" /><span>{r.profiles?.full_name ?? 'Employee'}</span></div></td>}
-                  <td><Badge tone={r.leave_type === 'sick' ? 'sick' : r.leave_type === 'annual' ? 'leave' : 'neutral'}>{r.leave_type}</Badge></td>
-                  <td className={s.dates}>{fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}</td>
-                  <td className={s.reason}>{r.reason ?? '—'}</td>
-                  <td><Badge tone={TONE[r.status]} dot>{r.status}</Badge></td>
-                  {isMgr && <td className={s.actions}>
-                    {r.status === 'pending' && (
-                      <>
-                        <Button size="sm" variant="outline" onClick={() => decide(r.id, 'rejected')}>Reject</Button>
-                        <Button size="sm" onClick={() => decide(r.id, 'approved')}>Approve</Button>
-                      </>
+              {filtered.map(r => {
+                const isOwn = r.user_id === user?.id;
+                return (
+                  <tr key={r.id}>
+                    {isMgr && (
+                      <td>
+                        <div className={s.who}>
+                          <Avatar name={r.profiles?.full_name ?? undefined} size="sm" />
+                          <span>{r.profiles?.full_name ?? 'Employee'}</span>
+                        </div>
+                      </td>
                     )}
-                  </td>}
-                </tr>
-              ))}
+                    {isMgr && <td className={s.muted}>{r.primary_store?.name ?? '—'}</td>}
+                    <td>
+                      <Badge tone={TYPE_TONE[r.leave_type]}>{TYPE_LABEL[r.leave_type]}</Badge>
+                    </td>
+                    <td className={s.dates}>
+                      {fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}
+                    </td>
+                    <td className={s.reason} title={r.reason ?? undefined}>{r.reason ?? '—'}</td>
+                    <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
+                    <td>
+                      <div className={s.statusCell}>
+                        <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
+                        {r.review_notes && (r.status === 'approved' || r.status === 'rejected') && (
+                          <span className={s.note} title={r.review_notes}>Note</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className={s.actions}>
+                      {isMgr && r.status === 'pending' && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => openReview(r, 'rejected')}>Decline</Button>
+                          <Button size="sm" onClick={() => openReview(r, 'approved')}>Approve</Button>
+                        </>
+                      )}
+                      {!isMgr && isOwn && r.status === 'pending' && (
+                        <Button size="sm" variant="ghost" onClick={() => cancel(r.id)}>Cancel</Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Request time off"
-        footer={<><Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button><Button onClick={submit}>Submit</Button></>}>
+      {/* Request modal */}
+      <Modal
+        open={requestModal}
+        onClose={() => setRequestModal(false)}
+        title="Request time off"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRequestModal(false)}>Cancel</Button>
+            <Button onClick={submitRequest}>Submit</Button>
+          </>
+        }
+      >
         <div className={s.form}>
           <Field label="Type">
-            <Select value={form.leave_type} onChange={e => setForm({...form, leave_type: e.target.value})}>
+            <Select value={form.leave_type} onChange={e => setForm({ ...form, leave_type: e.target.value })}>
               <option value="annual">Annual leave</option>
               <option value="unpaid">Unpaid</option>
               <option value="sick">Sick</option>
@@ -104,12 +212,76 @@ export default function Leave() {
             </Select>
           </Field>
           <div className={s.row2}>
-            <Field label="From"><Input type="date" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})}/></Field>
-            <Field label="To"><Input type="date" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})}/></Field>
+            <Field label="From">
+              <Input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+            </Field>
+            <Field label="To">
+              <Input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
+            </Field>
           </div>
-          <Field label="Reason"><TextArea value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} placeholder="Optional context for your manager"/></Field>
-          {err && <div className={s.err}>{err}</div>}
+          <Field label="Reason">
+            <TextArea
+              value={form.reason}
+              onChange={e => setForm({ ...form, reason: e.target.value })}
+              placeholder="Optional context for your manager"
+              rows={3}
+            />
+          </Field>
+          {formErr && <div className={s.err}>{formErr}</div>}
         </div>
+      </Modal>
+
+      {/* Review modal */}
+      <Modal
+        open={!!reviewing}
+        onClose={() => setReviewing(null)}
+        title={reviewing?.action === 'approved' ? 'Approve request' : 'Decline request'}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setReviewing(null)}>Cancel</Button>
+            <Button
+              variant={reviewing?.action === 'approved' ? 'primary' : 'danger'}
+              onClick={confirmReview}
+            >
+              {reviewing?.action === 'approved' ? 'Approve' : 'Decline'}
+            </Button>
+          </>
+        }
+      >
+        {reviewing && (
+          <div className={s.form}>
+            <div className={s.reviewSummary}>
+              <Avatar name={reviewing.row.profiles?.full_name ?? undefined} size="sm" />
+              <div>
+                <div className={s.reviewName}>{reviewing.row.profiles?.full_name ?? 'Employee'}</div>
+                <div className={s.muted}>
+                  {TYPE_LABEL[reviewing.row.leave_type]} ·{' '}
+                  {fmtDate(reviewing.row.start_date, 'd MMM')} → {fmtDate(reviewing.row.end_date, 'd MMM yyyy')}
+                </div>
+              </div>
+            </div>
+            {reviewing.row.reason && (
+              <div className={s.reviewReason}>
+                <span className={s.reasonLabel}>Reason</span>
+                <p>{reviewing.row.reason}</p>
+              </div>
+            )}
+            <Field
+              label="Note to employee (optional)"
+              hint={reviewing.action === 'approved'
+                ? 'Approving will unassign any of their shifts in this date range.'
+                : 'Briefly explain your decision so the employee has context.'}
+            >
+              <TextArea
+                value={reviewNote}
+                onChange={e => setReviewNote(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder={reviewing.action === 'approved' ? 'Enjoy your time off!' : 'Sorry — store is short-staffed that week.'}
+              />
+            </Field>
+          </div>
+        )}
       </Modal>
     </div>
   );
