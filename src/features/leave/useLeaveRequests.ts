@@ -33,27 +33,36 @@ export function useLeaveRequests() {
     setError(null);
     let q = supabase
       .from('leave_requests')
-      .select('*, profiles!leave_requests_user_id_fkey(full_name)')
+      .select('*')
       .eq('business_id', business.id)
       .order('created_at', { ascending: false });
     if (!isMgr) q = q.eq('user_id', user.id);
     const { data, error } = await q;
     if (error) { setError(error.message); setLoading(false); return; }
 
-    // Hydrate primary store name for manager view (one extra small query)
-    let rows = (data ?? []) as LeaveRequestRow[];
-    if (isMgr && rows.length) {
+    let rows: LeaveRequestRow[] = (data ?? []).map((r: any) => ({ ...r }));
+    if (rows.length) {
       const userIds = Array.from(new Set(rows.map(r => r.user_id)));
-      const { data: emp } = await supabase
-        .from('employee_profiles')
-        .select('user_id, primary_store_id, store_locations:primary_store_id(name)')
-        .eq('business_id', business.id)
-        .in('user_id', userIds);
+      const [{ data: profs }, { data: emp }] = await Promise.all([
+        supabase.from('profiles').select('id, full_name').in('id', userIds),
+        isMgr
+          ? supabase
+              .from('employee_profiles')
+              .select('user_id, store_locations:primary_store_id(name)')
+              .eq('business_id', business.id)
+              .in('user_id', userIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const nameById: Record<string, string | null> = Object.fromEntries(
+        (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
+      );
       const storeByUser: Record<string, { name: string | null } | null> = {};
-      for (const e of (emp ?? []) as any[]) {
-        storeByUser[e.user_id] = e.store_locations ?? null;
-      }
-      rows = rows.map(r => ({ ...r, primary_store: storeByUser[r.user_id] ?? null }));
+      for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
+      rows = rows.map(r => ({
+        ...r,
+        profiles: { full_name: nameById[r.user_id] ?? null },
+        primary_store: storeByUser[r.user_id] ?? null,
+      }));
     }
     setRequests(rows);
     setLoading(false);
