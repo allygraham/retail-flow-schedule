@@ -5,17 +5,41 @@
 .header { display: flex; align-items: end; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; }
+.sub { margin-top: $sp-2; display: flex; align-items: center; gap: $sp-2; color: $text-muted; font-size: $fs-sm; }
+
+.tabs { display: inline-flex; gap: 2px; background: $ink-100; padding: 4px; border-radius: $r-md; align-self: flex-start; }
+.tab {
+  background: transparent; border: none; cursor: pointer;
+  padding: 6px 14px; border-radius: $r-sm;
+  font-size: $fs-sm; font-weight: $fw-medium; color: $text-muted;
+  transition: all $dur-fast $ease;
+  &:hover { color: $text; }
+}
+.tabActive { background: $surface; color: $text; box-shadow: $shadow-sm; font-weight: $fw-semibold; }
+
+.loading { padding: $sp-6; text-align: center; color: $text-muted; font-size: $fs-sm; }
 
 .table { width: 100%; border-collapse: collapse; font-size: $fs-sm;
   th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid $border; vertical-align: middle; }
   th { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; font-weight: $fw-semibold; background: $ink-50; }
   tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba($brand-50, 0.4); }
 }
-.who { display: flex; align-items: center; gap: $sp-2; }
-.dates { color: $text-soft; }
-.reason { color: $text-muted; max-width: 280px; }
+.who { display: flex; align-items: center; gap: $sp-2; font-weight: $fw-medium; }
+.dates { color: $text-soft; white-space: nowrap; }
+.muted { color: $text-muted; font-size: $fs-xs; }
+.reason { color: $text-muted; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statusCell { display: flex; align-items: center; gap: 6px; }
+.note { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: $text-muted; cursor: help; padding: 2px 6px; background: $ink-100; border-radius: $r-sm; }
 .actions { display: flex; gap: 6px; justify-content: flex-end; }
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
 .err { background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
+
+.reviewSummary { display: flex; align-items: center; gap: $sp-3; padding: $sp-3; background: $ink-50; border-radius: $r-md; }
+.reviewName { font-weight: $fw-semibold; font-size: $fs-sm; }
+.reviewReason { background: $surface; border: 1px solid $border; border-radius: $r-md; padding: $sp-3;
+  p { margin: 4px 0 0; font-size: $fs-sm; color: $text; white-space: pre-wrap; }
+}
+.reasonLabel { font-size: $fs-xs; color: $text-muted; text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }

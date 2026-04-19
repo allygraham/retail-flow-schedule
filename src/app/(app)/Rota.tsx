@@ -71,8 +71,9 @@ export default function Rota() {
         c.push('Overlap'); break;
       }
     }
-    // leave conflict
+    // leave conflict — only approved leave is a real conflict
     for (const l of leave) {
+      if (l.status !== 'approved') continue;
       if (l.user_id === sh.assigned_user_id && inRange(sh.shift_date, l.start_date, l.end_date)) {
         c.push(l.leave_type === 'sick' ? 'Sick' : 'On leave'); break;
       }
@@ -193,6 +194,19 @@ export default function Rota() {
     const [targetUserId, targetDate] = String(e.over.id).split('|');
     const newAssigned = targetUserId === 'unassigned' ? null : targetUserId;
     if (dragged.assigned_user_id === newAssigned && dragged.shift_date === targetDate) return;
+
+    // Block drops onto an approved-leave date for the target employee
+    if (newAssigned) {
+      const blocked = leave.find(l =>
+        l.status === 'approved' &&
+        l.user_id === newAssigned &&
+        inRange(targetDate, l.start_date, l.end_date)
+      );
+      if (blocked) {
+        toast.error(`${peopleById[newAssigned]?.name ?? 'Employee'} is on approved leave that day.`);
+        return;
+      }
+    }
 
     // find an occupant in the target cell (for swap). If multiple, swap with the first.
     const occupant = filteredShifts.find(x =>

@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
+import { supabase } from '@/integrations/supabase/client';
 import s from './AppShell.module.scss';
 
 const NAV = [
@@ -23,6 +24,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   const location = useLocation();
   const isMgr = role === 'owner' || role === 'manager';
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingLeave, setPendingLeave] = useState(0);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
@@ -45,6 +47,19 @@ export default function AppShell({ children }: { children?: ReactNode }) {
     }
   }, [menuOpen]);
 
+  // Manager-only pending leave badge. Refreshes on route changes — cheap & predictable.
+  useEffect(() => {
+    if (!business || !isMgr) { setPendingLeave(0); return; }
+    let cancelled = false;
+    supabase
+      .from('leave_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', business.id)
+      .eq('status', 'pending')
+      .then(({ count }) => { if (!cancelled) setPendingLeave(count ?? 0); });
+    return () => { cancelled = true; };
+  }, [business, isMgr, location.pathname]);
+
   const items = NAV.filter(n => !n.mgr || isMgr);
 
   const renderNav = (onClick?: () => void) => (
@@ -56,7 +71,10 @@ export default function AppShell({ children }: { children?: ReactNode }) {
           onClick={onClick}
           className={({isActive}) => `${s.link} ${isActive ? s.active : ''}`}
         >
-          {n.label}
+          <span>{n.label}</span>
+          {n.to === '/leave' && isMgr && pendingLeave > 0 && (
+            <span className={s.linkBadge} aria-label={`${pendingLeave} pending`}>{pendingLeave}</span>
+          )}
         </NavLink>
       ))}
     </nav>
