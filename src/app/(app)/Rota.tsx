@@ -121,6 +121,52 @@ export default function Rota() {
     load();
   };
 
+  const onDragStart = (e: DragStartEvent) => {
+    const sh = shifts.find(x => x.id === e.active.id);
+    if (sh) setActiveShift(sh);
+  };
+
+  const onDragEnd = async (e: DragEndEvent) => {
+    setActiveShift(null);
+    if (!isMgr || !e.over) return;
+    const dragged = shifts.find(x => x.id === e.active.id);
+    if (!dragged) return;
+    const [targetUserId, targetDate] = String(e.over.id).split('|');
+    const newAssigned = targetUserId === 'unassigned' ? null : targetUserId;
+    if (dragged.assigned_user_id === newAssigned && dragged.shift_date === targetDate) return;
+
+    // find an occupant in the target cell (for swap). If multiple, swap with the first.
+    const occupant = filteredShifts.find(x =>
+      x.id !== dragged.id &&
+      x.shift_date === targetDate &&
+      (x.assigned_user_id ?? 'unassigned') === (newAssigned ?? 'unassigned')
+    );
+
+    // optimistic update
+    setShifts(prev => prev.map(x => {
+      if (x.id === dragged.id) return { ...x, assigned_user_id: newAssigned, shift_date: targetDate, status: newAssigned ? 'scheduled' : 'unassigned' };
+      if (occupant && x.id === occupant.id) return { ...x, assigned_user_id: dragged.assigned_user_id, shift_date: dragged.shift_date, status: dragged.assigned_user_id ? 'scheduled' : 'unassigned' };
+      return x;
+    }));
+
+    const updates: Promise<any>[] = [
+      supabase.from('shifts').update({
+        assigned_user_id: newAssigned,
+        shift_date: targetDate,
+        status: (newAssigned ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+      }).eq('id', dragged.id),
+    ];
+    if (occupant) {
+      updates.push(supabase.from('shifts').update({
+        assigned_user_id: dragged.assigned_user_id,
+        shift_date: dragged.shift_date,
+        status: (dragged.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+      }).eq('id', occupant.id));
+    }
+    const results = await Promise.all(updates);
+    if (results.some(r => r.error)) load();
+  };
+
   return (
     <div className={s.page}>
       <header className={s.header}>
