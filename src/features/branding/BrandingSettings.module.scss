@@ -1,0 +1,90 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.wrap { @include col; gap: $sp-5; }
+
+.grid {
+  display: grid; gap: $sp-5;
+  grid-template-columns: 1fr;
+  @include md { grid-template-columns: 1.1fr 1fr; }
+}
+
+.section { @include col; gap: $sp-4; }
+.sectionTitle { font-size: $fs-sm; font-weight: $fw-semibold; color: $text; }
+.help { font-size: $fs-xs; color: $text-muted; }
+
+.colorRow { display: grid; grid-template-columns: 44px 1fr auto; gap: $sp-3; align-items: center; }
+.swatch {
+  width: 44px; height: 44px; border-radius: $r-md; border: 1px solid $border;
+  padding: 0; cursor: pointer; background: transparent; overflow: hidden;
+  &::-webkit-color-swatch-wrapper { padding: 0; }
+  &::-webkit-color-swatch { border: none; border-radius: $r-md; }
+  &:focus-visible { @include focus-ring; }
+}
+.hexInput {
+  font-family: $font-mono; text-transform: lowercase;
+}
+.contrast {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: $fs-xs; font-weight: $fw-medium; color: $text-muted;
+  min-width: 78px; justify-content: flex-end;
+}
+.contrastBad { color: $danger; }
+.contrastOk  { color: $success; }
+
+.logoBox {
+  border: 1.5px dashed $border-strong; border-radius: $r-md;
+  padding: $sp-5; display: flex; flex-direction: column; align-items: center; gap: $sp-3;
+  background: $bg;
+}
+.logoPreview {
+  width: 100%; max-width: 220px; aspect-ratio: 16 / 9;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brand-secondary, #{$ink-900}); border-radius: $r-sm;
+  img { max-width: 80%; max-height: 80%; object-fit: contain; }
+}
+.logoEmpty { font-size: $fs-xs; color: $ink-300; }
+.logoActions { display: flex; gap: $sp-2; }
+.fileBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: $r-md;
+  background: $surface; border: 1px solid $border-strong; color: $text;
+  font-size: $fs-sm; font-weight: $fw-medium; cursor: pointer;
+  &:hover { background: $ink-50; }
+  input { display: none; }
+}
+
+.preview {
+  border: 1px solid $border; border-radius: $r-lg; overflow: hidden;
+  background: var(--brand-surface, $bg);
+}
+.previewBar {
+  background: var(--brand-secondary, $ink-900); color: var(--brand-secondary-fg, $white);
+  padding: $sp-3 $sp-4; display: flex; align-items: center; justify-content: space-between; gap: $sp-3;
+  img { max-height: 28px; max-width: 110px; object-fit: contain; }
+}
+.previewBarBrand { font-weight: $fw-semibold; font-size: $fs-sm; }
+.previewBody { padding: $sp-5; @include col; gap: $sp-4; }
+.previewBtnPrimary {
+  align-self: flex-start;
+  background: var(--brand-primary, $brand-600);
+  color: var(--brand-primary-fg, $white);
+  border: none; border-radius: $r-md; padding: 10px 18px;
+  font-weight: $fw-semibold; font-size: $fs-sm;
+}
+.previewBadgeRow { display: flex; gap: $sp-2; flex-wrap: wrap; }
+.previewBadge {
+  background: var(--brand-primary-soft, rgba(99,102,241,0.1));
+  color: var(--brand-primary, $brand-600);
+  font-weight: $fw-semibold; font-size: $fs-xs;
+  padding: 4px 10px; border-radius: $r-pill;
+}
+.previewBadgeAccent {
+  background: var(--brand-accent, $accent-500);
+  color: var(--brand-accent-fg, $white);
+}
+.previewLink { color: var(--brand-primary, $brand-600); font-weight: $fw-medium; font-size: $fs-sm; }
+
+.footer { display: flex; gap: $sp-3; justify-content: flex-end; padding-top: $sp-3; border-top: 1px solid $border; }
+.dirty { color: $warning; font-size: $fs-xs; align-self: center; margin-right: auto; }
+.error { color: $danger; font-size: $fs-xs; }

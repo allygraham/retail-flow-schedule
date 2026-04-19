@@ -24,9 +24,9 @@
 .lg { font-size: $fs-md; padding: 12px 22px; }
 
 .primary {
-  background: $brand-600; color: $white;
+  background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white);
   box-shadow: $shadow-sm;
-  &:hover:not(:disabled) { background: $brand-700; box-shadow: $shadow-glow; transform: translateY(-1px); }
+  &:hover:not(:disabled) { background: var(--brand-primary-hover, #{$brand-700}); box-shadow: $shadow-glow; transform: translateY(-1px); }
 }
 .secondary {
   background: $ink-100; color: $text;
