@@ -49,11 +49,22 @@ export default function Leave() {
     setFormErr(null);
     const parsed = leaveSchema.safeParse(form);
     if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
+    // Soft warn if annual leave exceeds remaining balance.
+    if (parsed.data.leave_type === 'annual' && balance) {
+      const days = daysBetween(parsed.data.start_date, parsed.data.end_date);
+      if (days > balance.remaining) {
+        const ok = window.confirm(
+          `This request is ${days} day${days === 1 ? '' : 's'} but you only have ${balance.remaining} day${balance.remaining === 1 ? '' : 's'} of annual leave remaining. Submit anyway?`
+        );
+        if (!ok) return;
+      }
+    }
     try {
       await submit(parsed.data);
       setRequestModal(false);
       setForm({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
       toast.success('Request submitted. Your manager has been notified.');
+      reloadBalance();
     } catch (e: any) {
       setFormErr(e.message ?? 'Could not submit');
     }
@@ -74,6 +85,7 @@ export default function Leave() {
           : verb,
       );
       setReviewing(null);
+      reloadBalance();
     } catch (e: any) {
       toast.error(e.message ?? 'Could not save decision');
     }
