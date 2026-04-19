@@ -36,15 +36,18 @@ export default function Rota() {
 
   const load = async () => {
     if (!business) return;
-    const [st, rl, ep, sh, lv] = await Promise.all([
+    const [st, rl, epRaw, sh, lv, mb] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
-      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id).eq('memberships.is_active', true),
+      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
       supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time'),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
+      supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true),
     ]);
-    const userIds = (ep.data ?? []).map((e:any) => e.user_id);
-    const profileIds = (ep.data ?? []).map((e:any) => e.id);
+    const activeUserIds = new Set((mb.data ?? []).map((m:any) => m.user_id));
+    const ep = { data: (epRaw.data ?? []).filter((e:any) => activeUserIds.has(e.user_id)) };
+    const userIds = ep.data.map((e:any) => e.user_id);
+    const profileIds = ep.data.map((e:any) => e.id);
     const [pf, es] = await Promise.all([
       userIds.length
         ? supabase.from('profiles').select('id, full_name').in('id', userIds)
