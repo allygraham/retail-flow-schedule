@@ -1,0 +1,34 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.wrap { display: flex; flex-direction: column; gap: $sp-4; padding: $sp-4 $sp-5 $sp-5; }
+.compact { padding: $sp-3 $sp-4 $sp-4; gap: $sp-3; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: $sp-3; }
+.stat {
+  background: $ink-50; border-radius: $r-md; padding: $sp-3;
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+}
+.statValue { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-2xl; line-height: 1; color: $text; }
+.statLabel { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.06em; color: $text-muted; font-weight: $fw-semibold; }
+.accent { background: $brand-50;
+  .statValue { color: $brand-700; }
+  .statLabel { color: $brand-700; }
+}
+.muted .statValue { color: $text-soft; }
+
+.bar {
+  position: relative; height: 10px; background: $ink-100; border-radius: 999px; overflow: hidden;
+  display: flex;
+}
+.barTaken { background: $brand-600; height: 100%; transition: width $dur-base $ease; }
+.barPending { background: repeating-linear-gradient(45deg, $brand-300, $brand-300 4px, $brand-200 4px, $brand-200 8px); height: 100%; transition: width $dur-base $ease; }
+
+.legend { display: flex; gap: $sp-3; flex-wrap: wrap; font-size: $fs-xs; color: $text-muted; align-items: center;
+  i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+}
+.dotTaken { background: $brand-600; }
+.dotPending { background: $brand-300; }
+.legendMuted { margin-left: auto; color: $text-soft; }
+
+.loading { padding: $sp-5; text-align: center; color: $text-muted; font-size: $fs-sm; }
