@@ -21,8 +21,8 @@
   position: relative; height: 10px; background: $ink-100; border-radius: 999px; overflow: hidden;
   display: flex;
 }
-.barTaken { background: $brand-600; height: 100%; transition: width $dur-base $ease; }
-.barPending { background: repeating-linear-gradient(45deg, $brand-300, $brand-300 4px, $brand-200 4px, $brand-200 8px); height: 100%; transition: width $dur-base $ease; }
+.barTaken { background: $brand-600; height: 100%; transition: width $dur $ease; }
+.barPending { background: repeating-linear-gradient(45deg, $brand-300, $brand-300 4px, $brand-200 4px, $brand-200 8px); height: 100%; transition: width $dur $ease; }
 
 .legend { display: flex; gap: $sp-3; flex-wrap: wrap; font-size: $fs-xs; color: $text-muted; align-items: center;
   i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
