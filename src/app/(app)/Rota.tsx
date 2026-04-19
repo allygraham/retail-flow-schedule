@@ -238,10 +238,39 @@ export default function Rota() {
   };
 
   const confirmPublish = async () => {
-    if (!isMgr) return;
-    const ids = filteredShifts.filter(x => !x.is_published).map(x => x.id);
+    if (!isMgr || !business) return;
+    const drafts = filteredShifts.filter(x => !x.is_published);
+    const ids = drafts.map(x => x.id);
     if (ids.length === 0) return;
-    await supabase.from('shifts').update({ is_published: true }).in('id', ids);
+
+    const { error: updErr } = await supabase.from('shifts').update({ is_published: true }).in('id', ids);
+    if (updErr) { toast.error(updErr.message); return; }
+
+    // Notify each employee assigned to a newly-published shift (one notification per person).
+    const affectedUserIds = Array.from(new Set(
+      drafts.map(d => d.assigned_user_id).filter((u): u is string => !!u)
+    ));
+    if (affectedUserIds.length > 0) {
+      const storeName = storeFilter === 'all' ? null : storeById[storeFilter]?.name ?? null;
+      const weekLabel = fmtDate(weekStart, 'd MMM yyyy');
+      const rows = affectedUserIds.map(uid => {
+        const count = drafts.filter(d => d.assigned_user_id === uid).length;
+        return {
+          business_id: business.id,
+          user_id: uid,
+          type: 'schedule_published',
+          title: 'New schedule published',
+          body: `Your schedule for the week of ${weekLabel} is ready (${count} shift${count === 1 ? '' : 's'}${storeName ? ` · ${storeName}` : ''}).`,
+          link: '/rota',
+          related_entity_type: 'shift_week',
+          related_entity_id: null as string | null,
+        };
+      });
+      const { error: notifErr } = await supabase.from('notifications').insert(rows as any);
+      if (notifErr) console.error('notifications insert failed', notifErr);
+    }
+
+    toast.success(`Schedule published${affectedUserIds.length ? ` · ${affectedUserIds.length} notified` : ''}`);
     setPublishModal({ open: false, count: 0 });
     load();
   };
