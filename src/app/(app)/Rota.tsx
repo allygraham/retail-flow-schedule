@@ -472,7 +472,7 @@ export default function Rota() {
       </Modal>
 
       {/* Publish confirmation modal */}
-      <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish drafts" size="sm">
+      <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish schedule" size="sm">
         <div style={{ lineHeight: 1.6 }}>
           <p>
             You are about to publish <strong>{publishModal.count} draft shift{publishModal.count === 1 ? '' : 's'}</strong>.
