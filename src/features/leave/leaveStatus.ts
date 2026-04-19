@@ -1,0 +1,30 @@
+import type { LeaveStatus, LeaveType } from '@/types/domain';
+
+/** UI label for a leave status. We store 'rejected' in the DB but show 'Declined'. */
+export const STATUS_LABEL: Record<LeaveStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Declined',
+  cancelled: 'Cancelled',
+};
+
+export const STATUS_TONE: Record<LeaveStatus, 'pending' | 'success' | 'danger' | 'neutral'> = {
+  pending: 'pending',
+  approved: 'success',
+  rejected: 'danger',
+  cancelled: 'neutral',
+};
+
+export const TYPE_LABEL: Record<LeaveType, string> = {
+  annual: 'Annual leave',
+  unpaid: 'Unpaid',
+  sick: 'Sick',
+  other: 'Other',
+};
+
+export const TYPE_TONE: Record<LeaveType, 'leave' | 'sick' | 'unavail' | 'neutral'> = {
+  annual: 'leave',
+  sick: 'sick',
+  unpaid: 'unavail',
+  other: 'neutral',
+};
