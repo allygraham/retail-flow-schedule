@@ -6,6 +6,7 @@ import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import s from './AppShell.module.scss';
 
 const NAV = [
