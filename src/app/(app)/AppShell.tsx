@@ -47,18 +47,29 @@ export default function AppShell({ children }: { children?: ReactNode }) {
     }
   }, [menuOpen]);
 
-  // Manager-only pending leave badge. Refreshes on route changes — cheap & predictable.
+  // Manager-only pending leave badge. Live via realtime + initial fetch.
   useEffect(() => {
     if (!business || !isMgr) { setPendingLeave(0); return; }
     let cancelled = false;
-    supabase
-      .from('leave_requests')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', business.id)
-      .eq('status', 'pending')
-      .then(({ count }) => { if (!cancelled) setPendingLeave(count ?? 0); });
-    return () => { cancelled = true; };
-  }, [business, isMgr, location.pathname]);
+    const fetchCount = () => {
+      supabase
+        .from('leave_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', business.id)
+        .eq('status', 'pending')
+        .then(({ count }) => { if (!cancelled) setPendingLeave(count ?? 0); });
+    };
+    fetchCount();
+    const channel = supabase
+      .channel(`leave_badge:${business.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leave_requests', filter: `business_id=eq.${business.id}` },
+        () => fetchCount(),
+      )
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [business, isMgr]);
 
   const items = NAV.filter(n => !n.mgr || isMgr);
 
