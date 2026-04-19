@@ -13,6 +13,7 @@ import Login from "@/app/(auth)/Login";
 import Signup from "@/app/(auth)/Signup";
 import ForgotPassword from "@/app/(auth)/ForgotPassword";
 import ResetPassword from "@/app/(auth)/ResetPassword";
+import AcceptInvite from "@/app/(auth)/AcceptInvite";
 import Dashboard from "@/app/(app)/Dashboard";
 import Rota from "@/app/(app)/Rota";
 import Leave from "@/app/(app)/Leave";
