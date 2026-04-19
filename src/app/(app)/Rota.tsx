@@ -195,6 +195,19 @@ export default function Rota() {
     const newAssigned = targetUserId === 'unassigned' ? null : targetUserId;
     if (dragged.assigned_user_id === newAssigned && dragged.shift_date === targetDate) return;
 
+    // Block drops onto an approved-leave date for the target employee
+    if (newAssigned) {
+      const blocked = leave.find(l =>
+        l.status === 'approved' &&
+        l.user_id === newAssigned &&
+        inRange(targetDate, l.start_date, l.end_date)
+      );
+      if (blocked) {
+        toast.error(`${peopleById[newAssigned]?.name ?? 'Employee'} is on approved leave that day.`);
+        return;
+      }
+    }
+
     // find an occupant in the target cell (for swap). If multiple, swap with the first.
     const occupant = filteredShifts.find(x =>
       x.id !== dragged.id &&
