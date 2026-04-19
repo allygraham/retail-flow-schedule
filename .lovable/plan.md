@@ -1,25 +1,14 @@
 
+This is a question, not an implementation request — answer directly from the code, no plan needed.
 
-The Rota typecheck is already fixed (status cast to literal union). What remains: wire all routes in `App.tsx` + replace the placeholder `Index.tsx` redirect, then verify demo logins.
-
-## Plan
-
-**1. Update `src/App.tsx`** — register all routes:
-- Public: `/` → Landing, `/features`, `/pricing`
-- Auth: `/login`, `/signup`, `/forgot-password`, `/reset-password`
-- Protected (wrapped in `AuthProvider` + `ProtectedRoute` + `AppShell`):
-  - `/dashboard`, `/rota`, `/leave`, `/profile`
-  - Manager-only (`roles={['owner','manager']}`): `/team`, `/stores`, `/settings`
-- Wrap `<Routes>` in `<AuthProvider>` inside `<BrowserRouter>`
-- Keep `NotFound` catch-all
-
-**2. Remove placeholder `src/pages/Index.tsx`** usage — Landing becomes `/`.
-
-**3. Verify end-to-end** via the preview:
-- Load `/`, navigate to `/login`
-- Sign in as `owner@lavoro.demo` / `LavoroDemo123!` → confirm dashboard, rota grid renders with seeded shifts, manager-only nav visible
-- Sign in as `employee@lavoro.demo` → confirm restricted nav (no Team/Stores/Settings), personal shifts visible
-- Check console for errors; query DB if shifts/leave don't render
-
-No DB or component changes needed beyond routing.
-
+From `src/app/(app)/Rota.tsx`:
+- Managers/owners (`role === 'owner' || 'manager'`) get edit affordances; employees see read-only.
+- Grid: rows = employees (+ Unassigned row), columns = 7 days of the selected week.
+- Create: click an empty cell → `openCreate(date)` opens Modal with defaults (09:00–17:00, 30min break, current store filter).
+- Edit: click an existing shift → `openEdit(sh)` opens same modal pre-filled.
+- Modal fields: date, start/end, store, role, assign-to (employee or unassigned), break, published (draft/published), notes. Validated by `shiftSchema` (Zod).
+- Save: insert/update `shifts` row with `business_id`, `created_by`, `status` derived from assignment.
+- Reassign/move: drag a shift card to another (employee, day) cell — empty target = move, occupied = swap. Optimistic update + Supabase update.
+- Publish: "Publish drafts" button bulk-flips `is_published=true` for all draft shifts in the current view.
+- Week nav: Prev / This week / Next; Store filter scopes the grid.
+- Conflicts: inline badges for overlap with another shift same day, or approved/pending leave.
