@@ -70,6 +70,20 @@ export function useLeaveRequests() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Live updates: any insert/update/delete on leave_requests in this business reloads.
+  useEffect(() => {
+    if (!business) return;
+    const channel = supabase
+      .channel(`leave_requests:${business.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leave_requests', filter: `business_id=eq.${business.id}` },
+        () => { load(); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [business, load]);
+
   const submit = useCallback(async (input: {
     leave_type: 'annual' | 'unpaid' | 'sick' | 'other';
     start_date: string;
