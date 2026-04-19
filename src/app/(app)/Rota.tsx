@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Card } from '@/components/common/Card';
@@ -26,6 +27,8 @@ export default function Rota() {
   const [modal, setModal] = useState<{open: boolean; shift?: any; date?: string}>({open: false});
   const [form, setForm] = useState<any>({});
   const [err, setErr] = useState<string | null>(null);
+  const [activeShift, setActiveShift] = useState<any | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const days = weekDays(weekStart);
   const weekEnd = addDays(weekStart, 6);
@@ -118,6 +121,52 @@ export default function Rota() {
     load();
   };
 
+  const onDragStart = (e: DragStartEvent) => {
+    const sh = shifts.find(x => x.id === e.active.id);
+    if (sh) setActiveShift(sh);
+  };
+
+  const onDragEnd = async (e: DragEndEvent) => {
+    setActiveShift(null);
+    if (!isMgr || !e.over) return;
+    const dragged = shifts.find(x => x.id === e.active.id);
+    if (!dragged) return;
+    const [targetUserId, targetDate] = String(e.over.id).split('|');
+    const newAssigned = targetUserId === 'unassigned' ? null : targetUserId;
+    if (dragged.assigned_user_id === newAssigned && dragged.shift_date === targetDate) return;
+
+    // find an occupant in the target cell (for swap). If multiple, swap with the first.
+    const occupant = filteredShifts.find(x =>
+      x.id !== dragged.id &&
+      x.shift_date === targetDate &&
+      (x.assigned_user_id ?? 'unassigned') === (newAssigned ?? 'unassigned')
+    );
+
+    // optimistic update
+    setShifts(prev => prev.map(x => {
+      if (x.id === dragged.id) return { ...x, assigned_user_id: newAssigned, shift_date: targetDate, status: newAssigned ? 'scheduled' : 'unassigned' };
+      if (occupant && x.id === occupant.id) return { ...x, assigned_user_id: dragged.assigned_user_id, shift_date: dragged.shift_date, status: dragged.assigned_user_id ? 'scheduled' : 'unassigned' };
+      return x;
+    }));
+
+    const updates: any[] = [
+      supabase.from('shifts').update({
+        assigned_user_id: newAssigned,
+        shift_date: targetDate,
+        status: (newAssigned ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+      }).eq('id', dragged.id),
+    ];
+    if (occupant) {
+      updates.push(supabase.from('shifts').update({
+        assigned_user_id: dragged.assigned_user_id,
+        shift_date: dragged.shift_date,
+        status: (dragged.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+      }).eq('id', occupant.id));
+    }
+    const results = await Promise.all(updates);
+    if (results.some((r: any) => r.error)) load();
+  };
+
   return (
     <div className={s.page}>
       <header className={s.header}>
@@ -138,77 +187,90 @@ export default function Rota() {
       </header>
 
       <Card padded={false}>
-        <div className={s.grid}>
-          <div className={s.gridHead}>Staff</div>
-          {days.map(d => (
-            <div key={isoDate(d)} className={s.gridHead}>
-              <div className={s.dayName}>{format(d, 'EEE')}</div>
-              <div className={s.dayDate}>{format(d, 'd MMM')}</div>
-            </div>
-          ))}
-          {/* per-employee rows */}
-          {people.map(p => (
-            <div key={p.user_id} className={s.contents}>
-              <div className={s.staffCell}>
-                <Avatar name={p.name} size="sm" />
-                <div>
-                  <div className={s.staffName}>{p.name}</div>
-                  <div className={s.staffRole}>{roleById[p.primary_role_id]?.name ?? '—'}</div>
+        <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+          <div className={s.grid}>
+            <div className={s.gridHead}>Staff</div>
+            {days.map(d => (
+              <div key={isoDate(d)} className={s.gridHead}>
+                <div className={s.dayName}>{format(d, 'EEE')}</div>
+                <div className={s.dayDate}>{format(d, 'd MMM')}</div>
+              </div>
+            ))}
+            {/* per-employee rows */}
+            {people.map(p => (
+              <div key={p.user_id} className={s.contents}>
+                <div className={s.staffCell}>
+                  <Avatar name={p.name} size="sm" />
+                  <div>
+                    <div className={s.staffName}>{p.name}</div>
+                    <div className={s.staffRole}>{roleById[p.primary_role_id]?.name ?? '—'}</div>
+                  </div>
                 </div>
+                {days.map(d => {
+                  const dStr = isoDate(d);
+                  const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
+                  const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
+                  return (
+                    <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={!isMgr || !!onLeave}
+                      onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr)}>
+                      {onLeave && (
+                        <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
+                          <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
+                        </div>
+                      )}
+                      {cell.map(sh => (
+                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
+                          <div className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
+                            onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}
+                            style={{ borderLeftColor: roleById[sh.role_id]?.color ?? undefined }}
+                          >
+                            <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
+                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {hoursBetween(sh.start_time, sh.end_time, sh.break_minutes)}h</div>
+                            {conflictsFor(sh).length > 0 && <Badge tone="danger">⚠ {conflictsFor(sh).join(', ')}</Badge>}
+                            {!sh.is_published && <Badge tone="warning">Draft</Badge>}
+                          </div>
+                        </DraggableShift>
+                      ))}
+                    </DroppableCell>
+                  );
+                })}
+              </div>
+            ))}
+            {/* Unassigned row */}
+            <div className={s.contents}>
+              <div className={s.staffCell}>
+                <Avatar name="?" size="sm" />
+                <div><div className={s.staffName}>Unassigned</div><div className={s.staffRole}>Open shifts</div></div>
               </div>
               {days.map(d => {
                 const dStr = isoDate(d);
-                const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
-                const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
+                const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
                 return (
-                  <div key={dStr} className={s.cell} onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr)}>
-                    {onLeave && (
-                      <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
-                        <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
-                      </div>
-                    )}
-                    {cell.map(sh => {
-                      const cf = conflictsFor(sh);
-                      return (
-                        <div key={sh.id} className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
-                          onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}
-                          style={{ borderLeftColor: roleById[sh.role_id]?.color ?? undefined }}
-                        >
+                  <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={!isMgr}
+                    onClick={() => isMgr && openCreate(dStr)}>
+                    {cell.map(sh => (
+                      <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
+                        <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}>
                           <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                          <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {hoursBetween(sh.start_time, sh.end_time, sh.break_minutes)}h</div>
-                          {cf.length > 0 && <Badge tone="danger">⚠ {cf.join(', ')}</Badge>}
-                          {!sh.is_published && <Badge tone="warning">Draft</Badge>}
+                          <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id]?.name ?? 'Floor'}</div>
+                          <Badge tone="unassigned" dot>Needs cover</Badge>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </DraggableShift>
+                    ))}
+                  </DroppableCell>
                 );
               })}
             </div>
-          ))}
-          {/* Unassigned row */}
-          <div className={s.contents}>
-            <div className={s.staffCell}>
-              <Avatar name="?" size="sm" />
-              <div><div className={s.staffName}>Unassigned</div><div className={s.staffRole}>Open shifts</div></div>
-            </div>
-            {days.map(d => {
-              const dStr = isoDate(d);
-              const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
-              return (
-                <div key={dStr} className={s.cell} onClick={() => isMgr && openCreate(dStr)}>
-                  {cell.map(sh => (
-                    <div key={sh.id} className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}>
-                      <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                      <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id]?.name ?? 'Floor'}</div>
-                      <Badge tone="unassigned" dot>Needs cover</Badge>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
           </div>
-        </div>
+          <DragOverlay dropAnimation={null}>
+            {activeShift && (
+              <div className={`${s.shift} ${s.dragGhost}`} style={{ borderLeftColor: roleById[activeShift.role_id]?.color ?? undefined }}>
+                <div className={s.shiftTime}>{fmtTime(activeShift.start_time)}–{fmtTime(activeShift.end_time)}</div>
+                <div className={s.shiftMeta}>{storeById[activeShift.store_id]?.name}</div>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       </Card>
 
       {filteredShifts.length === 0 && (
@@ -263,6 +325,24 @@ export default function Rota() {
           {err && <div className={s.err}>{err}</div>}
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function DroppableCell({ id, disabled, onClick, children }: { id: string; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id, disabled });
+  return (
+    <div ref={setNodeRef} className={`${s.cell} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
+      {children}
+    </div>
+  );
+}
+
+function DraggableShift({ id, disabled, children }: { id: string; disabled?: boolean; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled });
+  return (
+    <div ref={setNodeRef} {...attributes} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: 'none', cursor: disabled ? 'pointer' : 'grab' }}>
+      {children}
     </div>
   );
 }
