@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import s from './Leave.module.scss';
 import t from './Team.module.scss';
 
-type AccountStatus = 'active' | 'invited' | 'expired' | 'revoked';
+type AccountStatus = 'active' | 'invited' | 'expired' | 'revoked' | 'disabled';
 
 interface Row {
   kind: 'member' | 'invite';
@@ -23,7 +23,9 @@ interface Row {
   full_name: string;
   email: string;
   role: 'owner' | 'manager' | 'employee';
+  store_id?: string | null;
   store_name: string;
+  job_id?: string | null;
   job_name: string;
   contracted_hours: number | null;
   employment_type: string;
@@ -37,17 +39,20 @@ const STATUS_TONE: Record<AccountStatus, 'success' | 'warning' | 'danger' | 'neu
   invited: 'warning',
   expired: 'danger',
   revoked: 'neutral',
+  disabled: 'neutral',
 };
 const STATUS_LABEL: Record<AccountStatus, string> = {
   active: 'Active',
   invited: 'Invited',
   expired: 'Expired',
   revoked: 'Revoked',
+  disabled: 'Disabled',
 };
 
 export default function Team() {
-  const { business, role } = useAuth();
+  const { business, role, user } = useAuth();
   const isMgr = role === 'owner' || role === 'manager';
+  const isOwner = role === 'owner';
 
   const [rows, setRows] = useState<Row[]>([]);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
@@ -77,6 +82,21 @@ export default function Team() {
   };
   const [form, setForm] = useState(blankForm);
 
+  // edit member modal
+  const [editRow, setEditRow] = useState<Row | null>(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    role: 'employee' as 'owner' | 'manager' | 'employee',
+    primary_store_id: '',
+    primary_role_id: '',
+    contracted_hours: '',
+  });
+
+  // confirm deactivate
+  const [confirmRow, setConfirmRow] = useState<Row | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
   const load = async () => {
     if (!business) return;
     setLoading(true);
@@ -87,6 +107,7 @@ export default function Team() {
       { data: storeRows },
       { data: jobRows },
       { data: invites },
+      { data: members },
     ] = await Promise.all([
       supabase.from('user_roles').select('user_id, role').eq('business_id', business.id),
       supabase.from('profiles').select('id, full_name'),
@@ -101,14 +122,12 @@ export default function Team() {
             .eq('business_id', business.id)
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
+      supabase.from('memberships').select('user_id, is_active').eq('business_id', business.id),
     ]);
 
-    // Fetch emails for active members (managers/owners only — service-side limitation otherwise)
     let memberEmails: Record<string, string> = {};
     if (isMgr && (roles ?? []).length) {
       const ids = (roles ?? []).map((r: any) => r.user_id);
-      // Try via auth admin endpoint won't work from client; we don't have member emails available.
-      // Safe fallback: leave blank for active members; managers can still see them via Cloud.
       memberEmails = Object.fromEntries(ids.map((id: string) => [id, '']));
     }
 
@@ -116,32 +135,40 @@ export default function Team() {
     const epMap = Object.fromEntries((ep ?? []).map((e: any) => [e.user_id, e]));
     const storeMap = Object.fromEntries((storeRows ?? []).map((x: any) => [x.id, x.name]));
     const jobMap = Object.fromEntries((jobRows ?? []).map((x: any) => [x.id, x.name]));
+    const memberMap = Object.fromEntries((members ?? []).map((m: any) => [m.user_id, m.is_active]));
 
-    const memberRows: Row[] = (roles ?? []).map((r: any) => ({
-      kind: 'member',
-      key: `m:${r.user_id}`,
-      user_id: r.user_id,
-      full_name: profMap[r.user_id] ?? 'Member',
-      email: memberEmails[r.user_id] ?? '',
-      role: r.role,
-      store_name: storeMap[epMap[r.user_id]?.primary_store_id] ?? '—',
-      job_name: jobMap[epMap[r.user_id]?.primary_role_id] ?? '—',
-      contracted_hours: epMap[r.user_id]?.contracted_hours ?? null,
-      employment_type: epMap[r.user_id]?.employment_type ?? '—',
-      account_status: 'active',
-      annual_leave_entitlement: epMap[r.user_id]?.annual_leave_entitlement ?? 28,
-    }));
+    const memberRows: Row[] = (roles ?? []).map((r: any) => {
+      const isActive = memberMap[r.user_id] !== false;
+      return {
+        kind: 'member' as const,
+        key: `m:${r.user_id}`,
+        user_id: r.user_id,
+        full_name: profMap[r.user_id] ?? 'Member',
+        email: memberEmails[r.user_id] ?? '',
+        role: r.role,
+        store_id: epMap[r.user_id]?.primary_store_id ?? null,
+        store_name: storeMap[epMap[r.user_id]?.primary_store_id] ?? '—',
+        job_id: epMap[r.user_id]?.primary_role_id ?? null,
+        job_name: jobMap[epMap[r.user_id]?.primary_role_id] ?? '—',
+        contracted_hours: epMap[r.user_id]?.contracted_hours ?? null,
+        employment_type: epMap[r.user_id]?.employment_type ?? '—',
+        account_status: (isActive ? 'active' : 'disabled') as AccountStatus,
+        annual_leave_entitlement: epMap[r.user_id]?.annual_leave_entitlement ?? 28,
+      };
+    });
 
     const inviteRows: Row[] = (invites ?? [])
       .filter((i: any) => i.status === 'pending' || i.status === 'expired' || i.status === 'revoked')
       .map((i: any) => ({
-        kind: 'invite',
+        kind: 'invite' as const,
         key: `i:${i.id}`,
         invitation_id: i.id,
         full_name: i.full_name ?? i.email,
         email: i.email,
         role: i.role,
+        store_id: i.primary_store_id,
         store_name: storeMap[i.primary_store_id] ?? '—',
+        job_id: i.primary_role_id,
         job_name: jobMap[i.primary_role_id] ?? '—',
         contracted_hours: i.contracted_hours ?? null,
         employment_type: '—',
@@ -161,7 +188,6 @@ export default function Team() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [business]);
 
-  // Realtime: refresh on invitation changes for this business
   useEffect(() => {
     if (!business || !isMgr) return;
     const ch = supabase
@@ -179,7 +205,6 @@ export default function Team() {
       if (fRole !== 'all' && r.role !== fRole) return false;
       if (fStatus !== 'all' && r.account_status !== fStatus) return false;
       if (fStore !== 'all') {
-        // Match by store name lookup
         const wanted = stores.find(x => x.id === fStore)?.name;
         if (!wanted || r.store_name !== wanted) return false;
       }
@@ -192,7 +217,7 @@ export default function Team() {
   }, [rows, q, fRole, fStatus, fStore, stores]);
 
   const counts = useMemo(() => {
-    const c = { active: 0, invited: 0, expired: 0, revoked: 0 };
+    const c = { active: 0, invited: 0, expired: 0, revoked: 0, disabled: 0 };
     rows.forEach(r => { c[r.account_status]++; });
     return c;
   }, [rows]);
@@ -255,7 +280,6 @@ export default function Team() {
     });
     setInviteBusy(false);
     if (error) {
-      // edge function returns JSON {error} with non-2xx
       const msg = (data as any)?.error || error.message || 'Something went wrong';
       setInviteErr(msg);
       return;
@@ -281,7 +305,6 @@ export default function Team() {
   };
 
   const resendInvite = async (id: string) => {
-    // Extend expiry by 14 days; the link itself stays the same.
     const newExpiry = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
     const { error } = await supabase
       .from('invitations')
@@ -292,6 +315,117 @@ export default function Team() {
     load();
   };
 
+  // ---- Edit member ----
+  const openEdit = (row: Row) => {
+    setEditErr(null);
+    setEditForm({
+      role: row.role,
+      primary_store_id: row.store_id ?? '',
+      primary_role_id: row.job_id ?? '',
+      contracted_hours: row.contracted_hours != null ? String(row.contracted_hours) : '',
+    });
+    setEditRow(row);
+  };
+
+  const submitEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!business || !editRow?.user_id) return;
+    setEditErr(null);
+
+    const hours = editForm.contracted_hours === '' ? null : Number(editForm.contracted_hours);
+    if (hours != null && (!Number.isFinite(hours) || hours < 0 || hours > 168)) {
+      setEditErr('Contracted hours must be between 0 and 168'); return;
+    }
+    if (!editForm.primary_store_id) { setEditErr('Pick a primary store'); return; }
+
+    setEditBusy(true);
+
+    // Role change: only owners can change roles or assign owner
+    const roleChanged = editForm.role !== editRow.role;
+    if (roleChanged && !isOwner) {
+      setEditBusy(false);
+      setEditErr('Only owners can change roles'); return;
+    }
+
+    try {
+      if (roleChanged) {
+        const { error: roleErr } = await supabase
+          .from('user_roles')
+          .update({ role: editForm.role })
+          .eq('business_id', business.id)
+          .eq('user_id', editRow.user_id);
+        if (roleErr) throw roleErr;
+      }
+
+      // Upsert employee_profile fields
+      const { data: existing } = await supabase
+        .from('employee_profiles')
+        .select('id')
+        .eq('business_id', business.id)
+        .eq('user_id', editRow.user_id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error: epErr } = await supabase
+          .from('employee_profiles')
+          .update({
+            primary_store_id: editForm.primary_store_id,
+            primary_role_id: editForm.primary_role_id || null,
+            contracted_hours: hours,
+          })
+          .eq('id', existing.id);
+        if (epErr) throw epErr;
+      } else {
+        const { error: epErr } = await supabase
+          .from('employee_profiles')
+          .insert({
+            business_id: business.id,
+            user_id: editRow.user_id,
+            primary_store_id: editForm.primary_store_id,
+            primary_role_id: editForm.primary_role_id || null,
+            contracted_hours: hours,
+          });
+        if (epErr) throw epErr;
+      }
+
+      toast.success('Employee updated');
+      setEditRow(null);
+      load();
+    } catch (err: any) {
+      setEditErr(err.message || 'Update failed');
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  // ---- Deactivate / reactivate ----
+  const setMembershipActive = async (row: Row, active: boolean) => {
+    if (!business || !row.user_id) return;
+    setConfirmBusy(true);
+    const { error } = await supabase
+      .from('memberships')
+      .update({ is_active: active })
+      .eq('business_id', business.id)
+      .eq('user_id', row.user_id);
+    setConfirmBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(active ? 'Employee reactivated' : 'Employee deactivated');
+    setConfirmRow(null);
+    load();
+  };
+
+  const canEdit = (row: Row) => {
+    if (!isMgr || row.kind !== 'member') return false;
+    if (row.role === 'owner' && !isOwner) return false;
+    return true;
+  };
+  const canDeactivate = (row: Row) => {
+    if (!isMgr || row.kind !== 'member') return false;
+    if (row.user_id === user?.id) return false; // can't disable self
+    if (row.role === 'owner' && !isOwner) return false;
+    return true;
+  };
+
   return (
     <div className={s.page}>
       <header className={s.header}>
@@ -300,6 +434,7 @@ export default function Team() {
           <h1 className={s.h1}>Your people</h1>
           <p className={s.sub}>
             {counts.active} active · {counts.invited} invited
+            {counts.disabled > 0 ? ` · ${counts.disabled} disabled` : ''}
             {counts.expired > 0 ? ` · ${counts.expired} expired` : ''}
           </p>
         </div>
@@ -327,6 +462,7 @@ export default function Team() {
           <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="invited">Invited</option>
+          <option value="disabled">Disabled</option>
           <option value="expired">Expired</option>
           <option value="revoked">Revoked</option>
         </Select>
@@ -359,7 +495,7 @@ export default function Team() {
             </thead>
             <tbody>
               {filtered.map(m => (
-                <tr key={m.key}>
+                <tr key={m.key} className={m.account_status === 'disabled' ? t.rowDisabled : ''}>
                   <td>
                     <div className={s.who}>
                       <Avatar name={m.full_name} size="sm" />
@@ -417,19 +553,34 @@ export default function Team() {
                   </td>
                   {isMgr && (
                     <td>
-                      {m.kind === 'invite' && m.account_status !== 'revoked' && (
-                        <div className={t.rowActions}>
-                          <button className={t.linkBtn} onClick={() => copyAccept(m.accept_token)}>Copy link</button>
-                          {m.account_status === 'expired' && (
-                            <button className={t.linkBtn} onClick={() => resendInvite(m.invitation_id!)}>
-                              Renew
+                      <div className={t.rowActions}>
+                        {m.kind === 'invite' && m.account_status !== 'revoked' && (
+                          <>
+                            <button className={t.linkBtn} onClick={() => copyAccept(m.accept_token)}>Copy link</button>
+                            {m.account_status === 'expired' && (
+                              <button className={t.linkBtn} onClick={() => resendInvite(m.invitation_id!)}>
+                                Renew
+                              </button>
+                            )}
+                            <button className={t.linkBtnDanger} onClick={() => revokeInvite(m.invitation_id!)}>
+                              Revoke
                             </button>
-                          )}
-                          <button className={t.linkBtnDanger} onClick={() => revokeInvite(m.invitation_id!)}>
-                            Revoke
+                          </>
+                        )}
+                        {canEdit(m) && (
+                          <button className={t.linkBtn} onClick={() => openEdit(m)}>Edit</button>
+                        )}
+                        {canDeactivate(m) && m.account_status === 'active' && (
+                          <button className={t.linkBtnDanger} onClick={() => setConfirmRow(m)}>
+                            Deactivate
                           </button>
-                        </div>
-                      )}
+                        )}
+                        {canDeactivate(m) && m.account_status === 'disabled' && (
+                          <button className={t.linkBtn} onClick={() => setMembershipActive(m, true)}>
+                            Reactivate
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -534,6 +685,90 @@ export default function Team() {
             {inviteErr && <div className={s.err}>{inviteErr}</div>}
           </form>
         )}
+      </Modal>
+
+      {/* Edit member modal */}
+      <Modal
+        open={!!editRow}
+        onClose={() => setEditRow(null)}
+        title={editRow ? `Edit ${editRow.full_name}` : 'Edit employee'}
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setEditRow(null)}>Cancel</Button>
+            <Button onClick={submitEdit as any} loading={editBusy}>Save changes</Button>
+          </>
+        }
+      >
+        <form onSubmit={submitEdit} className={s.form}>
+          <div className={s.row2}>
+            <Field label="Role" hint={!isOwner ? 'Only owners can change roles' : undefined}>
+              <Select
+                value={editForm.role}
+                disabled={!isOwner}
+                onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}
+              >
+                <option value="employee">Employee</option>
+                <option value="manager">Manager</option>
+                <option value="owner">Owner</option>
+              </Select>
+            </Field>
+            <Field label="Primary store">
+              <Select
+                value={editForm.primary_store_id}
+                onChange={e => setEditForm({ ...editForm, primary_store_id: e.target.value })}
+                required
+              >
+                <option value="">Select…</option>
+                {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <div className={s.row2}>
+            <Field label="Job title" hint="Optional">
+              <Select
+                value={editForm.primary_role_id}
+                onChange={e => setEditForm({ ...editForm, primary_role_id: e.target.value })}
+              >
+                <option value="">—</option>
+                {jobs.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Contracted hours / week" hint="Optional">
+              <Input
+                type="number" min={0} max={168} step={0.5}
+                value={editForm.contracted_hours}
+                onChange={e => setEditForm({ ...editForm, contracted_hours: e.target.value })}
+              />
+            </Field>
+          </div>
+          {editErr && <div className={s.err}>{editErr}</div>}
+        </form>
+      </Modal>
+
+      {/* Confirm deactivate */}
+      <Modal
+        open={!!confirmRow}
+        onClose={() => setConfirmRow(null)}
+        title="Deactivate employee?"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmRow(null)}>Cancel</Button>
+            <Button
+              variant="danger"
+              loading={confirmBusy}
+              onClick={() => confirmRow && setMembershipActive(confirmRow, false)}
+            >
+              Deactivate
+            </Button>
+          </>
+        }
+      >
+        <p className={s.muted}>
+          {confirmRow?.full_name} will lose access to {business?.name}. Their shifts and history will be preserved
+          and you can reactivate them at any time.
+        </p>
       </Modal>
     </div>
   );

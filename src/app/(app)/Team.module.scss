@@ -18,7 +18,8 @@
 .inlineBtn { background: transparent; border: none; cursor: pointer; font-weight: $fw-semibold; color: $brand-700; }
 .inlineBtnGhost { background: transparent; border: none; cursor: pointer; color: $text-muted; }
 
-.rowActions { display: flex; gap: $sp-2; justify-content: flex-end; }
+.rowActions { display: flex; gap: $sp-2; justify-content: flex-end; flex-wrap: wrap; }
+.rowDisabled { opacity: 0.55; }
 .linkBtn { background: transparent; border: none; cursor: pointer; color: $brand-700; font-weight: $fw-semibold; font-size: $fs-sm; padding: 0; }
 .linkBtnDanger { background: transparent; border: none; cursor: pointer; color: #b91c1c; font-weight: $fw-semibold; font-size: $fs-sm; padding: 0; }
 
