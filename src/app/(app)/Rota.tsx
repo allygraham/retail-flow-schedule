@@ -360,6 +360,7 @@ export default function Rota() {
                     </DroppableCell>
                   );
                 })}
+                <div className={s.totalCell}>{fmtH(openHours)}<span className={s.totalUnit}>h</span></div>
               </div>
             )}
           </div>
