@@ -114,22 +114,32 @@ export default function Rota() {
 
   const remove = async () => {
     if (!modal.shift) return;
-    if (!confirm('Delete this shift?')) return;
-    await supabase.from('shifts').delete().eq('id', modal.shift.id);
-    setModal({ open: false }); load();
+    const id = modal.shift.id;
+    toast('Delete this shift?', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          const { error } = await supabase.from('shifts').delete().eq('id', id);
+          if (error) { toast.error(error.message); return; }
+          setModal({ open: false });
+          toast.success('Shift deleted');
+          load();
+        },
+      },
+      cancel: { label: 'Cancel', onClick: () => {} },
+    });
   };
 
-  const copyPreviousWeek = async () => {
-    if (!isMgr || !business) return;
-    if (filteredShifts.length > 0 && !confirm('This week already has shifts. Add copies from last week anyway?')) return;
+  const performCopyPreviousWeek = async () => {
+    if (!business) return;
     const prevStart = addDays(weekStart, -7);
     const prevEnd = addDays(weekStart, -1);
     let q = supabase.from('shifts').select('*').eq('business_id', business.id)
       .gte('shift_date', isoDate(prevStart)).lte('shift_date', isoDate(prevEnd));
     if (storeFilter !== 'all') q = q.eq('store_id', storeFilter);
     const { data: prev, error } = await q;
-    if (error) { alert(error.message); return; }
-    if (!prev || prev.length === 0) { alert('No shifts found in the previous week.'); return; }
+    if (error) { toast.error(error.message); return; }
+    if (!prev || prev.length === 0) { toast.info('No shifts found in the previous week.'); return; }
     const rows = prev.map((s: any) => ({
       business_id: business.id,
       store_id: s.store_id,
@@ -145,11 +155,22 @@ export default function Rota() {
       created_by: user?.id,
     }));
     const { error: insErr } = await supabase.from('shifts').insert(rows as any);
-    if (insErr) { alert(insErr.message); return; }
+    if (insErr) { toast.error(insErr.message); return; }
+    toast.success(`Copied ${rows.length} shift${rows.length === 1 ? '' : 's'} from last week`);
     load();
   };
 
-  const togglePublish = async () => {
+  const copyPreviousWeek = async () => {
+    if (!isMgr || !business) return;
+    if (filteredShifts.length > 0) {
+      toast('This week already has shifts. Copy from last week anyway?', {
+        action: { label: 'Copy', onClick: () => performCopyPreviousWeek() },
+        cancel: { label: 'Cancel', onClick: () => {} },
+      });
+      return;
+    }
+    performCopyPreviousWeek();
+  };
     if (!isMgr) return;
     const ids = filteredShifts.filter(x => !x.is_published).map(x => x.id);
     if (ids.length === 0) return;
