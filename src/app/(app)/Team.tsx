@@ -454,24 +454,12 @@ export default function Team() {
           onChange={e => setQ(e.target.value)}
           className={t.search}
         />
-        <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
-          <option value="all">All roles</option>
-          <option value="owner">Owner</option>
-          <option value="manager">Manager</option>
-          <option value="employee">Employee</option>
-        </Select>
-        <Select value={fStore} onChange={e => setFStore(e.target.value)}>
-          <option value="all">All stores</option>
-          {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-        </Select>
-        <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="invited">Invited</option>
-          <option value="disabled">Disabled</option>
-          <option value="expired">Expired</option>
-          <option value="revoked">Revoked</option>
-        </Select>
+        <Button variant="ghost" onClick={() => setFiltersOpen(true)}>
+          Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+        </Button>
+        {activeFilterCount > 0 && (
+          <button type="button" className={t.linkBtn} onClick={clearFilters}>Clear</button>
+        )}
       </div>
 
       <Card padded={false}>
