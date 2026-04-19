@@ -4,6 +4,7 @@ import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeav
 import { STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
 import { useLeaveBalance, daysBetween } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
+import { LeaveBalanceInline } from '@/features/leave/LeaveBalanceInline';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -279,6 +280,12 @@ export default function Leave() {
                 </div>
               </div>
             </div>
+            {reviewing.row.leave_type === 'annual' && (
+              <LeaveBalanceInline
+                userId={reviewing.row.user_id}
+                pendingDays={daysBetween(reviewing.row.start_date, reviewing.row.end_date)}
+              />
+            )}
             {reviewing.row.reason && (
               <div className={s.reviewReason}>
                 <span className={s.reasonLabel}>Reason</span>

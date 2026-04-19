@@ -1,0 +1,14 @@
+@use '@/styles/tokens' as *;
+
+.row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: $sp-2;
+  background: $brand-50; border: 1px solid rgba($brand-600, 0.15);
+  border-radius: $r-md; padding: $sp-3;
+  font-size: $fs-sm;
+}
+.label { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.06em; color: $brand-700; font-weight: $fw-semibold; }
+.value { color: $text; strong { font-family: $font-display; font-weight: $fw-bold; color: $brand-700; } }
+.sep { color: $text-muted; margin: 0 6px; }
+.muted { color: $text-muted; }
+.after { margin-left: auto; font-size: $fs-xs; color: $text-soft; padding: 2px 8px; background: $surface; border-radius: $r-sm; border: 1px solid $border; }
+.warn { color: #991b1b; background: #fee2e2; border-color: #fca5a5; font-weight: $fw-semibold; }
