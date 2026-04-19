@@ -6,9 +6,10 @@
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; }
 
-.grid { display: grid; gap: $sp-4; grid-template-columns: 1fr;
+.grid { display: grid; gap: $sp-4; grid-template-columns: 1fr; align-items: start;
   @include lg { grid-template-columns: 1fr 1.2fr; }
 }
+.col { display: flex; flex-direction: column; gap: $sp-4; }
 .who { display: flex; align-items: center; gap: $sp-3; margin-bottom: $sp-5; }
 .name { font-family: $font-display; font-weight: $fw-bold; font-size: $fs-xl; }
 .role { color: $text-muted; font-size: $fs-sm; display: flex; align-items: center; gap: 6px; margin-top: 4px; }

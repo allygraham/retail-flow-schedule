@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
+import { useLeaveBalance, daysBetween } from '@/features/leave/useLeaveBalance';
+import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
+import { LeaveBalanceInline } from '@/features/leave/LeaveBalanceInline';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -19,6 +22,7 @@ type Filter = 'pending' | 'reviewed' | 'all';
 export default function Leave() {
   const { user } = useAuth();
   const { requests, loading, isMgr, submit, cancelOwn, review } = useLeaveRequests();
+  const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
   const [requestModal, setRequestModal] = useState(false);
   const [form, setForm] = useState<any>({
@@ -46,11 +50,22 @@ export default function Leave() {
     setFormErr(null);
     const parsed = leaveSchema.safeParse(form);
     if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
+    // Soft warn if annual leave exceeds remaining balance.
+    if (parsed.data.leave_type === 'annual' && balance) {
+      const days = daysBetween(parsed.data.start_date, parsed.data.end_date);
+      if (days > balance.remaining) {
+        const ok = window.confirm(
+          `This request is ${days} day${days === 1 ? '' : 's'} but you only have ${balance.remaining} day${balance.remaining === 1 ? '' : 's'} of annual leave remaining. Submit anyway?`
+        );
+        if (!ok) return;
+      }
+    }
     try {
       await submit(parsed.data);
       setRequestModal(false);
       setForm({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
       toast.success('Request submitted. Your manager has been notified.');
+      reloadBalance();
     } catch (e: any) {
       setFormErr(e.message ?? 'Could not submit');
     }
@@ -71,6 +86,7 @@ export default function Leave() {
           : verb,
       );
       setReviewing(null);
+      reloadBalance();
     } catch (e: any) {
       toast.error(e.message ?? 'Could not save decision');
     }
@@ -100,6 +116,10 @@ export default function Leave() {
         </div>
         <Button onClick={() => setRequestModal(true)}>Request time off</Button>
       </header>
+
+      {!isMgr && (
+        <LeaveBalanceCard balance={balance} loading={balanceLoading} />
+      )}
 
       {isMgr && (
         <div className={s.tabs} role="tablist">
@@ -260,6 +280,12 @@ export default function Leave() {
                 </div>
               </div>
             </div>
+            {reviewing.row.leave_type === 'annual' && (
+              <LeaveBalanceInline
+                userId={reviewing.row.user_id}
+                pendingDays={daysBetween(reviewing.row.start_date, reviewing.row.end_date)}
+              />
+            )}
             {reviewing.row.reason && (
               <div className={s.reviewReason}>
                 <span className={s.reasonLabel}>Reason</span>
