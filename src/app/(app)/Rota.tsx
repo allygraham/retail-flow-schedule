@@ -324,7 +324,7 @@ export default function Rota() {
             ))}
             <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
             {/* per-employee rows */}
-            {people.map(p => (
+            {visiblePeople.map(p => (
               <div key={p.user_id} className={s.contents}>
                 <div className={s.staffCell}>
                   <Avatar name={p.name} size="sm" />
