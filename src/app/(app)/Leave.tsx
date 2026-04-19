@@ -21,6 +21,7 @@ type Filter = 'pending' | 'reviewed' | 'all';
 export default function Leave() {
   const { user } = useAuth();
   const { requests, loading, isMgr, submit, cancelOwn, review } = useLeaveRequests();
+  const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
   const [requestModal, setRequestModal] = useState(false);
   const [form, setForm] = useState<any>({
