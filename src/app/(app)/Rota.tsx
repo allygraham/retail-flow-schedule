@@ -27,6 +27,8 @@ export default function Rota() {
   const [modal, setModal] = useState<{open: boolean; shift?: any; date?: string}>({open: false});
   const [form, setForm] = useState<any>({});
   const [err, setErr] = useState<string | null>(null);
+  const [activeShift, setActiveShift] = useState<any | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const days = weekDays(weekStart);
   const weekEnd = addDays(weekStart, 6);
