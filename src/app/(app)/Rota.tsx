@@ -329,7 +329,7 @@ export default function Rota() {
   );
 }
 
-function DroppableCell({ id, disabled, onClick, children }: { id: string; disabled?: boolean; onClick?: () => void; children: React.ReactNode }) {
+function DroppableCell({ id, disabled, onClick, children }: { id: string; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id, disabled });
   return (
     <div ref={setNodeRef} className={`${s.cell} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
@@ -338,7 +338,7 @@ function DroppableCell({ id, disabled, onClick, children }: { id: string; disabl
   );
 }
 
-function DraggableShift({ id, disabled, children }: { id: string; disabled?: boolean; children: React.ReactNode }) {
+function DraggableShift({ id, disabled, children }: { id: string; disabled?: boolean; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled });
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: 'none', cursor: disabled ? 'pointer' : 'grab' }}>
