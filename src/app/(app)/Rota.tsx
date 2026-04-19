@@ -468,6 +468,26 @@ export default function Rota() {
           {err && <div className={s.err}>{err}</div>}
         </div>
       </Modal>
+
+      {/* Publish confirmation modal */}
+      <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish drafts" size="sm">
+        <div style={{ lineHeight: 1.6 }}>
+          <p>
+            You are about to publish <strong>{publishModal.count} draft shift{publishModal.count === 1 ? '' : 's'}</strong>.
+          </p>
+          <ul style={{ margin: '12px 0', paddingLeft: 20 }}>
+            <li>Week: <strong>{fmtDate(weekStart, 'd MMM yyyy')}</strong></li>
+            <li>Store: <strong>{storeFilter === 'all' ? 'All stores' : storeById[storeFilter]?.name ?? 'Selected store'}</strong></li>
+          </ul>
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
+            Published shifts will be visible to employees.
+          </p>
+        </div>
+        <div slot="footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => setPublishModal({ open: false, count: 0 })}>Cancel</Button>
+          <Button onClick={confirmPublish}>Publish {publishModal.count} shift{publishModal.count === 1 ? '' : 's'}</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
