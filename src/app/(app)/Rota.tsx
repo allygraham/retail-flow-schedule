@@ -310,31 +310,33 @@ export default function Rota() {
                 })}
               </div>
             ))}
-            {/* Unassigned row */}
-            <div className={s.contents}>
-              <div className={s.staffCell}>
-                <Avatar name="?" size="sm" />
-                <div><div className={s.staffName}>Unassigned</div><div className={s.staffRole}>Open shifts</div></div>
+            {/* Unassigned row — hidden for non-managers when there's nothing to cover */}
+            {(isMgr || filteredShifts.some(sh => !sh.assigned_user_id)) && (
+              <div className={s.contents}>
+                <div className={s.staffCell}>
+                  <Avatar name="?" size="sm" />
+                  <div><div className={s.staffName}>Unassigned</div><div className={s.staffRole}>Open shifts</div></div>
+                </div>
+                {days.map(d => {
+                  const dStr = isoDate(d);
+                  const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
+                  return (
+                    <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={!isMgr}
+                      onClick={() => isMgr && openCreate(dStr)}>
+                      {cell.map(sh => (
+                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
+                          <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}>
+                            <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
+                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id]?.name ?? 'Floor'}</div>
+                            <Badge tone="unassigned" dot>Needs cover</Badge>
+                          </div>
+                        </DraggableShift>
+                      ))}
+                    </DroppableCell>
+                  );
+                })}
               </div>
-              {days.map(d => {
-                const dStr = isoDate(d);
-                const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
-                return (
-                  <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={!isMgr}
-                    onClick={() => isMgr && openCreate(dStr)}>
-                    {cell.map(sh => (
-                      <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
-                        <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}>
-                          <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                          <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id]?.name ?? 'Floor'}</div>
-                          <Badge tone="unassigned" dot>Needs cover</Badge>
-                        </div>
-                      </DraggableShift>
-                    ))}
-                  </DroppableCell>
-                );
-              })}
-            </div>
+            )}
           </div>
           <DragOverlay dropAnimation={null}>
             {activeShift && (
