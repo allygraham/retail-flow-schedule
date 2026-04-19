@@ -321,7 +321,7 @@ export default function Rota() {
             {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
           {isMgr && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
-          {isMgr && <Button onClick={openPublishConfirm}>Publish drafts</Button>}
+          {isMgr && <Button onClick={openPublishConfirm}>Publish schedule</Button>}
         </div>
       </header>
 
