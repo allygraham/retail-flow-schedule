@@ -82,7 +82,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [business, isMgr]);
+  }, [business, isMgr, nav]);
 
   const items = NAV.filter(n => !n.mgr || isMgr);
 
