@@ -228,11 +228,19 @@ export default function Rota() {
     performCopyPreviousWeek();
   };
 
-  const togglePublish = async () => {
+  const openPublishConfirm = () => {
+    if (!isMgr) return;
+    const count = filteredShifts.filter(x => !x.is_published).length;
+    if (count === 0) return;
+    setPublishModal({ open: true, count });
+  };
+
+  const confirmPublish = async () => {
     if (!isMgr) return;
     const ids = filteredShifts.filter(x => !x.is_published).map(x => x.id);
     if (ids.length === 0) return;
     await supabase.from('shifts').update({ is_published: true }).in('id', ids);
+    setPublishModal({ open: false, count: 0 });
     load();
   };
 
