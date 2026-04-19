@@ -39,7 +39,7 @@ export default function Rota() {
     const [st, rl, ep, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
-      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
+      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id).eq('memberships.is_active', true),
       supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time'),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
     ]);
