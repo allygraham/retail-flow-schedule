@@ -30,7 +30,7 @@
 .dayName { color: $text; font-weight: $fw-bold; text-transform: none; letter-spacing: 0; font-size: $fs-sm; }
 .dayDate { color: $text-muted; font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
 
-.staffCell { display: flex; align-items: center; gap: $sp-2; padding: $sp-3 $sp-4; border-right: 1px solid $border; border-bottom: 1px solid $border; background: $surface; min-height: 80px; position: sticky; left: 0; }
+.staffCell { display: flex; align-items: center; gap: $sp-2; padding: $sp-3 $sp-4; border-right: 1px solid $border; border-bottom: 1px solid $border; background: $surface; min-height: 80px; position: sticky; left: 0; z-index: 2; }
 .staffName { font-size: $fs-sm; font-weight: $fw-semibold; @include truncate; max-width: 130px; }
 .staffRole { font-size: $fs-xs; color: $text-muted; }
 
