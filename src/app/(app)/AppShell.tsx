@@ -6,6 +6,7 @@ import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
+import { useBranding } from '@/features/branding/BrandingProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import s from './AppShell.module.scss';
@@ -22,6 +23,8 @@ const NAV = [
 
 export default function AppShell({ children }: { children?: ReactNode }) {
   const { fullName, business, role, signOut } = useAuth();
+  const { theme } = useBranding();
+  const workspaceName = theme.displayName || business?.name || 'Workspace';
   const nav = useNavigate();
   const location = useLocation();
   const isMgr = role === 'owner' || role === 'manager';
@@ -117,7 +120,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
 
   const renderBiz = () => (
     <div className={s.biz}>
-      <div className={s.bizName}>{business?.name ?? 'Workspace'}</div>
+      <div className={s.bizName}>{workspaceName}</div>
       <Badge tone="brand" dot>{role ?? '—'}</Badge>
     </div>
   );
@@ -137,14 +140,14 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         >
           <Menu size={22} />
         </button>
-        <div className={s.topbarBrand}><Logo size="sm" /></div>
+        <div className={s.topbarBrand}><Logo size="sm" useBusinessLogo /></div>
         <NotificationsBell variant="mobile" />
       </header>
 
       {/* Desktop sidebar (unchanged behavior) */}
       <aside className={s.side}>
         <div className={s.sideBrand}>
-          <Logo size="sm" />
+          <Logo size="sm" useBusinessLogo />
           <NotificationsBell variant="desktop" />
         </div>
         {renderBiz()}
@@ -166,7 +169,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         aria-label="Main navigation"
       >
         <div className={s.drawerHead}>
-          <Logo size="sm" />
+          <Logo size="sm" useBusinessLogo />
           <button
             ref={closeBtnRef}
             type="button"
