@@ -764,6 +764,47 @@ export default function Team() {
           and you can reactivate them at any time.
         </p>
       </Modal>
+
+      {/* Filters modal */}
+      <Modal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filter team"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={clearFilters}>Clear all</Button>
+            <Button onClick={() => setFiltersOpen(false)}>Done</Button>
+          </>
+        }
+      >
+        <div className={s.form}>
+          <Field label="Role">
+            <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
+              <option value="all">All roles</option>
+              <option value="owner">Owner</option>
+              <option value="manager">Manager</option>
+              <option value="employee">Employee</option>
+            </Select>
+          </Field>
+          <Field label="Store">
+            <Select value={fStore} onChange={e => setFStore(e.target.value)}>
+              <option value="all">All stores</option>
+              {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Account status">
+            <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="invited">Invited</option>
+              <option value="disabled">Disabled</option>
+              <option value="expired">Expired</option>
+              <option value="revoked">Revoked</option>
+            </Select>
+          </Field>
+        </div>
+      </Modal>
     </div>
   );
 }
