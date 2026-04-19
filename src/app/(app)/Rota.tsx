@@ -249,9 +249,9 @@ export default function Rota() {
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className={s.grid}>
-            <div className={s.gridHead}>Staff</div>
+            <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>
             {days.map(d => (
-              <div key={isoDate(d)} className={s.gridHead}>
+              <div key={isoDate(d)} className={`${s.gridHead} ${s.gridHeadDay}`}>
                 <div className={s.dayName}>{format(d, 'EEE')}</div>
                 <div className={s.dayDate}>{format(d, 'd MMM')}</div>
               </div>
