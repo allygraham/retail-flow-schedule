@@ -50,3 +50,22 @@ export const storeSchema = z.object({
   postcode: z.string().optional(),
 });
 export type StoreInput = z.infer<typeof storeSchema>;
+
+export const inviteEmployeeSchema = z.object({
+  first_name: z.string().trim().min(1, 'First name is required').max(60),
+  last_name: z.string().trim().min(1, 'Last name is required').max(60),
+  email: z.string().trim().toLowerCase().email('Enter a valid email').max(255),
+  role: z.enum(['employee', 'manager', 'owner']),
+  primary_store_id: z.string().uuid('Pick a primary store'),
+  primary_role_id: z.string().uuid().optional().nullable(),
+  contracted_hours: z.coerce.number().min(0).max(168).optional().nullable(),
+  hire_date: z.string().optional().nullable(),
+  phone: z.string().trim().max(40).optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
+});
+export type InviteEmployeeInput = z.infer<typeof inviteEmployeeSchema>;
+
+export const acceptInviteSchema = z.object({
+  full_name: z.string().trim().min(2, 'Enter your full name').max(120),
+  password: z.string().min(8, 'At least 8 characters'),
+});
