@@ -120,5 +120,5 @@
   &:focus-visible { @include focus-ring; }
 }
 
-.main { padding: $sp-5; min-width: 0; max-width: 100%; overflow-x: hidden; @include scrollbar; }
+.main { padding: $sp-5; min-width: 0; max-width: 100%; @include scrollbar; }
 @include md { .main { padding: $sp-7 $sp-8; } }
