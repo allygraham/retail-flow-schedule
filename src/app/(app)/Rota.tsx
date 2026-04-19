@@ -39,17 +39,37 @@ export default function Rota() {
     const [st, rl, ep, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
-      supabase.from('employee_profiles').select('user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
+      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
       supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time'),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
     ]);
     const userIds = (ep.data ?? []).map((e:any) => e.user_id);
-    const pf = userIds.length
-      ? await supabase.from('profiles').select('id, full_name').in('id', userIds)
-      : { data: [] as any[] };
+    const profileIds = (ep.data ?? []).map((e:any) => e.id);
+    const [pf, es] = await Promise.all([
+      userIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', userIds)
+        : Promise.resolve({ data: [] as any[] }),
+      profileIds.length
+        ? supabase.from('employee_stores').select('employee_profile_id, store_id').in('employee_profile_id', profileIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
     const nameById: Record<string,string> = Object.fromEntries((pf.data ?? []).map((p:any) => [p.id, p.full_name ?? 'Employee']));
+    const storesByProfile: Record<string, Set<string>> = {};
+    for (const row of (es.data ?? []) as any[]) {
+      (storesByProfile[row.employee_profile_id] ??= new Set()).add(row.store_id);
+    }
     setStores(st.data ?? []); setRoles(rl.data ?? []);
-    setPeople((ep.data ?? []).map((e:any) => ({ user_id: e.user_id, name: nameById[e.user_id] ?? 'Employee', primary_role_id: e.primary_role_id, primary_store_id: e.primary_store_id })));
+    setPeople((ep.data ?? []).map((e:any) => {
+      const ids = new Set<string>(storesByProfile[e.id] ?? []);
+      if (e.primary_store_id) ids.add(e.primary_store_id);
+      return {
+        user_id: e.user_id,
+        name: nameById[e.user_id] ?? 'Employee',
+        primary_role_id: e.primary_role_id,
+        primary_store_id: e.primary_store_id,
+        store_ids: Array.from(ids),
+      };
+    }));
     setShifts(sh.data ?? []); setLeave(lv.data ?? []);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, weekStart]);
