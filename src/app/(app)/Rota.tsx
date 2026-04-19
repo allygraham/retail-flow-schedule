@@ -38,12 +38,17 @@ export default function Rota() {
     const [st, rl, ep, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
-      supabase.from('employee_profiles').select('user_id, primary_role_id, primary_store_id, profiles!employee_profiles_user_id_fkey(full_name)').eq('business_id', business.id),
+      supabase.from('employee_profiles').select('user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
       supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time'),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
     ]);
+    const userIds = (ep.data ?? []).map((e:any) => e.user_id);
+    const pf = userIds.length
+      ? await supabase.from('profiles').select('id, full_name').in('id', userIds)
+      : { data: [] as any[] };
+    const nameById: Record<string,string> = Object.fromEntries((pf.data ?? []).map((p:any) => [p.id, p.full_name ?? 'Employee']));
     setStores(st.data ?? []); setRoles(rl.data ?? []);
-    setPeople((ep.data ?? []).map((e:any) => ({ user_id: e.user_id, name: e.profiles?.full_name ?? 'Employee', primary_role_id: e.primary_role_id, primary_store_id: e.primary_store_id })));
+    setPeople((ep.data ?? []).map((e:any) => ({ user_id: e.user_id, name: nameById[e.user_id] ?? 'Employee', primary_role_id: e.primary_role_id, primary_store_id: e.primary_store_id })));
     setShifts(sh.data ?? []); setLeave(lv.data ?? []);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, weekStart]);
