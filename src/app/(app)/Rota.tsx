@@ -39,17 +39,37 @@ export default function Rota() {
     const [st, rl, ep, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
-      supabase.from('employee_profiles').select('user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
+      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
       supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time'),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
     ]);
     const userIds = (ep.data ?? []).map((e:any) => e.user_id);
-    const pf = userIds.length
-      ? await supabase.from('profiles').select('id, full_name').in('id', userIds)
-      : { data: [] as any[] };
+    const profileIds = (ep.data ?? []).map((e:any) => e.id);
+    const [pf, es] = await Promise.all([
+      userIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', userIds)
+        : Promise.resolve({ data: [] as any[] }),
+      profileIds.length
+        ? supabase.from('employee_stores').select('employee_profile_id, store_id').in('employee_profile_id', profileIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
     const nameById: Record<string,string> = Object.fromEntries((pf.data ?? []).map((p:any) => [p.id, p.full_name ?? 'Employee']));
+    const storesByProfile: Record<string, Set<string>> = {};
+    for (const row of (es.data ?? []) as any[]) {
+      (storesByProfile[row.employee_profile_id] ??= new Set()).add(row.store_id);
+    }
     setStores(st.data ?? []); setRoles(rl.data ?? []);
-    setPeople((ep.data ?? []).map((e:any) => ({ user_id: e.user_id, name: nameById[e.user_id] ?? 'Employee', primary_role_id: e.primary_role_id, primary_store_id: e.primary_store_id })));
+    setPeople((ep.data ?? []).map((e:any) => {
+      const ids = new Set<string>(storesByProfile[e.id] ?? []);
+      if (e.primary_store_id) ids.add(e.primary_store_id);
+      return {
+        user_id: e.user_id,
+        name: nameById[e.user_id] ?? 'Employee',
+        primary_role_id: e.primary_role_id,
+        primary_store_id: e.primary_store_id,
+        store_ids: Array.from(ids),
+      };
+    }));
     setShifts(sh.data ?? []); setLeave(lv.data ?? []);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, weekStart]);
@@ -61,6 +81,15 @@ export default function Rota() {
   const peopleById = useMemo(() => Object.fromEntries(people.map(p => [p.user_id, p])), [people]);
   const storeById = useMemo(() => Object.fromEntries(stores.map(s => [s.id, s])), [stores]);
   const roleById = useMemo(() => Object.fromEntries(roles.map(r => [r.id, r])), [roles]);
+
+  // People shown as rows: filtered by selected store (membership OR a shift in that store this week).
+  const visiblePeople = useMemo(() => {
+    if (storeFilter === 'all') return people;
+    const assignedHere = new Set(
+      shifts.filter(sh => sh.store_id === storeFilter && sh.assigned_user_id).map(sh => sh.assigned_user_id),
+    );
+    return people.filter(p => p.store_ids?.includes(storeFilter) || assignedHere.has(p.user_id));
+  }, [people, shifts, storeFilter]);
 
   // Total scheduled hours per employee for the visible week (respects store filter).
   const hoursByUser = useMemo(() => {
@@ -295,7 +324,7 @@ export default function Rota() {
             ))}
             <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
             {/* per-employee rows */}
-            {people.map(p => (
+            {visiblePeople.map(p => (
               <div key={p.user_id} className={s.contents}>
                 <div className={s.staffCell}>
                   <Avatar name={p.name} size="sm" />
