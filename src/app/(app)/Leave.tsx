@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
+import { useLeaveBalance, daysBetween } from '@/features/leave/useLeaveBalance';
+import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
