@@ -97,6 +97,12 @@ export default function Team() {
   const [confirmRow, setConfirmRow] = useState<Row | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
+  // filters modal
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount =
+    (fRole !== 'all' ? 1 : 0) + (fStore !== 'all' ? 1 : 0) + (fStatus !== 'all' ? 1 : 0);
+  const clearFilters = () => { setFRole('all'); setFStore('all'); setFStatus('all'); };
+
   const load = async () => {
     if (!business) return;
     setLoading(true);
