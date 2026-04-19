@@ -102,6 +102,53 @@ export type Database = {
           },
         ]
       }
+      business_branding: {
+        Row: {
+          accent_color: string | null
+          business_id: string
+          created_at: string
+          display_name: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          surface_color: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          business_id: string
+          created_at?: string
+          display_name?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          surface_color?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          business_id?: string
+          created_at?: string
+          display_name?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          surface_color?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_branding_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           created_at: string
