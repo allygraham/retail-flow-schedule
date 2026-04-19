@@ -171,6 +171,8 @@ export default function Rota() {
     }
     performCopyPreviousWeek();
   };
+
+  const togglePublish = async () => {
     if (!isMgr) return;
     const ids = filteredShifts.filter(x => !x.is_published).map(x => x.id);
     if (ids.length === 0) return;
