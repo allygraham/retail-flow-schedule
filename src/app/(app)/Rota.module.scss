@@ -9,38 +9,22 @@
   select { min-width: 160px; }
 }
 
-.hoursStrip {
-  display: flex; align-items: stretch; gap: $sp-3;
-  padding: $sp-3; background: $surface; border: 1px solid $border;
-  border-radius: $r-md; box-shadow: $shadow-xs;
-}
-.hoursTotal {
-  display: flex; flex-direction: column; justify-content: center;
-  padding: $sp-2 $sp-3; background: $brand-50; border: 1px solid $brand-100;
-  border-radius: $r-sm; min-width: 110px;
-}
-.hoursTotalLabel { font-size: $fs-xs; color: $text-muted; text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }
-.hoursTotalValue { font-size: $fs-lg; font-weight: $fw-bold; color: $brand-700; line-height: 1.1; margin-top: 2px; }
-.hoursChips {
-  display: flex; gap: $sp-2; overflow-x: auto; flex: 1; padding-bottom: 2px;
-  @include scrollbar;
-}
-.hoursChip {
-  display: flex; align-items: center; gap: $sp-2;
-  padding: 6px $sp-3 6px 6px; background: $ink-50; border: 1px solid $border;
-  border-radius: 999px; flex-shrink: 0;
-}
-.hoursChipText { display: flex; flex-direction: column; line-height: 1.1; }
-.hoursChipName { font-size: $fs-xs; color: $text-muted; @include truncate; max-width: 110px; }
-.hoursChipValue { font-size: $fs-sm; font-weight: $fw-bold; color: $text; }
-.hoursChipOpen { background: #ffe4e6; border-color: #fecdd3; }
-
 .grid {
   display: grid;
-  grid-template-columns: 180px repeat(7, minmax(120px, 1fr));
+  grid-template-columns: 180px repeat(7, minmax(120px, 1fr)) 80px;
   overflow-x: auto;
   @include scrollbar;
 }
+.gridHeadTotal {
+  text-align: right; border-left: 1px solid $border;
+}
+.totalCell {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: $sp-3 $sp-4; border-left: 1px solid $border; border-bottom: 1px solid $border;
+  background: $ink-50; font-weight: $fw-bold; font-size: $fs-sm; color: $text;
+  min-height: 80px;
+}
+.totalUnit { color: $text-muted; font-weight: $fw-medium; margin-left: 2px; font-size: $fs-xs; }
 .contents { display: contents; }
 .gridHead {
   background: $ink-50; border-bottom: 1px solid $border;

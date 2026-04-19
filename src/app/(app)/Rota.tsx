@@ -282,37 +282,6 @@ export default function Rota() {
         </div>
       </header>
 
-      {people.length > 0 && (
-        <div className={s.hoursStrip} aria-label="Scheduled hours this week">
-          <div className={s.hoursTotal}>
-            <span className={s.hoursTotalLabel}>Week total</span>
-            <span className={s.hoursTotalValue}>{fmtH(totalWeekHours)}h</span>
-          </div>
-          <div className={s.hoursChips}>
-            {people.map(p => {
-              const h = hoursByUser.get(p.user_id) ?? 0;
-              return (
-                <div key={p.user_id} className={s.hoursChip} title={`${p.name}: ${fmtH(h)}h scheduled`}>
-                  <Avatar name={p.name} size="sm" />
-                  <div className={s.hoursChipText}>
-                    <div className={s.hoursChipName}>{p.name}</div>
-                    <div className={s.hoursChipValue}>{fmtH(h)}h</div>
-                  </div>
-                </div>
-              );
-            })}
-            {openHours > 0 && (
-              <div className={`${s.hoursChip} ${s.hoursChipOpen}`} title={`${fmtH(openHours)}h of open shifts`}>
-                <Avatar name="?" size="sm" />
-                <div className={s.hoursChipText}>
-                  <div className={s.hoursChipName}>Open</div>
-                  <div className={s.hoursChipValue}>{fmtH(openHours)}h</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -324,6 +293,7 @@ export default function Rota() {
                 <div className={s.dayDate}>{format(d, 'd MMM')}</div>
               </div>
             ))}
+            <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
             {/* per-employee rows */}
             {people.map(p => (
               <div key={p.user_id} className={s.contents}>
@@ -362,6 +332,7 @@ export default function Rota() {
                     </DroppableCell>
                   );
                 })}
+                <div className={s.totalCell}>{fmtH(hoursByUser.get(p.user_id) ?? 0)}<span className={s.totalUnit}>h</span></div>
               </div>
             ))}
             {/* Unassigned row — hidden for non-managers when there's nothing to cover */}
@@ -389,6 +360,7 @@ export default function Rota() {
                     </DroppableCell>
                   );
                 })}
+                <div className={s.totalCell}>{fmtH(openHours)}<span className={s.totalUnit}>h</span></div>
               </div>
             )}
           </div>
