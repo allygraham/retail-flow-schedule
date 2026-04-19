@@ -149,7 +149,7 @@ export default function Rota() {
       return x;
     }));
 
-    const updates: Promise<any>[] = [
+    const updates: any[] = [
       supabase.from('shifts').update({
         assigned_user_id: newAssigned,
         shift_date: targetDate,
@@ -164,7 +164,7 @@ export default function Rota() {
       }).eq('id', occupant.id));
     }
     const results = await Promise.all(updates);
-    if (results.some(r => r.error)) load();
+    if (results.some((r: any) => r.error)) load();
   };
 
   return (
