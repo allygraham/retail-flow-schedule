@@ -131,6 +131,7 @@ export type Database = {
       }
       employee_profiles: {
         Row: {
+          annual_leave_entitlement: number
           business_id: string
           contracted_hours: number | null
           created_at: string
@@ -145,6 +146,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          annual_leave_entitlement?: number
           business_id: string
           contracted_hours?: number | null
           created_at?: string
@@ -161,6 +163,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          annual_leave_entitlement?: number
           business_id?: string
           contracted_hours?: number | null
           created_at?: string
