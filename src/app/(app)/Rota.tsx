@@ -90,7 +90,7 @@ export default function Rota() {
     if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
     const payload = { ...parsed.data,
       business_id: business!.id,
-      status: parsed.data.assigned_user_id ? 'scheduled' : 'unassigned',
+      status: (parsed.data.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
       created_by: user?.id,
     };
     if (modal.shift) {
