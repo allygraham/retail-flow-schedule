@@ -62,6 +62,28 @@ export default function Rota() {
   const storeById = useMemo(() => Object.fromEntries(stores.map(s => [s.id, s])), [stores]);
   const roleById = useMemo(() => Object.fromEntries(roles.map(r => [r.id, r])), [roles]);
 
+  // Total scheduled hours per employee for the visible week (respects store filter).
+  const hoursByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const sh of filteredShifts) {
+      if (!sh.assigned_user_id || sh.status === 'cancelled') continue;
+      const h = hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0);
+      map.set(sh.assigned_user_id, (map.get(sh.assigned_user_id) ?? 0) + h);
+    }
+    return map;
+  }, [filteredShifts]);
+  const totalWeekHours = useMemo(
+    () => Array.from(hoursByUser.values()).reduce((a, b) => a + b, 0),
+    [hoursByUser],
+  );
+  const openHours = useMemo(
+    () => filteredShifts
+      .filter(sh => !sh.assigned_user_id && sh.status !== 'cancelled')
+      .reduce((a, sh) => a + hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0), 0),
+    [filteredShifts],
+  );
+  const fmtH = (n: number) => (Math.round(n * 10) / 10).toString();
+
   const conflictsFor = (sh: any): string[] => {
     const c: string[] = [];
     if (!sh.assigned_user_id) return c;
@@ -259,6 +281,38 @@ export default function Rota() {
           {isMgr && <Button onClick={togglePublish}>Publish drafts</Button>}
         </div>
       </header>
+
+      {people.length > 0 && (
+        <div className={s.hoursStrip} aria-label="Scheduled hours this week">
+          <div className={s.hoursTotal}>
+            <span className={s.hoursTotalLabel}>Week total</span>
+            <span className={s.hoursTotalValue}>{fmtH(totalWeekHours)}h</span>
+          </div>
+          <div className={s.hoursChips}>
+            {people.map(p => {
+              const h = hoursByUser.get(p.user_id) ?? 0;
+              return (
+                <div key={p.user_id} className={s.hoursChip} title={`${p.name}: ${fmtH(h)}h scheduled`}>
+                  <Avatar name={p.name} size="sm" />
+                  <div className={s.hoursChipText}>
+                    <div className={s.hoursChipName}>{p.name}</div>
+                    <div className={s.hoursChipValue}>{fmtH(h)}h</div>
+                  </div>
+                </div>
+              );
+            })}
+            {openHours > 0 && (
+              <div className={`${s.hoursChip} ${s.hoursChipOpen}`} title={`${fmtH(openHours)}h of open shifts`}>
+                <Avatar name="?" size="sm" />
+                <div className={s.hoursChipText}>
+                  <div className={s.hoursChipName}>Open</div>
+                  <div className={s.hoursChipValue}>{fmtH(openHours)}h</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
