@@ -1,0 +1,33 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.toolbar {
+  display: flex; gap: $sp-2; flex-wrap: wrap; align-items: center;
+  select { min-width: 140px; }
+}
+.search { flex: 1; min-width: 220px; }
+
+.emailCell { color: $text-soft; font-size: $fs-sm; }
+
+.editable { cursor: pointer; border-bottom: 1px dashed transparent; transition: all $dur-fast $ease;
+  &:hover { border-bottom-color: $brand-500; color: $brand-700; }
+}
+
+.inlineEdit { display: inline-flex; gap: 6px; align-items: center; }
+.inlineInput { width: 64px; padding: 4px 8px; border-radius: $r-sm; border: 1px solid $border; font: inherit; }
+.inlineBtn { background: transparent; border: none; cursor: pointer; font-weight: $fw-semibold; color: $brand-700; }
+.inlineBtnGhost { background: transparent; border: none; cursor: pointer; color: $text-muted; }
+
+.rowActions { display: flex; gap: $sp-2; justify-content: flex-end; }
+.linkBtn { background: transparent; border: none; cursor: pointer; color: $brand-700; font-weight: $fw-semibold; font-size: $fs-sm; padding: 0; }
+.linkBtnDanger { background: transparent; border: none; cursor: pointer; color: #b91c1c; font-weight: $fw-semibold; font-size: $fs-sm; padding: 0; }
+
+.successBlock { display: flex; flex-direction: column; gap: $sp-3; }
+.successTitle { font-size: $fs-lg; font-weight: $fw-bold; color: $text; }
+.successCopy { color: $text-muted; font-size: $fs-sm; margin: 0; }
+.linkBox {
+  display: flex; align-items: center; gap: $sp-2;
+  padding: $sp-3; border: 1px solid $border; border-radius: $r-md; background: $ink-50;
+}
+.linkText { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: $fs-xs; color: $text; word-break: break-all; }
