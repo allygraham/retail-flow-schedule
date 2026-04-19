@@ -118,6 +118,36 @@ export default function Rota() {
     setModal({ open: false }); load();
   };
 
+  const copyPreviousWeek = async () => {
+    if (!isMgr || !business) return;
+    if (filteredShifts.length > 0 && !confirm('This week already has shifts. Add copies from last week anyway?')) return;
+    const prevStart = addDays(weekStart, -7);
+    const prevEnd = addDays(weekStart, -1);
+    let q = supabase.from('shifts').select('*').eq('business_id', business.id)
+      .gte('shift_date', isoDate(prevStart)).lte('shift_date', isoDate(prevEnd));
+    if (storeFilter !== 'all') q = q.eq('store_id', storeFilter);
+    const { data: prev, error } = await q;
+    if (error) { alert(error.message); return; }
+    if (!prev || prev.length === 0) { alert('No shifts found in the previous week.'); return; }
+    const rows = prev.map((s: any) => ({
+      business_id: business.id,
+      store_id: s.store_id,
+      role_id: s.role_id,
+      assigned_user_id: s.assigned_user_id,
+      shift_date: isoDate(addDays(new Date(s.shift_date), 7)),
+      start_time: s.start_time,
+      end_time: s.end_time,
+      break_minutes: s.break_minutes ?? 0,
+      notes: s.notes,
+      is_published: false,
+      status: (s.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+      created_by: user?.id,
+    }));
+    const { error: insErr } = await supabase.from('shifts').insert(rows as any);
+    if (insErr) { alert(insErr.message); return; }
+    load();
+  };
+
   const togglePublish = async () => {
     if (!isMgr) return;
     const ids = filteredShifts.filter(x => !x.is_published).map(x => x.id);
