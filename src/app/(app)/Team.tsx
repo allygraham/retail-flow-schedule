@@ -454,7 +454,7 @@ export default function Team() {
           onChange={e => setQ(e.target.value)}
           className={t.search}
         />
-        <Button variant="ghost" onClick={() => setFiltersOpen(true)}>
+        <Button variant="outline" onClick={() => setFiltersOpen(true)}>
           Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
         </Button>
         {activeFilterCount > 0 && (
