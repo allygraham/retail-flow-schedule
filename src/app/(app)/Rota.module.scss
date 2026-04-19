@@ -32,6 +32,8 @@
 .cell { padding: 6px; border-right: 1px solid $border; border-bottom: 1px solid $border; min-height: 80px; cursor: pointer; transition: background $dur-fast $ease; display: flex; flex-direction: column; gap: 4px;
   &:hover { background: $ink-50; }
 }
+.cellOver { background: $brand-50; outline: 2px dashed $brand-500; outline-offset: -3px; }
+.dragGhost { box-shadow: $shadow-md; transform: rotate(-2deg); background: $surface; border: 1px solid $brand-500; }
 
 .shift {
   background: $brand-50; border: 1px solid $brand-100; border-left: 3px solid $brand-500;
