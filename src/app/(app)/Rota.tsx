@@ -41,7 +41,9 @@ export default function Rota() {
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
       supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
-      supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time'),
+      (role === 'owner' || role === 'manager'
+        ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')
+        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
       supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true),
     ]);
@@ -319,7 +321,7 @@ export default function Rota() {
             {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
           {isMgr && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
-          {isMgr && <Button onClick={openPublishConfirm}>Publish drafts</Button>}
+          {isMgr && <Button onClick={openPublishConfirm}>Publish schedule</Button>}
         </div>
       </header>
 
@@ -470,7 +472,7 @@ export default function Rota() {
       </Modal>
 
       {/* Publish confirmation modal */}
-      <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish drafts" size="sm">
+      <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish schedule" size="sm">
         <div style={{ lineHeight: 1.6 }}>
           <p>
             You are about to publish <strong>{publishModal.count} draft shift{publishModal.count === 1 ? '' : 's'}</strong>.
