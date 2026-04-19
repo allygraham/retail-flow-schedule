@@ -116,6 +116,10 @@ export default function Leave() {
         <Button onClick={() => setRequestModal(true)}>Request time off</Button>
       </header>
 
+      {!isMgr && (
+        <LeaveBalanceCard balance={balance} loading={balanceLoading} />
+      )}
+
       {isMgr && (
         <div className={s.tabs} role="tablist">
           {(['pending','reviewed','all'] as Filter[]).map(f => (
