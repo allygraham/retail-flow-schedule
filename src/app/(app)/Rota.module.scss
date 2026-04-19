@@ -22,6 +22,11 @@
   color: $text-soft; text-transform: uppercase; letter-spacing: 0.05em;
   position: sticky; top: 0; z-index: 1;
 }
+.gridHeadStaff {
+  position: sticky; left: 0; top: 0; z-index: 3;
+  border-right: 1px solid $border;
+}
+.gridHeadDay { z-index: 1; }
 .dayName { color: $text; font-weight: $fw-bold; text-transform: none; letter-spacing: 0; font-size: $fs-sm; }
 .dayDate { color: $text-muted; font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
 
