@@ -2,13 +2,37 @@
 @use '@/styles/mixins' as *;
 
 .shell { display: grid; grid-template-columns: 1fr; min-height: 100vh; background: $bg;
-  @include lg { grid-template-columns: $sidebar-w 1fr; }
+  @include md { grid-template-columns: $sidebar-w 1fr; }
 }
+
+/* ===== Mobile top bar ===== */
+.topbar {
+  display: flex; align-items: center; gap: $sp-3;
+  padding: $sp-3 $sp-4;
+  background: $ink-900; color: $white;
+  position: sticky; top: 0; z-index: 30;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  @include md { display: none; }
+}
+.topbarBrand { flex: 1; display: flex; justify-content: center;
+  :global(.lvword), a, a span { color: $white !important; }
+}
+.topbarSpacer { width: 40px; height: 40px; }
+.hamburger {
+  width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: $white; cursor: pointer; border-radius: $r-md;
+  transition: background $dur $ease;
+  &:hover { background: rgba(255,255,255,0.08); }
+  &:focus-visible { @include focus-ring; }
+}
+
+/* ===== Desktop sidebar (unchanged on >= md) ===== */
 .side {
+  display: none;
   background: $ink-900; color: $ink-200;
-  display: flex; flex-direction: column;
+  flex-direction: column;
   padding: $sp-4;
-  @include lg { position: sticky; top: 0; height: 100vh; }
+  @include md { display: flex; position: sticky; top: 0; height: 100vh; }
 }
 .brand { padding: $sp-2 $sp-3 $sp-4; }
 .brand :global(.lvword), .brand a { color: $white !important; }
@@ -20,12 +44,13 @@
 
 .nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .link {
-  padding: 9px 12px;
+  padding: 11px 12px;
   border-radius: $r-md;
   color: $ink-300;
   font-size: $fs-sm; font-weight: $fw-medium;
   transition: all $dur $ease;
   &:hover { background: rgba(255,255,255,0.06); color: $white; }
+  &:focus-visible { @include focus-ring; }
 }
 .active { background: $brand-600; color: $white !important;
   box-shadow: $shadow-glow;
@@ -43,5 +68,43 @@
   &:hover { color: $white; text-decoration: underline; }
 }
 
-.main { padding: $sp-6; min-width: 0; @include scrollbar; }
-@include lg { .main { padding: $sp-7 $sp-8; } }
+/* ===== Mobile drawer ===== */
+.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none;
+  transition: opacity $dur $ease;
+  z-index: 40;
+  @include md { display: none; }
+}
+.backdropOpen { opacity: 1; pointer-events: auto; }
+
+.drawer {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: min(82vw, 320px);
+  background: $ink-900; color: $ink-200;
+  display: flex; flex-direction: column;
+  padding: $sp-4;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 280ms $ease;
+  box-shadow: $shadow-lg;
+  overflow-y: auto;
+  @include scrollbar;
+  @include md { display: none; }
+}
+.drawerOpen { transform: translateX(0); }
+.drawerHead {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: $sp-2 $sp-3 $sp-4;
+  :global(.lvword), a, a span { color: $white !important; }
+}
+.closeBtn {
+  width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: $white; cursor: pointer; border-radius: $r-md;
+  &:hover { background: rgba(255,255,255,0.08); }
+  &:focus-visible { @include focus-ring; }
+}
+
+.main { padding: $sp-5; min-width: 0; @include scrollbar; }
+@include md { .main { padding: $sp-7 $sp-8; } }
