@@ -26,6 +26,7 @@ export default function Rota() {
   const [shifts, setShifts] = useState<any[]>([]);
   const [leave, setLeave] = useState<any[]>([]);
   const [modal, setModal] = useState<{open: boolean; shift?: any; date?: string}>({open: false});
+  const [publishModal, setPublishModal] = useState<{open: boolean; count: number}>({open: false, count: 0});
   const [form, setForm] = useState<any>({});
   const [err, setErr] = useState<string | null>(null);
   const [activeShift, setActiveShift] = useState<any | null>(null);
