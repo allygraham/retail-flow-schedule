@@ -66,7 +66,19 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leave_requests', filter: `business_id=eq.${business.id}` },
-        () => fetchCount(),
+        (payload) => {
+          fetchCount();
+          if (payload.eventType === 'INSERT' && (payload.new as any)?.status === 'pending') {
+            const newRow: any = payload.new;
+            supabase.auth.getUser().then(({ data }) => {
+              if (data.user?.id === newRow.user_id) return;
+              toast('New leave request', {
+                description: `${newRow.leave_type} · ${newRow.start_date} → ${newRow.end_date}`,
+                action: { label: 'Review', onClick: () => nav('/leave') },
+              });
+            });
+          }
+        },
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
