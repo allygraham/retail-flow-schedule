@@ -26,6 +26,7 @@ export default function Rota() {
   const [shifts, setShifts] = useState<any[]>([]);
   const [leave, setLeave] = useState<any[]>([]);
   const [modal, setModal] = useState<{open: boolean; shift?: any; date?: string}>({open: false});
+  const [publishModal, setPublishModal] = useState<{open: boolean; count: number}>({open: false, count: 0});
   const [form, setForm] = useState<any>({});
   const [err, setErr] = useState<string | null>(null);
   const [activeShift, setActiveShift] = useState<any | null>(null);
@@ -227,11 +228,19 @@ export default function Rota() {
     performCopyPreviousWeek();
   };
 
-  const togglePublish = async () => {
+  const openPublishConfirm = () => {
+    if (!isMgr) return;
+    const count = filteredShifts.filter(x => !x.is_published).length;
+    if (count === 0) return;
+    setPublishModal({ open: true, count });
+  };
+
+  const confirmPublish = async () => {
     if (!isMgr) return;
     const ids = filteredShifts.filter(x => !x.is_published).map(x => x.id);
     if (ids.length === 0) return;
     await supabase.from('shifts').update({ is_published: true }).in('id', ids);
+    setPublishModal({ open: false, count: 0 });
     load();
   };
 
@@ -310,7 +319,7 @@ export default function Rota() {
             {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
           {isMgr && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
-          {isMgr && <Button onClick={togglePublish}>Publish drafts</Button>}
+          {isMgr && <Button onClick={openPublishConfirm}>Publish drafts</Button>}
         </div>
       </header>
 
@@ -457,6 +466,26 @@ export default function Rota() {
           </div>
           <Field label="Notes"><TextArea value={form.notes ?? ''} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Optional notes for this shift"/></Field>
           {err && <div className={s.err}>{err}</div>}
+        </div>
+      </Modal>
+
+      {/* Publish confirmation modal */}
+      <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish drafts" size="sm">
+        <div style={{ lineHeight: 1.6 }}>
+          <p>
+            You are about to publish <strong>{publishModal.count} draft shift{publishModal.count === 1 ? '' : 's'}</strong>.
+          </p>
+          <ul style={{ margin: '12px 0', paddingLeft: 20 }}>
+            <li>Week: <strong>{fmtDate(weekStart, 'd MMM yyyy')}</strong></li>
+            <li>Store: <strong>{storeFilter === 'all' ? 'All stores' : storeById[storeFilter]?.name ?? 'Selected store'}</strong></li>
+          </ul>
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
+            Published shifts will be visible to employees.
+          </p>
+        </div>
+        <div slot="footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => setPublishModal({ open: false, count: 0 })}>Cancel</Button>
+          <Button onClick={confirmPublish}>Publish {publishModal.count} shift{publishModal.count === 1 ? '' : 's'}</Button>
         </div>
       </Modal>
     </div>
