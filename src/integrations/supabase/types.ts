@@ -236,6 +236,94 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_user_id: string | null
+          business_id: string
+          contracted_hours: number | null
+          created_at: string
+          email: string
+          expires_at: string
+          full_name: string | null
+          hire_date: string | null
+          id: string
+          invited_by: string | null
+          notes: string | null
+          phone: string | null
+          primary_role_id: string | null
+          primary_store_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["invitation_status"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          business_id: string
+          contracted_hours?: number | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          full_name?: string | null
+          hire_date?: string | null
+          id?: string
+          invited_by?: string | null
+          notes?: string | null
+          phone?: string | null
+          primary_role_id?: string | null
+          primary_store_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          business_id?: string
+          contracted_hours?: number | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          full_name?: string | null
+          hire_date?: string | null
+          id?: string
+          invited_by?: string | null
+          notes?: string | null
+          phone?: string | null
+          primary_role_id?: string | null
+          primary_store_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_primary_role_id_fkey"
+            columns: ["primary_role_id"]
+            isOneToOne: false
+            referencedRelation: "roles_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_primary_store_id_fkey"
+            columns: ["primary_store_id"]
+            isOneToOne: false
+            referencedRelation: "store_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_requests: {
         Row: {
           business_id: string
@@ -604,11 +692,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { _token: string }; Returns: string }
       bootstrap_business: {
         Args: { _name: string; _slug: string }
         Returns: string
       }
       current_business_id: { Args: never; Returns: string }
+      get_invitation_by_token: {
+        Args: { _token: string }
+        Returns: {
+          business_id: string
+          business_name: string
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["invitation_status"]
+        }[]
+      }
       has_role: {
         Args: {
           _business_id: string
@@ -629,6 +731,7 @@ export type Database = {
     Enums: {
       app_role: "owner" | "manager" | "employee"
       employment_type: "full_time" | "part_time" | "casual" | "contractor"
+      invitation_status: "pending" | "accepted" | "revoked" | "expired"
       leave_status: "pending" | "approved" | "rejected" | "cancelled"
       leave_type: "annual" | "unpaid" | "sick" | "other"
       schedule_status: "draft" | "published"
@@ -762,6 +865,7 @@ export const Constants = {
     Enums: {
       app_role: ["owner", "manager", "employee"],
       employment_type: ["full_time", "part_time", "casual", "contractor"],
+      invitation_status: ["pending", "accepted", "revoked", "expired"],
       leave_status: ["pending", "approved", "rejected", "cancelled"],
       leave_type: ["annual", "unpaid", "sick", "other"],
       schedule_status: ["draft", "published"],
