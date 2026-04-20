@@ -41,7 +41,6 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async () => {
     if (!business) {
       setTheme(DEFAULT_THEME);
-      resetTheme();
       return;
     }
     setLoading(true);
@@ -59,7 +58,6 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       logoUrl: data?.logo_url ?? null,
     };
     setTheme(next);
-    applyThemeToDocument(next);
     setLoading(false);
   }, [business]);
 
@@ -76,9 +74,6 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [business, load]);
-
-  // Re-apply when theme changes (defensive — also done in load)
-  useEffect(() => { applyThemeToDocument(theme); }, [theme]);
 
   const value = useMemo<BrandingState>(() => ({ theme, loading, refresh: load }), [theme, loading, load]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
