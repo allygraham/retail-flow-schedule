@@ -391,8 +391,10 @@ export default function Rota() {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
                   const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
+                  const hol = holidays.get(dStr);
                   return (
                     <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={!isMgr || !!onLeave}
+                      className={hol ? s.cellHoliday : ''}
                       onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr)}>
                       {onLeave && (
                         <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
