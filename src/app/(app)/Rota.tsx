@@ -407,8 +407,8 @@ export default function Rota() {
                 <div className={s.totalCell}>{fmtH(hoursByUser.get(p.user_id) ?? 0)}<span className={s.totalUnit}>h</span></div>
               </div>
             ))}
-            {/* Unassigned row — hidden for non-managers when there's nothing to cover */}
-            {(isMgr || filteredShifts.some(sh => !sh.assigned_user_id)) && (
+            {/* Unassigned row — managers only */}
+            {isMgr && (
               <div className={s.contents}>
                 <div className={s.staffCell}>
                   <Avatar name="?" size="sm" />
