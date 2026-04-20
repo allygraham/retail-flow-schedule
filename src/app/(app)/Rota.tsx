@@ -22,7 +22,7 @@ export default function Rota() {
   const { business, role, user } = useAuth();
   const isMgr = role === 'owner' || role === 'manager';
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
-  const [storeFilter, setStoreFilter] = useState<string>('all');
+  const [storeFilter, setStoreFilter] = useState<string>(() => sessionStorage.getItem('rota.storeFilter') ?? 'all');
   const [stores, setStores] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
