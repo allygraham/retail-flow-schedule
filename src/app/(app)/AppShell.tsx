@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import {
+  Menu, X, LayoutDashboard, Calendar, CalendarDays, Users, MapPin, User, Settings,
+} from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
@@ -11,14 +13,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import s from './AppShell.module.scss';
 
+const ICON_SIZE = 18;
+
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/rota', label: 'Rota' },
-  { to: '/leave', label: 'Leave' },
-  { to: '/team', label: 'Team', mgr: true },
-  { to: '/stores', label: 'Stores', mgr: true },
-  { to: '/profile', label: 'My profile' },
-  { to: '/settings', label: 'Settings', mgr: true },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/rota', label: 'Rota', icon: Calendar },
+  { to: '/leave', label: 'Leave', icon: CalendarDays },
+  { to: '/team', label: 'Team', icon: Users, mgr: true },
+  { to: '/stores', label: 'Stores', icon: MapPin, mgr: true },
+  { to: '/profile', label: 'My profile', icon: User },
+  { to: '/settings', label: 'Settings', icon: Settings, mgr: true },
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
@@ -92,19 +96,25 @@ export default function AppShell({ children }: { children?: ReactNode }) {
 
   const renderNav = (onClick?: () => void) => (
     <nav className={s.nav}>
-      {items.map(n => (
-        <NavLink
-          key={n.to}
-          to={n.to}
-          onClick={onClick}
-          className={({isActive}) => `${s.link} ${isActive ? s.active : ''}`}
-        >
-          <span>{n.label}</span>
-          {n.to === '/leave' && isMgr && pendingLeave > 0 && (
-            <span className={s.linkBadge} aria-label={`${pendingLeave} pending`}>{pendingLeave}</span>
-          )}
-        </NavLink>
-      ))}
+      {items.map(n => {
+        const Icon = n.icon;
+        return (
+          <NavLink
+            key={n.to}
+            to={n.to}
+            onClick={onClick}
+            className={({isActive}) => `${s.link} ${isActive ? s.active : ''}`}
+          >
+            <div className={s.linkInner}>
+              <Icon size={ICON_SIZE} className={s.linkIcon} />
+              <span>{n.label}</span>
+            </div>
+            {n.to === '/leave' && isMgr && pendingLeave > 0 && (
+              <span className={s.linkBadge} aria-label={`${pendingLeave} pending`}>{pendingLeave}</span>
+            )}
+          </NavLink>
+        );
+      })}
     </nav>
   );
 

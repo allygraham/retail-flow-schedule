@@ -66,8 +66,16 @@
   &:hover { background: rgba(255,255,255,0.06); color: $white; }
   &:focus-visible { @include focus-ring; }
 }
-.active { background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white) !important;
+.linkInner {
+  display: flex; align-items: center; gap: $sp-3;
+}
+.linkIcon {
+  opacity: 0.9;
+}
+.active {
+  background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white) !important;
   box-shadow: $shadow-sm;
+  .linkIcon { opacity: 1; }
 }
 .linkBadge {
   display: inline-flex; align-items: center; justify-content: center;
