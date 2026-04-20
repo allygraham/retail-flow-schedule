@@ -81,3 +81,77 @@
   color: hsl(var(--muted-foreground));
   font-style: italic;
 }
+
+.section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid hsl(var(--border));
+}
+.sectionHead { margin-bottom: 12px; }
+.addRow {
+  display: grid;
+  grid-template-columns: 160px 1fr auto auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 12px;
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+.blocksLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+  padding-bottom: 8px;
+  cursor: pointer;
+  input { cursor: pointer; }
+}
+.customList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.customItem {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  background: hsl(var(--muted) / 0.4);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.customMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.customName {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.removeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: all 0.15s ease;
+  &:hover {
+    background: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+    border-color: hsl(var(--destructive) / 0.3);
+  }
+}
