@@ -433,7 +433,7 @@ export default function Rota() {
                   return (
                     <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={!isMgr || !!onLeave}
                       className={hol ? s.cellHoliday : ''}
-                      onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr)}>
+                      onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
                       {onLeave && (
                         <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
                           <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
