@@ -121,6 +121,7 @@ export default function Rota() {
       .reduce((a, sh) => a + hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0), 0),
     [filteredShifts],
   );
+  const hasDrafts = useMemo(() => filteredShifts.some(x => !x.is_published), [filteredShifts]);
   const fmtH = (n: number) => (Math.round(n * 10) / 10).toString();
 
   const conflictsFor = (sh: any): string[] => {
