@@ -367,6 +367,21 @@ function ManagerDashboard() {
         </div>
       </header>
 
+      {weekHolidays.length > 0 && (
+        <div className={s.holidayBanner} role="status">
+          <Calendar size={16} />
+          <strong>Public holiday this week:</strong>
+          <span className={s.holidayList}>
+            {weekHolidays.map((h, i) => (
+              <span key={h.date}>
+                {i > 0 && <span className={s.dot}>·</span>}
+                {h.name} <span className={s.holidayDate}>({fmtDate(h.date, 'EEE d MMM')})</span>
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
       <div className={s.stats}>
         <Stat label="Working today" value={data.shiftsToday.filter((s: any) => s.assigned_user_id).length} accent="success" hint="Across all stores" />
         <Stat label="On annual leave" value={data.leaveApproved.length} accent="brand" />
