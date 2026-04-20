@@ -61,7 +61,7 @@ export default function Dashboard() {
         <Stat label="Working today" value={data.shiftsToday.filter((s:any)=>s.assigned_user_id).length} accent="success" hint="Across all stores" />
         <Stat label="On annual leave" value={data.leaveApproved.length} accent="brand" />
         <Stat label="Off sick" value={data.sickToday.length} accent="danger" />
-        <Stat label="Unassigned shifts" value={data.unassigned.length} accent="warn" hint="Need cover" />
+        {isMgr && <Stat label="Unassigned shifts" value={data.unassigned.length} accent="warn" hint="Need cover" />}
         {isMgr && <Stat label="Pending requests" value={data.pendingLeave.length} accent="warn" />}
       </div>
 
