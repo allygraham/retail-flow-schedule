@@ -157,6 +157,16 @@ export default function Rota() {
       ...form, role_id: form.role_id || null, assigned_user_id: form.assigned_user_id || null,
     });
     if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
+
+    // Block scheduling on a company holiday flagged as blocking (custom only).
+    if (parsed.data.assigned_user_id) {
+      const blocking = holidays.getBlocking(parsed.data.shift_date);
+      if (blocking) {
+        setErr(`Scheduling is blocked on ${blocking.name} (${parsed.data.shift_date}). Remove or unblock this company holiday in Settings to assign a shift.`);
+        return;
+      }
+    }
+
     const payload = { ...parsed.data,
       business_id: business!.id,
       status: (parsed.data.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
@@ -169,9 +179,11 @@ export default function Rota() {
       const { error } = await supabase.from('shifts').insert(payload as any);
       if (error) { setErr(error.message); return; }
     }
-    // Informational warning when scheduling a person on a public holiday
+    // Informational warning when scheduling on a public holiday (custom is blocked above)
     const hol = parsed.data.assigned_user_id ? holidays.get(parsed.data.shift_date) : undefined;
-    if (hol) toast.warning(`Heads up: ${parsed.data.shift_date} is ${hol.name} (public holiday).`);
+    if (hol && hol.kind !== 'custom') {
+      toast.warning(`Heads up: ${parsed.data.shift_date} is ${hol.name} (public holiday).`);
+    }
     setModal({ open: false }); load();
   };
 
@@ -305,6 +317,12 @@ export default function Rota() {
         toast.error(`${peopleById[newAssigned]?.name ?? 'Employee'} is on approved leave that day.`);
         return;
       }
+      // Block drops onto a company holiday flagged as blocking
+      const blockingHol = holidays.getBlocking(targetDate);
+      if (blockingHol) {
+        toast.error(`Scheduling is blocked on ${blockingHol.name} (${targetDate}).`);
+        return;
+      }
     }
 
     // find an occupant in the target cell (for swap). If multiple, swap with the first.
@@ -337,10 +355,12 @@ export default function Rota() {
     }
     const results = await Promise.all(updates);
     if (results.some((r: any) => r.error)) load();
-    // Informational warning when dragging a person onto a public holiday
+    // Informational warning when dragging a person onto a public holiday (custom is blocked above)
     if (newAssigned) {
       const hol = holidays.get(targetDate);
-      if (hol) toast.warning(`Heads up: ${targetDate} is ${hol.name} (public holiday).`);
+      if (hol && hol.kind !== 'custom') {
+        toast.warning(`Heads up: ${targetDate} is ${hol.name} (public holiday).`);
+      }
     }
   };
 

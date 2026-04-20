@@ -8,8 +8,13 @@ const REGISTRY: Record<HolidayRegion, PublicHoliday[]> = {
   scotland: SCOTLAND_HOLIDAYS,
 };
 
+/** Normalize a registry entry to always carry kind='public'. */
+function asPublic(h: PublicHoliday): PublicHoliday {
+  return h.kind ? h : { ...h, kind: 'public' };
+}
+
 export function getAllHolidays(region: HolidayRegion): PublicHoliday[] {
-  return REGISTRY[region] ?? [];
+  return (REGISTRY[region] ?? []).map(asPublic);
 }
 
 /** Returns holidays whose date falls within [startISO, endISO], inclusive. */
