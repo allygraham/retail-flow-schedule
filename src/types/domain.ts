@@ -5,7 +5,14 @@ export type LeaveType = 'annual' | 'unpaid' | 'sick' | 'other';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type EmploymentType = 'full_time' | 'part_time' | 'casual' | 'contractor';
 
-export interface Business { id: string; name: string; slug: string; industry: string | null; }
+export interface Business {
+  id: string;
+  name: string;
+  slug: string;
+  industry: string | null;
+  public_holidays_enabled?: boolean;
+  public_holidays_region?: string;
+}
 export interface Profile { id: string; full_name: string | null; avatar_url: string | null; phone: string | null; }
 export interface StoreLocation {
   id: string; business_id: string; name: string; address: string | null;

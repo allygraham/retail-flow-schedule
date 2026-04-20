@@ -24,7 +24,7 @@ export function HolidaySettings() {
   const persist = async (next: { enabled?: boolean; region?: HolidayRegion }) => {
     if (!canEdit) return;
     setSaving(true);
-    const payload: Record<string, unknown> = {};
+    const payload: { public_holidays_enabled?: boolean; public_holidays_region?: string } = {};
     if (next.enabled !== undefined) payload.public_holidays_enabled = next.enabled;
     if (next.region !== undefined) payload.public_holidays_region = next.region;
     const { error } = await supabase.from('businesses').update(payload).eq('id', business.id);
@@ -55,7 +55,7 @@ export function HolidaySettings() {
   const upcoming = getHolidaysInRange(region, today, yearAhead).slice(0, 5);
 
   return (
-    <Card title="Public Holidays" description="Show public holidays in the rota and calendar views.">
+    <Card title="Public Holidays" subtitle="Show public holidays in the rota and calendar views.">
       <div className={s.row}>
         <div>
           <div className={s.label}>Enable public holidays</div>
