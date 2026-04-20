@@ -319,7 +319,15 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 
 function ManagerDashboard() {
   const { business, user, fullName } = useAuth();
+  const holidays = useHolidays();
   const [data, setData] = useState<any>(null);
+
+  const weekHolidays = useMemo(() => {
+    if (!holidays.enabled) return [];
+    const ws = weekStartFor(new Date());
+    const we = weekDays(ws)[6];
+    return holidays.inRange(isoDate(ws), isoDate(we));
+  }, [holidays]);
 
   useEffect(() => {
     if (!business) return;
