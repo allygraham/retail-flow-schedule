@@ -7,6 +7,7 @@ import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
+import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
 import { inviteEmployeeSchema } from '@/lib/validation';
 import { toast } from 'sonner';
@@ -662,7 +663,11 @@ export default function Team() {
             </div>
             <div className={s.row2}>
               <Field label="Start date" hint="Optional">
-                <Input type="date" value={form.hire_date} onChange={e => setForm({ ...form, hire_date: e.target.value })} />
+                <DatePicker
+                  value={parseISODate(form.hire_date)}
+                  onChange={(d) => setForm({ ...form, hire_date: toISODate(d) })}
+                  placeholder="Pick start date"
+                />
               </Field>
               <Field label="Phone" hint="Optional">
                 <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { Card } from '@/components/common/Card';
 import { Field, Input, Select } from '@/components/common/Field';
+import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -165,12 +166,12 @@ export function HolidaySettings() {
         {canEdit && (
           <div className={s.addRow}>
             <Field label="Date">
-              <Input
-                type="date"
-                value={newDate}
-                min={today}
-                onChange={(e) => setNewDate(e.target.value)}
+              <DatePicker
+                value={parseISODate(newDate)}
+                onChange={(d) => setNewDate(toISODate(d))}
+                minDate={new Date(today)}
                 disabled={adding}
+                placeholder="Pick a date"
               />
             </Field>
             <Field label="Name">

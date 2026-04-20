@@ -6,6 +6,7 @@ import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
+import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -514,7 +515,13 @@ export default function Rota() {
           </>
         }>
         <div className={s.form}>
-          <Field label="Date"><Input type="date" value={form.shift_date ?? ''} onChange={e => setForm({...form, shift_date: e.target.value})}/></Field>
+          <Field label="Date">
+            <DatePicker
+              value={parseISODate(form.shift_date)}
+              onChange={(d) => setForm({ ...form, shift_date: toISODate(d) })}
+              placeholder="Pick a date"
+            />
+          </Field>
           <div className={s.row2}>
             <Field label="Start"><Input type="time" value={form.start_time ?? ''} onChange={e => setForm({...form, start_time: e.target.value})}/></Field>
             <Field label="End"><Input type="time" value={form.end_time ?? ''} onChange={e => setForm({...form, end_time: e.target.value})}/></Field>
