@@ -24,9 +24,14 @@
 .lg { font-size: $fs-md; padding: 12px 22px; }
 
 .primary {
-  background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white);
+  background: $brand-600; color: $white;
   box-shadow: $shadow-sm;
-  &:hover:not(:disabled) { background: var(--brand-primary-hover, #{$brand-700}); box-shadow: $shadow-glow; transform: translateY(-1px); }
+  &:hover:not(:disabled) { background: $brand-700; box-shadow: $shadow-md; transform: translateY(-1px); }
+}
+/* Inside the tenant-themed workspace, primary buttons follow business branding. */
+:global(.tenantTheme) .primary {
+  background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white);
+  &:hover:not(:disabled) { background: var(--brand-primary-hover, #{$brand-700}); }
 }
 .secondary {
   background: $ink-100; color: $text;
