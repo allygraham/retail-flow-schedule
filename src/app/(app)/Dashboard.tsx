@@ -61,7 +61,7 @@ export default function Dashboard() {
         <Stat label="Working today" value={data.shiftsToday.filter((s:any)=>s.assigned_user_id).length} accent="success" hint="Across all stores" />
         <Stat label="On annual leave" value={data.leaveApproved.length} accent="brand" />
         <Stat label="Off sick" value={data.sickToday.length} accent="danger" />
-        <Stat label="Unassigned shifts" value={data.unassigned.length} accent="warn" hint="Need cover" />
+        {isMgr && <Stat label="Unassigned shifts" value={data.unassigned.length} accent="warn" hint="Need cover" />}
         {isMgr && <Stat label="Pending requests" value={data.pendingLeave.length} accent="warn" />}
       </div>
 
@@ -127,23 +127,25 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <Card title="Coverage gaps" subtitle="Upcoming unassigned shifts">
-          {data.unassigned.length === 0 ? (
-            <EmptyState title="Fully covered" description="No gaps in the published rota." />
-          ) : (
-            <ul className={s.list}>
-              {data.unassigned.slice(0, 6).map((sh: any) => (
-                <li key={sh.id} className={s.row}>
-                  <div className={s.rowMain}>
-                    <div className={s.rowName}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}</div>
-                    <div className={s.rowMeta}>{fmtDate(sh.shift_date)} · {fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                  </div>
-                  <Badge tone="unassigned" dot>Open</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {isMgr && (
+          <Card title="Coverage gaps" subtitle="Upcoming unassigned shifts">
+            {data.unassigned.length === 0 ? (
+              <EmptyState title="Fully covered" description="No gaps in the published rota." />
+            ) : (
+              <ul className={s.list}>
+                {data.unassigned.slice(0, 6).map((sh: any) => (
+                  <li key={sh.id} className={s.row}>
+                    <div className={s.rowMain}>
+                      <div className={s.rowName}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}</div>
+                      <div className={s.rowMeta}>{fmtDate(sh.shift_date)} · {fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
+                    </div>
+                    <Badge tone="unassigned" dot>Open</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
       </div>
     </div>
   );
