@@ -121,3 +121,17 @@
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
 .err { background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
+
+.emptyBanner {
+  display: flex;
+  align-items: center;
+  gap: $sp-2;
+  padding: $sp-3 $sp-4;
+  background: $ink-50;
+  border: 1px solid $border;
+  border-radius: $r-sm;
+  color: $text-muted;
+  font-size: $fs-sm;
+}
+.emptyIcon { font-size: 14px; }
+.emptyText { color: $text-soft; }

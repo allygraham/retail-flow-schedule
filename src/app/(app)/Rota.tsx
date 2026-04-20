@@ -511,7 +511,10 @@ export default function Rota() {
       </Card>
 
       {filteredShifts.length === 0 && (
-        <Card><EmptyState title="No shifts this week" description={isMgr ? 'Click any cell to add one.' : 'Your manager hasn\'t published this week yet.'} /></Card>
+        <div className={s.emptyBanner}>
+          <span className={s.emptyIcon}>ℹ️</span>
+          <span className={s.emptyText}>{isMgr ? 'No shifts this week — click any cell to add one.' : 'Your manager hasn\'t published this week yet.'}</span>
+        </div>
       )}
 
       <Modal open={modal.open} onClose={() => setModal({open: false})}
