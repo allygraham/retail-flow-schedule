@@ -13,6 +13,7 @@ import { fmtDate, fmtTime, hoursBetween, isoDate, weekDays, weekStartFor, overla
 import { addDays, format } from 'date-fns';
 import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
+import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
 
 export default function Rota() {
@@ -31,6 +32,7 @@ export default function Rota() {
   const [err, setErr] = useState<string | null>(null);
   const [activeShift, setActiveShift] = useState<any | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const holidays = useHolidays();
 
   const days = weekDays(weekStart);
   const weekEnd = addDays(weekStart, 6);
@@ -359,12 +361,21 @@ export default function Rota() {
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className={s.grid}>
             <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>
-            {days.map(d => (
-              <div key={isoDate(d)} className={`${s.gridHead} ${s.gridHeadDay}`}>
-                <div className={s.dayName}>{format(d, 'EEE')}</div>
-                <div className={s.dayDate}>{format(d, 'd MMM')}</div>
-              </div>
-            ))}
+            {days.map(d => {
+              const dStr = isoDate(d);
+              const hol = holidays.get(dStr);
+              return (
+                <div key={dStr} className={`${s.gridHead} ${s.gridHeadDay} ${hol ? s.gridHeadDayHoliday : ''}`}>
+                  <div className={s.dayName}>{format(d, 'EEE')}</div>
+                  <div className={s.dayDate}>{format(d, 'd MMM')}</div>
+                  {hol && (
+                    <div className={s.holidayLabel} title={hol.name}>
+                      <span className={s.holidayDot} />{hol.name}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
             {/* per-employee rows */}
             {visiblePeople.map(p => (
