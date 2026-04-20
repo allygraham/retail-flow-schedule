@@ -3,25 +3,144 @@
 
 .page { @include col; gap: $sp-6; }
 .loading { color: $text-muted; padding: $sp-8; text-align: center; }
-.header { display: flex; align-items: end; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
+
+.header {
+  display: flex; align-items: end; justify-content: space-between;
+  gap: $sp-4; flex-wrap: wrap;
+}
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; }
 .sub { color: $text-muted; font-size: $fs-sm; margin-top: 4px; }
-.stats { display: grid; gap: $sp-4; grid-template-columns: repeat(2, 1fr);
+
+.quickActions {
+  display: flex; gap: $sp-2; flex-wrap: wrap;
+  @media (max-width: 640px) { width: 100%; > * { flex: 1; } }
+}
+
+/* Manager stats */
+.stats {
+  display: grid; gap: $sp-4; grid-template-columns: repeat(2, 1fr);
   @include md { grid-template-columns: repeat(4, 1fr); }
   @include lg { grid-template-columns: repeat(5, 1fr); }
 }
-.cols { display: grid; gap: $sp-4; grid-template-columns: 1fr;
+.cols {
+  display: grid; gap: $sp-4; grid-template-columns: 1fr;
   @include lg { grid-template-columns: 1.2fr 1fr 1fr; }
 }
+
+/* ---------- HERO: Next Shift ---------- */
+.heroWrap { display: block; }
+.hero {
+  position: relative;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: $sp-6;
+  padding: $sp-7 $sp-7;
+  border-radius: $r-lg;
+  background:
+    linear-gradient(135deg,
+      var(--brand-primary-soft, #{$brand-50}) 0%,
+      $surface 70%);
+  border: 1px solid $border;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+
+  &::before {
+    content: ''; position: absolute; inset: 0 0 auto auto;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, var(--brand-primary, #{$brand-700}) 0%, transparent 70%);
+    opacity: 0.08; transform: translate(40%, -40%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 640px) {
+    flex-direction: column; padding: $sp-5;
+  }
+}
+.heroLeft { @include col; gap: $sp-3; min-width: 0; flex: 1; position: relative; z-index: 1; }
+.heroEye {
+  @include eyebrow;
+  color: var(--brand-primary, #{$brand-700});
+}
+.heroDate {
+  display: flex; align-items: baseline; gap: $sp-3; flex-wrap: wrap;
+}
+.heroDay {
+  font-family: $font-display; font-weight: $fw-extra;
+  font-size: clamp(28px, 4vw, 40px); line-height: 1;
+  color: $text;
+}
+.heroDayNum {
+  color: $text-muted; font-size: $fs-md; font-weight: $fw-semibold;
+}
+.heroTime {
+  display: flex; align-items: center; gap: $sp-2;
+  font-size: $fs-lg; font-weight: $fw-semibold; color: $text;
+}
+.heroHours { color: $text-muted; font-weight: $fw-medium; font-size: $fs-sm; }
+.heroMeta {
+  display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap;
+  color: $text-muted; font-size: $fs-sm;
+  span { display: inline-flex; align-items: center; gap: 4px; }
+}
+.dot { color: $border; }
+.heroNotes {
+  margin: 0; padding: $sp-2 $sp-3;
+  background: $surface; border-left: 3px solid var(--brand-primary, #{$brand-700});
+  border-radius: $r-sm; font-size: $fs-sm; color: $text-muted; font-style: italic;
+}
+
+/* ---------- Grid ---------- */
+.grid {
+  display: grid; gap: $sp-4; grid-template-columns: 1fr;
+  @include lg { grid-template-columns: 1.2fr 1fr; }
+}
+
+/* ---------- Generic list rows ---------- */
 .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
-.row { display: flex; align-items: center; gap: $sp-3; padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
+.row {
+  display: flex; align-items: center; gap: $sp-3;
+  padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
   &:last-child { border-bottom: none; }
 }
+.rowUnread { background: var(--brand-primary-soft, #{$brand-50}); }
 .rowMain { flex: 1; min-width: 0; }
 .rowName { font-weight: $fw-semibold; font-size: $fs-sm; @include truncate; }
-.rowMeta { color: $text-muted; font-size: $fs-xs; }
+.rowMeta { color: $text-muted; font-size: $fs-xs; margin-top: 2px; }
+.rowTime { color: $text-muted; font-size: 11px; margin-top: 4px; }
+.unreadDot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-primary, #{$brand-700}); flex-shrink: 0;
+}
+.iconBubble {
+  width: 36px; height: 36px; border-radius: 999px;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: var(--brand-primary-soft, #{$brand-50});
+  color: var(--brand-primary, #{$brand-700});
+}
 
+/* ---------- This week list ---------- */
+.weekList { list-style: none; padding: 0; margin: 0; }
+.weekRow {
+  display: flex; align-items: center; gap: $sp-3;
+  padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
+  &:last-child { border-bottom: none; }
+}
+.weekToday {
+  background: var(--brand-primary-soft, #{$brand-50});
+  .wDay, .wNum { color: var(--brand-primary, #{$brand-700}); }
+}
+.weekDate {
+  width: 44px; text-align: center; flex-shrink: 0;
+}
+.wDay { font-size: 10px; font-weight: $fw-bold; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; }
+.wNum { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-lg; line-height: 1; color: $text; }
+.weekBody { flex: 1; min-width: 0; @include col; gap: 2px; }
+.weekShift { display: flex; align-items: baseline; gap: $sp-2; flex-wrap: wrap; }
+.weekTime { font-weight: $fw-semibold; font-size: $fs-sm; color: $text; }
+.weekStore { font-size: $fs-xs; color: $text-muted; @include truncate; }
+.weekOff { color: $text-muted; font-size: $fs-sm; font-style: italic; }
+
+/* ---------- Compact "then after that" shift rows ---------- */
 .shiftRow {
   display: flex; align-items: center; gap: $sp-3;
   padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
@@ -30,7 +149,7 @@
 .date {
   width: 44px; text-align: center;
   background: var(--brand-primary-soft, #{$brand-50});
-  border-radius: $r-sm; padding: 4px;
+  border-radius: $r-sm; padding: 4px; flex-shrink: 0;
 }
 .dDay {
   font-size: 10px; font-weight: $fw-bold;
