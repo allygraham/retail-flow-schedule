@@ -28,6 +28,21 @@
   @include lg { grid-template-columns: 1.2fr 1fr 1fr; }
 }
 
+/* ---------- Holiday banner (manager) ---------- */
+.holidayBanner {
+  display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap;
+  padding: $sp-3 $sp-4;
+  border-radius: $r-md;
+  background: var(--brand-primary-soft, #{$brand-50});
+  border: 1px solid $border;
+  color: $text;
+  font-size: $fs-sm;
+  strong { font-weight: $fw-semibold; }
+  svg { flex-shrink: 0; color: var(--brand-primary, #{$brand-700}); }
+}
+.holidayList { display: inline-flex; flex-wrap: wrap; gap: $sp-2; align-items: center; }
+.holidayDate { color: $text-muted; font-weight: $fw-medium; }
+
 /* ---------- HERO: Next Shift ---------- */
 .heroWrap { display: block; }
 .hero {

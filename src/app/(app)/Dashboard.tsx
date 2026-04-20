@@ -319,7 +319,15 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 
 function ManagerDashboard() {
   const { business, user, fullName } = useAuth();
+  const holidays = useHolidays();
   const [data, setData] = useState<any>(null);
+
+  const weekHolidays = useMemo(() => {
+    if (!holidays.enabled) return [];
+    const ws = weekStartFor(new Date());
+    const we = weekDays(ws)[6];
+    return holidays.inRange(isoDate(ws), isoDate(we));
+  }, [holidays]);
 
   useEffect(() => {
     if (!business) return;
@@ -358,6 +366,21 @@ function ManagerDashboard() {
           <p className={s.sub}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {business.name}</p>
         </div>
       </header>
+
+      {weekHolidays.length > 0 && (
+        <div className={s.holidayBanner} role="status">
+          <Calendar size={16} />
+          <strong>Public holiday this week:</strong>
+          <span className={s.holidayList}>
+            {weekHolidays.map((h, i) => (
+              <span key={h.date}>
+                {i > 0 && <span className={s.dot}>·</span>}
+                {h.name} <span className={s.holidayDate}>({fmtDate(h.date, 'EEE d MMM')})</span>
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
 
       <div className={s.stats}>
         <Stat label="Working today" value={data.shiftsToday.filter((s: any) => s.assigned_user_id).length} accent="success" hint="Across all stores" />
