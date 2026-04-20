@@ -43,7 +43,7 @@ export default function Rota() {
       supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
       (role === 'owner' || role === 'manager'
         ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')
-        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')),
+        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
       supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true),
     ]);
@@ -407,8 +407,8 @@ export default function Rota() {
                 <div className={s.totalCell}>{fmtH(hoursByUser.get(p.user_id) ?? 0)}<span className={s.totalUnit}>h</span></div>
               </div>
             ))}
-            {/* Unassigned row — hidden for non-managers when there's nothing to cover */}
-            {(isMgr || filteredShifts.some(sh => !sh.assigned_user_id)) && (
+            {/* Unassigned row — managers only */}
+            {isMgr && (
               <div className={s.contents}>
                 <div className={s.staffCell}>
                   <Avatar name="?" size="sm" />
