@@ -395,7 +395,7 @@ export default function Rota() {
             options={stores.map(st => ({ id: st.id, name: st.name }))}
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
           />
-          {isMgr && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
+          {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
           {isMgr && hasDrafts && <Button onClick={openPublishConfirm}>Publish schedule</Button>}
         </div>
       </header>
