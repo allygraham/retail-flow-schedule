@@ -25,7 +25,7 @@ export default function Dashboard() {
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
         user?.id
-          ? supabase.from('shifts').select('*, store_locations(name)').eq('business_id', business.id).eq('assigned_user_id', user.id).eq('is_published', true).neq('status', 'cancelled').gte('shift_date', today).order('shift_date').order('start_time').limit(5)
+          ? supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('assigned_user_id', user.id).eq('is_published', true).neq('status', 'cancelled').gte('shift_date', today).order('shift_date').order('start_time').limit(5)
           : Promise.resolve({ data: [] as any[] }),
       ]);
       setData({
