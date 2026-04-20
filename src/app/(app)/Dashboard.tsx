@@ -17,13 +17,16 @@ export default function Dashboard() {
     if (!business) return;
     (async () => {
       const today = isoDate(new Date());
-      const [shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles] = await Promise.all([
+      const [shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles, myUpcomingRes] = await Promise.all([
         supabase.from('shifts').select('*').eq('business_id', business.id).eq('shift_date', today).eq('is_published', true).neq('status', 'cancelled').order('start_time'),
         supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'approved').eq('leave_type', 'annual').lte('start_date', today).gte('end_date', today),
         supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'approved').eq('leave_type', 'sick').lte('start_date', today).gte('end_date', today),
         supabase.from('leave_requests').select('*, profiles!leave_requests_user_id_fkey(full_name)').eq('business_id', business.id).eq('status', 'pending').order('created_at', { ascending: false }),
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
+        user?.id
+          ? supabase.from('shifts').select('*, store_locations(name)').eq('business_id', business.id).eq('assigned_user_id', user.id).eq('is_published', true).neq('status', 'cancelled').gte('shift_date', today).order('shift_date').order('start_time').limit(5)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       setData({
         shiftsToday: shiftsToday.data ?? [],
@@ -32,6 +35,7 @@ export default function Dashboard() {
         pendingLeave: pendingLeave.data ?? [],
         unassigned: unassigned.data ?? [],
         profilesById: Object.fromEntries((profiles.data ?? []).map((p: any) => [p.id, p.full_name])),
+        myUpcoming: myUpcomingRes.data ?? [],
       });
     })();
   }, [business]);
