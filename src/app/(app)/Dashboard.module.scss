@@ -21,3 +21,24 @@
 .rowMain { flex: 1; min-width: 0; }
 .rowName { font-weight: $fw-semibold; font-size: $fs-sm; @include truncate; }
 .rowMeta { color: $text-muted; font-size: $fs-xs; }
+
+.shiftRow {
+  display: flex; align-items: center; gap: $sp-3;
+  padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
+  &:last-child { border-bottom: none; }
+}
+.date {
+  width: 44px; text-align: center;
+  background: var(--brand-primary-soft, #{$brand-50});
+  border-radius: $r-sm; padding: 4px;
+}
+.dDay {
+  font-size: 10px; font-weight: $fw-bold;
+  color: var(--brand-primary, #{$brand-700});
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.dNum {
+  font-family: $font-display; font-weight: $fw-extra;
+  font-size: $fs-lg; line-height: 1;
+  color: var(--brand-primary, #{$brand-700});
+}
