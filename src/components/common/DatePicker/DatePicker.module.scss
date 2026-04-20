@@ -1,0 +1,108 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.wrap { position: relative; width: 100%; }
+
+.trigger {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: $sp-2;
+  background: $surface;
+  border: 1px solid $border-strong;
+  border-radius: $r-md;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: $fs-base;
+  color: $text;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color $dur $ease, box-shadow $dur $ease;
+  &:hover:not(:disabled) { border-color: $ink-400; }
+  &:focus-visible { @include focus-ring; border-color: $brand-500; outline: none; }
+  &:disabled { opacity: .55; cursor: not-allowed; }
+  &.placeholder { color: $ink-400; }
+}
+.icon { margin-left: auto; color: $text-muted; flex-shrink: 0; }
+.clear {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: $r-pill;
+  border: 0; background: transparent; color: $text-muted; cursor: pointer;
+  &:hover { background: $surface-2; color: $text; }
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: $z-overlay;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  box-shadow: $shadow-lg;
+  padding: $sp-2;
+  min-width: 280px;
+  animation: pop $dur-fast $ease;
+}
+@keyframes pop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// react-day-picker v8 styling overrides
+.rdp {
+  --rdp-cell-size: 38px;
+  --rdp-accent-color: #{$brand-600};
+  --rdp-background-color: #{$brand-50};
+  --rdp-accent-color-dark: #{$brand-700};
+  --rdp-background-color-dark: #{$brand-100};
+  --rdp-outline: 2px solid #{$brand-300};
+  --rdp-outline-selected: 2px solid #{$brand-600};
+  margin: 0;
+  font-family: inherit;
+  font-size: $fs-sm;
+  color: $text;
+
+  :global(.rdp-caption_label) { font-weight: $fw-semibold; color: $text; }
+  :global(.rdp-head_cell) { color: $text-muted; font-weight: $fw-medium; text-transform: none; font-size: $fs-xs; }
+  :global(.rdp-nav_button) {
+    color: $text-soft;
+    border-radius: $r-sm;
+    &:hover:not([disabled]) { background: $surface-2; color: $text; }
+  }
+  :global(.rdp-day) {
+    border-radius: $r-sm;
+    color: $text;
+    &:hover:not([disabled]):not(.rdp-day_selected) { background: $surface-2; }
+  }
+  :global(.rdp-day_today):not(:global(.rdp-day_selected)) {
+    color: $brand-700;
+    font-weight: $fw-semibold;
+  }
+  :global(.rdp-day_selected),
+  :global(.rdp-day_selected:focus-visible),
+  :global(.rdp-day_selected:hover) {
+    background: $brand-600;
+    color: $white;
+  }
+  :global(.rdp-day_range_middle) {
+    background: $brand-50;
+    color: $brand-800;
+    border-radius: 0;
+  }
+  :global(.rdp-day_range_start),
+  :global(.rdp-day_range_end) {
+    background: $brand-600;
+    color: $white;
+  }
+  :global(.rdp-day_disabled) { opacity: .35; cursor: not-allowed; }
+  :global(.rdp-day_outside) { color: $text-muted; opacity: .55; }
+}
+
+:global(.tenantTheme) {
+  .rdp {
+    --rdp-accent-color: var(--brand-primary, #{$brand-600});
+    --rdp-accent-color-dark: var(--brand-primary, #{$brand-700});
+  }
+  .trigger:focus-visible { border-color: var(--brand-primary, #{$brand-500}); }
+}
