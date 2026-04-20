@@ -37,8 +37,34 @@
   @include md { position: sticky; left: 0; top: 0; z-index: 3; }
 }
 .gridHeadDay { z-index: 1; }
+.gridHeadDayHoliday {
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.12), $ink-50);
+  border-bottom-color: rgba(217, 119, 6, 0.4);
+}
 .dayName { color: $text; font-weight: $fw-bold; text-transform: none; letter-spacing: 0; font-size: $fs-sm; }
 .dayDate { color: $text-muted; font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
+.holidayLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: $fw-semibold;
+  color: #b45309;
+  text-transform: none;
+  letter-spacing: 0;
+  @include truncate;
+  max-width: 100%;
+}
+.holidayDot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
+}
+.cellHoliday {
+  background: rgba(217, 119, 6, 0.04);
+  &:hover { background: rgba(217, 119, 6, 0.08); }
+}
 
 .staffCell { display: flex; align-items: center; gap: $sp-2; padding: $sp-3 $sp-4; border-right: 1px solid $border; border-bottom: 1px solid $border; background: $surface; min-height: 80px;
   @include md { position: sticky; left: 0; z-index: 2; }
