@@ -38,7 +38,14 @@
   background: var(--brand-secondary, #{$ink-900}); color: var(--brand-secondary-fg, $ink-200);
   flex-direction: column;
   padding: $sp-4;
-  @include md { display: flex; position: sticky; top: 0; height: 100vh; }
+  @include md {
+    display: flex;
+    position: sticky; top: 0;
+    height: 100vh; height: 100dvh;
+    min-height: 100vh; min-height: 100dvh;
+    overflow-y: auto;
+    @include scrollbar;
+  }
 }
 .brand { padding: $sp-2 $sp-3 $sp-4; }
 .brand :global(.lvword), .brand a { color: $white !important; }
