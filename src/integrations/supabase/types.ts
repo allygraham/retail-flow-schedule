@@ -155,6 +155,8 @@ export type Database = {
           id: string
           industry: string | null
           name: string
+          public_holidays_enabled: boolean
+          public_holidays_region: string
           slug: string
           updated_at: string
         }
@@ -163,6 +165,8 @@ export type Database = {
           id?: string
           industry?: string | null
           name: string
+          public_holidays_enabled?: boolean
+          public_holidays_region?: string
           slug: string
           updated_at?: string
         }
@@ -171,6 +175,8 @@ export type Database = {
           id?: string
           industry?: string | null
           name?: string
+          public_holidays_enabled?: boolean
+          public_holidays_region?: string
           slug?: string
           updated_at?: string
         }

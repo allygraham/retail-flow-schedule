@@ -13,6 +13,7 @@ import { fmtDate, fmtTime, hoursBetween, isoDate, weekDays, weekStartFor, overla
 import { addDays, format } from 'date-fns';
 import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
+import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
 
 export default function Rota() {
@@ -31,6 +32,7 @@ export default function Rota() {
   const [err, setErr] = useState<string | null>(null);
   const [activeShift, setActiveShift] = useState<any | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const holidays = useHolidays();
 
   const days = weekDays(weekStart);
   const weekEnd = addDays(weekStart, 6);
@@ -167,6 +169,9 @@ export default function Rota() {
       const { error } = await supabase.from('shifts').insert(payload as any);
       if (error) { setErr(error.message); return; }
     }
+    // Informational warning when scheduling a person on a public holiday
+    const hol = parsed.data.assigned_user_id ? holidays.get(parsed.data.shift_date) : undefined;
+    if (hol) toast.warning(`Heads up: ${parsed.data.shift_date} is ${hol.name} (public holiday).`);
     setModal({ open: false }); load();
   };
 
@@ -332,6 +337,11 @@ export default function Rota() {
     }
     const results = await Promise.all(updates);
     if (results.some((r: any) => r.error)) load();
+    // Informational warning when dragging a person onto a public holiday
+    if (newAssigned) {
+      const hol = holidays.get(targetDate);
+      if (hol) toast.warning(`Heads up: ${targetDate} is ${hol.name} (public holiday).`);
+    }
   };
 
   return (
@@ -359,12 +369,21 @@ export default function Rota() {
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className={s.grid}>
             <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>
-            {days.map(d => (
-              <div key={isoDate(d)} className={`${s.gridHead} ${s.gridHeadDay}`}>
-                <div className={s.dayName}>{format(d, 'EEE')}</div>
-                <div className={s.dayDate}>{format(d, 'd MMM')}</div>
-              </div>
-            ))}
+            {days.map(d => {
+              const dStr = isoDate(d);
+              const hol = holidays.get(dStr);
+              return (
+                <div key={dStr} className={`${s.gridHead} ${s.gridHeadDay} ${hol ? s.gridHeadDayHoliday : ''}`}>
+                  <div className={s.dayName}>{format(d, 'EEE')}</div>
+                  <div className={s.dayDate}>{format(d, 'd MMM')}</div>
+                  {hol && (
+                    <div className={s.holidayLabel} title={hol.name}>
+                      <span className={s.holidayDot} />{hol.name}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
             {/* per-employee rows */}
             {visiblePeople.map(p => (
@@ -380,8 +399,10 @@ export default function Rota() {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
                   const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
+                  const hol = holidays.get(dStr);
                   return (
                     <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={!isMgr || !!onLeave}
+                      className={hol ? s.cellHoliday : ''}
                       onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr)}>
                       {onLeave && (
                         <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
@@ -417,8 +438,10 @@ export default function Rota() {
                 {days.map(d => {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
+                  const hol = holidays.get(dStr);
                   return (
                     <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={!isMgr}
+                      className={hol ? s.cellHoliday : ''}
                       onClick={() => isMgr && openCreate(dStr)}>
                       {cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
@@ -523,10 +546,10 @@ export default function Rota() {
   );
 }
 
-function DroppableCell({ id, disabled, onClick, children }: { id: string; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
+function DroppableCell({ id, disabled, onClick, className, children }: { id: string; disabled?: boolean; onClick?: () => void; className?: string; children: ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id, disabled });
   return (
-    <div ref={setNodeRef} className={`${s.cell} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
+    <div ref={setNodeRef} className={`${s.cell} ${className ?? ''} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
       {children}
     </div>
   );

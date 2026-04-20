@@ -13,6 +13,7 @@ import { Button } from '@/components/common/Button';
 import { STATUS_LABEL, STATUS_TONE, TYPE_LABEL } from '@/features/leave/leaveStatus';
 import { fmtDate, fmtTime, isoDate, weekStartFor, weekDays, hoursBetween } from '@/lib/datetime';
 import { formatDistanceToNow } from 'date-fns';
+import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Dashboard.module.scss';
 
 export default function Dashboard() {
@@ -34,6 +35,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 }) {
   const nav = useNavigate();
   const { items: notifications } = useNotifications(userId);
+  const holidays = useHolidays();
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
@@ -149,6 +151,10 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
                 <span><MapPin size={14} /> {next.store_locations?.name ?? 'Store'}</span>
                 {next.roles_catalog?.name && <span className={s.dot}>·</span>}
                 {next.roles_catalog?.name && <span>{next.roles_catalog.name}</span>}
+                {holidays.get(next.shift_date) && <span className={s.dot}>·</span>}
+                {holidays.get(next.shift_date) && (
+                  <Badge tone="warning" dot>{holidays.get(next.shift_date)!.name}</Badge>
+                )}
               </div>
               {next.notes && <p className={s.heroNotes}>“{next.notes}”</p>}
             </div>
@@ -281,18 +287,24 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
           <Card title="Then after that" subtitle="Your next shifts"
             action={<Button variant="ghost" size="sm" trailing={<ArrowRight size={14} />} onClick={() => nav('/rota')}>Full rota</Button>}>
             <ul className={s.list}>
-              {restUpcoming.map((sh: any) => (
-                <li key={sh.id} className={s.shiftRow}>
-                  <div className={s.date}>
-                    <div className={s.dDay}>{fmtDate(sh.shift_date, 'EEE')}</div>
-                    <div className={s.dNum}>{fmtDate(sh.shift_date, 'd')}</div>
-                  </div>
-                  <div className={s.rowMain}>
-                    <div className={s.rowName}>{fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}</div>
-                    <div className={s.rowMeta}>{sh.store_locations?.name}{sh.roles_catalog?.name ? ` · ${sh.roles_catalog.name}` : ''}</div>
-                  </div>
-                </li>
-              ))}
+              {restUpcoming.map((sh: any) => {
+                const hol = holidays.get(sh.shift_date);
+                return (
+                  <li key={sh.id} className={s.shiftRow}>
+                    <div className={s.date}>
+                      <div className={s.dDay}>{fmtDate(sh.shift_date, 'EEE')}</div>
+                      <div className={s.dNum}>{fmtDate(sh.shift_date, 'd')}</div>
+                    </div>
+                    <div className={s.rowMain}>
+                      <div className={s.rowName}>
+                        {fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}
+                        {hol && <Badge tone="warning" dot>{hol.name}</Badge>}
+                      </div>
+                      <div className={s.rowMeta}>{sh.store_locations?.name}{sh.roles_catalog?.name ? ` · ${sh.roles_catalog.name}` : ''}</div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </Card>
         )}
