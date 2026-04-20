@@ -19,6 +19,12 @@
 .danger  { background: #fee2e2; color: #991b1b; }
 .info    { background: #e0f2fe; color: #075985; }
 
+/* Inside the tenant workspace, brand-tinted badges follow business branding. */
+:global(.tenantTheme) {
+  .brand { background: var(--brand-primary-soft, #{$brand-50}); color: var(--brand-primary, #{$brand-700}); }
+  .leave { background: var(--brand-primary-soft, #{$brand-50}); color: var(--brand-primary, #{$brand-700}); }
+}
+
 .working    { background: #dcfce7; color: #166534; }
 .leave      { background: $brand-50; color: $brand-700; }
 .sick       { background: #fee2e2; color: #991b1b; }
