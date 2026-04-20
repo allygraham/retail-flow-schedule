@@ -6,6 +6,7 @@ import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
+import { StoreSelect } from '@/components/common/StoreSelect';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
