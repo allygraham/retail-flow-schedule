@@ -1,0 +1,52 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.wrap { position: relative; display: inline-block; }
+
+.trigger {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $r-sm;
+  font-size: $fs-sm; font-weight: $fw-medium;
+  color: $text;
+  cursor: pointer;
+  transition: border-color $dur-fast $ease, background $dur-fast $ease;
+  max-width: 200px;
+  &:hover { border-color: $ink-400; background: $ink-50; }
+  &:focus-visible { outline: 2px solid $brand-500; outline-offset: 1px; }
+}
+.label { @include truncate; max-width: 140px; }
+.caret {
+  width: 14px; height: 14px; flex-shrink: 0; color: $text-muted;
+  transition: transform $dur-fast $ease;
+}
+.caretOpen { transform: rotate(180deg); }
+
+.menu {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  min-width: 220px; max-height: 280px; overflow-y: auto;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $r-sm;
+  box-shadow: $shadow-md;
+  z-index: 40;
+  padding: 4px;
+  @include scrollbar;
+}
+.option {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  background: none; border: none;
+  border-radius: $r-sm;
+  font-size: $fs-sm; color: $text; text-align: left;
+  cursor: pointer;
+  &:hover { background: $ink-50; }
+}
+.optionActive { background: $brand-50; color: $brand-700; font-weight: $fw-semibold;
+  &:hover { background: $brand-50; }
+}
+.check { width: 14px; height: 14px; color: $brand-500; }
+.divider { height: 1px; background: $border; margin: 4px 0; }
