@@ -140,8 +140,18 @@ export default function Rota() {
     return c;
   };
 
-  const openCreate = (date: string) => {
-    setForm({ store_id: storeFilter !== 'all' ? storeFilter : stores[0]?.id, shift_date: date, start_time: '09:00', end_time: '17:00', break_minutes: 30, role_id: '', assigned_user_id: '', notes: '' });
+  const openCreate = (date: string, userId?: string) => {
+    const person = userId ? peopleById[userId] : undefined;
+    setForm({
+      store_id: storeFilter !== 'all' ? storeFilter : (person?.primary_store_id ?? stores[0]?.id),
+      shift_date: date,
+      start_time: '09:00',
+      end_time: '17:00',
+      break_minutes: 30,
+      role_id: person?.primary_role_id ?? '',
+      assigned_user_id: userId ?? '',
+      notes: '',
+    });
     setErr(null);
     setModal({ open: true, date });
   };
