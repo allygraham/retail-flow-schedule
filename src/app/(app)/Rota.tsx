@@ -388,7 +388,7 @@ export default function Rota() {
           {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
-            <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>This week</button>
+            <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>Current week</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
           </div>
           <StoreSelect
