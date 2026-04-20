@@ -6,7 +6,7 @@ import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
-import { useBranding } from '@/features/branding/BrandingProvider';
+import { useBranding, buildThemeStyle } from '@/features/branding/BrandingProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import s from './AppShell.module.scss';
@@ -126,7 +126,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   );
 
   return (
-    <div className={s.shell}>
+    <div className={`${s.shell} tenantTheme`} style={buildThemeStyle(theme)}>
       {/* Mobile top bar */}
       <header className={s.topbar}>
         <button

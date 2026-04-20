@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { readableForeground, shade, withAlpha } from './contrast';
@@ -12,31 +12,25 @@ type BrandingState = {
 
 const Ctx = createContext<BrandingState | undefined>(undefined);
 
-function applyThemeToDocument(theme: BrandingTheme) {
-  const root = document.documentElement;
+/**
+ * Build inline style object for tenant theme — applied to a SCOPED wrapper,
+ * never to :root. This prevents tenant branding from leaking into public pages.
+ */
+export function buildThemeStyle(theme: BrandingTheme): React.CSSProperties {
   const fgPrimary = readableForeground(theme.primaryColor);
   const fgSecondary = readableForeground(theme.secondaryColor);
   const fgAccent = readableForeground(theme.accentColor);
-
-  root.style.setProperty('--brand-primary', theme.primaryColor);
-  root.style.setProperty('--brand-primary-fg', fgPrimary);
-  root.style.setProperty('--brand-primary-soft', withAlpha(theme.primaryColor, 0.10));
-  root.style.setProperty('--brand-primary-hover', shade(theme.primaryColor, -0.08));
-
-  root.style.setProperty('--brand-secondary', theme.secondaryColor);
-  root.style.setProperty('--brand-secondary-fg', fgSecondary);
-
-  root.style.setProperty('--brand-accent', theme.accentColor);
-  root.style.setProperty('--brand-accent-fg', fgAccent);
-
-  root.style.setProperty('--brand-surface', theme.surfaceColor);
-}
-
-function resetTheme() {
-  const root = document.documentElement;
-  ['--brand-primary','--brand-primary-fg','--brand-primary-soft','--brand-primary-hover',
-   '--brand-secondary','--brand-secondary-fg','--brand-accent','--brand-accent-fg','--brand-surface']
-    .forEach(v => root.style.removeProperty(v));
+  return {
+    ['--brand-primary' as any]: theme.primaryColor,
+    ['--brand-primary-fg' as any]: fgPrimary,
+    ['--brand-primary-soft' as any]: withAlpha(theme.primaryColor, 0.10),
+    ['--brand-primary-hover' as any]: shade(theme.primaryColor, -0.08),
+    ['--brand-secondary' as any]: theme.secondaryColor,
+    ['--brand-secondary-fg' as any]: fgSecondary,
+    ['--brand-accent' as any]: theme.accentColor,
+    ['--brand-accent-fg' as any]: fgAccent,
+    ['--brand-surface' as any]: theme.surfaceColor,
+  };
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
@@ -47,7 +41,6 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async () => {
     if (!business) {
       setTheme(DEFAULT_THEME);
-      resetTheme();
       return;
     }
     setLoading(true);
@@ -65,7 +58,6 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       logoUrl: data?.logo_url ?? null,
     };
     setTheme(next);
-    applyThemeToDocument(next);
     setLoading(false);
   }, [business]);
 
@@ -82,9 +74,6 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [business, load]);
-
-  // Re-apply when theme changes (defensive — also done in load)
-  useEffect(() => { applyThemeToDocument(theme); }, [theme]);
 
   const value = useMemo<BrandingState>(() => ({ theme, loading, refresh: load }), [theme, loading, load]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
