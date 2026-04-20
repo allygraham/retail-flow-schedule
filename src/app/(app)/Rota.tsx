@@ -355,10 +355,12 @@ export default function Rota() {
     }
     const results = await Promise.all(updates);
     if (results.some((r: any) => r.error)) load();
-    // Informational warning when dragging a person onto a public holiday
+    // Informational warning when dragging a person onto a public holiday (custom is blocked above)
     if (newAssigned) {
       const hol = holidays.get(targetDate);
-      if (hol) toast.warning(`Heads up: ${targetDate} is ${hol.name} (public holiday).`);
+      if (hol && hol.kind !== 'custom') {
+        toast.warning(`Heads up: ${targetDate} is ${hol.name} (public holiday).`);
+      }
     }
   };
 
