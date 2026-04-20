@@ -9,12 +9,14 @@ import { Field, Input } from '@/components/common/Field';
 import { fmtDate, fmtTime, isoDate } from '@/lib/datetime';
 import { useLeaveBalance } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
+import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Profile.module.scss';
 
 export default function Profile() {
   const { user, fullName, role, business, refresh } = useAuth();
   const { balance, loading: balanceLoading } = useLeaveBalance();
   const [name, setName] = useState(fullName ?? '');
+  const holidays = useHolidays();
   const [phone, setPhone] = useState('');
   const [shifts, setShifts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
@@ -66,18 +68,24 @@ export default function Profile() {
             <div className={s.empty}>No upcoming shifts.</div>
           ) : (
             <ul className={s.list}>
-              {shifts.map((sh: any) => (
-                <li key={sh.id} className={s.row}>
-                  <div className={s.date}>
-                    <div className={s.dDay}>{fmtDate(sh.shift_date, 'EEE')}</div>
-                    <div className={s.dNum}>{fmtDate(sh.shift_date, 'd')}</div>
-                  </div>
-                  <div className={s.rowMain}>
-                    <div className={s.rowName}>{fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}</div>
-                    <div className={s.rowMeta}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}{sh.notes ? ` · ${sh.notes}` : ''}</div>
-                  </div>
-                </li>
-              ))}
+              {shifts.map((sh: any) => {
+                const hol = holidays.get(sh.shift_date);
+                return (
+                  <li key={sh.id} className={s.row}>
+                    <div className={s.date}>
+                      <div className={s.dDay}>{fmtDate(sh.shift_date, 'EEE')}</div>
+                      <div className={s.dNum}>{fmtDate(sh.shift_date, 'd')}</div>
+                    </div>
+                    <div className={s.rowMain}>
+                      <div className={s.rowName}>
+                        {fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}
+                        {hol && <Badge tone="warning" dot>{hol.name}</Badge>}
+                      </div>
+                      <div className={s.rowMeta}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}{sh.notes ? ` · ${sh.notes}` : ''}</div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
