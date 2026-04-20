@@ -11,6 +11,7 @@ import { Badge } from '@/components/common/Badge';
 import { Avatar } from '@/components/common/Avatar';
 import { Modal } from '@/components/common/Modal';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
+import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema } from '@/lib/validation';
@@ -231,14 +232,18 @@ export default function Leave() {
               <option value="other">Other</option>
             </Select>
           </Field>
-          <div className={s.row2}>
-            <Field label="From">
-              <Input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
-            </Field>
-            <Field label="To">
-              <Input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
-            </Field>
-          </div>
+          <Field label="Dates">
+            <DatePicker
+              mode="range"
+              value={{ from: parseISODate(form.start_date), to: parseISODate(form.end_date) }}
+              onChange={(r) => setForm({
+                ...form,
+                start_date: toISODate(r.from) || form.start_date,
+                end_date: toISODate(r.to) || toISODate(r.from) || form.end_date,
+              })}
+              placeholder="Pick a date range"
+            />
+          </Field>
           <Field label="Reason">
             <TextArea
               value={form.reason}
