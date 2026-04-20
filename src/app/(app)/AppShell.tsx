@@ -126,7 +126,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   );
 
   return (
-    <div className={s.shell}>
+    <div className={`${s.shell} tenantTheme`} style={buildThemeStyle(theme)}>
       {/* Mobile top bar */}
       <header className={s.topbar}>
         <button
