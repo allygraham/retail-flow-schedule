@@ -121,7 +121,7 @@ export default function Rota() {
       .reduce((a, sh) => a + hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0), 0),
     [filteredShifts],
   );
-  const hasDrafts = useMemo(() => filteredShifts.some(x => !x.is_published), [filteredShifts]);
+  const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published).length, [filteredShifts]);
   const fmtH = (n: number) => (Math.round(n * 10) / 10).toString();
 
   const conflictsFor = (sh: any): string[] => {
@@ -396,7 +396,11 @@ export default function Rota() {
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
           />
           {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
-          {isMgr && hasDrafts && <Button onClick={openPublishConfirm}>Publish schedule</Button>}
+          {isMgr && (
+            <Button onClick={openPublishConfirm} disabled={draftCount === 0}>
+              Publish{draftCount > 0 ? ` (${draftCount})` : ''}
+            </Button>
+          )}
         </div>
       </header>
 
