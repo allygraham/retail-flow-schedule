@@ -536,10 +536,10 @@ export default function Rota() {
   );
 }
 
-function DroppableCell({ id, disabled, onClick, children }: { id: string; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
+function DroppableCell({ id, disabled, onClick, className, children }: { id: string; disabled?: boolean; onClick?: () => void; className?: string; children: ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id, disabled });
   return (
-    <div ref={setNodeRef} className={`${s.cell} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
+    <div ref={setNodeRef} className={`${s.cell} ${className ?? ''} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
       {children}
     </div>
   );
