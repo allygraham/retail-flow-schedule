@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,7 +14,8 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
   const nav = useNavigate();
   const { items, unreadCount, markRead, markAllRead } = useNotifications(user?.id);
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -22,6 +24,26 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const update = () => {
+      const r = btnRef.current!.getBoundingClientRect();
+      const panelW = Math.min(360, window.innerWidth - 24);
+      const top = r.bottom + 8;
+      const left = variant === 'desktop'
+        ? Math.min(r.left, window.innerWidth - panelW - 12)
+        : Math.max(12, r.right - panelW);
+      setPos({ top, left });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open, variant]);
+
   const onClickItem = async (n: Notification) => {
     if (!n.read_at) await markRead(n.id);
     setOpen(false);
@@ -29,8 +51,9 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
   };
 
   return (
-    <div className={s.wrap} ref={wrapRef}>
+    <div className={s.wrap}>
       <button
+        ref={btnRef}
         type="button"
         className={`${s.btn} ${variant === 'desktop' ? s.btnDesktop : ''}`}
         aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
@@ -43,10 +66,15 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
         )}
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <>
           <div className={s.backdrop} onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className={`${s.panel} ${variant === 'desktop' ? s.panelLeft : ''}`} role="dialog" aria-label="Notifications">
+          <div
+            className={s.panel}
+            role="dialog"
+            aria-label="Notifications"
+            style={{ top: pos.top, left: pos.left }}
+          >
             <div className={s.head}>
               <span className={s.title}>Notifications</span>
               <button
@@ -80,7 +108,8 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
               ))}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
