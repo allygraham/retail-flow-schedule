@@ -169,6 +169,9 @@ export default function Rota() {
       const { error } = await supabase.from('shifts').insert(payload as any);
       if (error) { setErr(error.message); return; }
     }
+    // Informational warning when scheduling a person on a public holiday
+    const hol = parsed.data.assigned_user_id ? holidays.get(parsed.data.shift_date) : undefined;
+    if (hol) toast.warning(`Heads up: ${parsed.data.shift_date} is ${hol.name} (public holiday).`);
     setModal({ open: false }); load();
   };
 
