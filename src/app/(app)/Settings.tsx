@@ -2,6 +2,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { BrandingSettings } from '@/features/branding/BrandingSettings';
+import { HolidaySettings } from '@/features/holidays/HolidaySettings';
 import s from './Stores.module.scss';
 
 export default function Settings() {
@@ -22,6 +23,8 @@ export default function Settings() {
           <div><strong>Your role:</strong> <Badge tone="brand" dot>{role}</Badge></div>
         </div>
       </Card>
+
+      <HolidaySettings />
 
       <BrandingSettings />
     </div>
