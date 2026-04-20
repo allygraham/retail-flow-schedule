@@ -46,7 +46,7 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
       {open && (
         <>
           <div className={s.backdrop} onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className={s.panel} role="dialog" aria-label="Notifications">
+          <div className={`${s.panel} ${variant === 'desktop' ? s.panelLeft : ''}`} role="dialog" aria-label="Notifications">
             <div className={s.head}>
               <span className={s.title}>Notifications</span>
               <button
