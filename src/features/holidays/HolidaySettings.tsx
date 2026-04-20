@@ -27,10 +27,14 @@ export function HolidaySettings() {
     const payload: { public_holidays_enabled?: boolean; public_holidays_region?: string } = {};
     if (next.enabled !== undefined) payload.public_holidays_enabled = next.enabled;
     if (next.region !== undefined) payload.public_holidays_region = next.region;
-    const { error } = await supabase.from('businesses').update(payload).eq('id', business.id);
+    const { data, error } = await supabase
+      .from('businesses')
+      .update(payload)
+      .eq('id', business.id)
+      .select('id');
     setSaving(false);
-    if (error) {
-      toast.error(error.message);
+    if (error || !data || data.length === 0) {
+      toast.error(error?.message ?? 'You do not have permission to change these settings.');
       // revert
       setEnabled(!!business.public_holidays_enabled);
       setRegion((business.public_holidays_region as HolidayRegion) ?? 'england');
