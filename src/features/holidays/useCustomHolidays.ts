@@ -47,7 +47,7 @@ export function useCustomHolidays(businessId: string | null) {
 
   const update = useCallback(
     async (id: string, patch: { name?: string; blocks_scheduling?: boolean }) => {
-      const cleaned: Record<string, unknown> = {};
+      const cleaned: { name?: string; blocks_scheduling?: boolean } = {};
       if (patch.name !== undefined) cleaned.name = patch.name.trim();
       if (patch.blocks_scheduling !== undefined) cleaned.blocks_scheduling = patch.blocks_scheduling;
       const { error } = await supabase.from('custom_holidays').update(cleaned).eq('id', id);
