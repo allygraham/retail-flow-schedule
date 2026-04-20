@@ -317,6 +317,12 @@ export default function Rota() {
         toast.error(`${peopleById[newAssigned]?.name ?? 'Employee'} is on approved leave that day.`);
         return;
       }
+      // Block drops onto a company holiday flagged as blocking
+      const blockingHol = holidays.getBlocking(targetDate);
+      if (blockingHol) {
+        toast.error(`Scheduling is blocked on ${blockingHol.name} (${targetDate}).`);
+        return;
+      }
     }
 
     // find an occupant in the target cell (for swap). If multiple, swap with the first.
