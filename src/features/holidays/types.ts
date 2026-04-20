@@ -14,7 +14,8 @@ export interface PublicHoliday {
   year: number;
   /** Optional classification, e.g. "bank", "national". */
   type?: string;
-  kind: HolidayKind;
+  /** Source of the holiday. Defaults to 'public' for built-in registry data. */
+  kind?: HolidayKind;
   /** When true, scheduling on this date should be blocked (custom only). */
   blocksScheduling?: boolean;
 }
