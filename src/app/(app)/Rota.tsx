@@ -384,15 +384,18 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
         <div className={s.controls}>
-          <Button variant="outline" size="sm" onClick={() => setWeekStart(addDays(weekStart, -7))}>← Prev</Button>
-          <Button variant="ghost" size="sm" onClick={() => setWeekStart(weekStartFor(new Date()))}>This week</Button>
-          <Button variant="outline" size="sm" onClick={() => setWeekStart(addDays(weekStart, 7))}>Next →</Button>
-          <Select value={storeFilter} onChange={e => setStoreFilter(e.target.value)}>
-            <option value="all">All stores</option>
-            {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </Select>
+          <div className={s.weekNav} role="group" aria-label="Week navigation">
+            <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
+            <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>This week</button>
+            <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
+          </div>
+          <StoreSelect
+            value={storeFilter}
+            options={stores.map(st => ({ id: st.id, name: st.name }))}
+            onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
+          />
           {isMgr && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
-          {isMgr && <Button onClick={openPublishConfirm}>Publish schedule</Button>}
+          {isMgr && hasDrafts && <Button onClick={openPublishConfirm}>Publish schedule</Button>}
         </div>
       </header>
 
