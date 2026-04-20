@@ -17,13 +17,16 @@ export default function Dashboard() {
     if (!business) return;
     (async () => {
       const today = isoDate(new Date());
-      const [shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles] = await Promise.all([
+      const [shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles, myUpcomingRes] = await Promise.all([
         supabase.from('shifts').select('*').eq('business_id', business.id).eq('shift_date', today).eq('is_published', true).neq('status', 'cancelled').order('start_time'),
         supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'approved').eq('leave_type', 'annual').lte('start_date', today).gte('end_date', today),
         supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'approved').eq('leave_type', 'sick').lte('start_date', today).gte('end_date', today),
         supabase.from('leave_requests').select('*, profiles!leave_requests_user_id_fkey(full_name)').eq('business_id', business.id).eq('status', 'pending').order('created_at', { ascending: false }),
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
+        user?.id
+          ? supabase.from('shifts').select('*, store_locations(name)').eq('business_id', business.id).eq('assigned_user_id', user.id).eq('is_published', true).neq('status', 'cancelled').gte('shift_date', today).order('shift_date').order('start_time').limit(5)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       setData({
         shiftsToday: shiftsToday.data ?? [],
@@ -32,6 +35,7 @@ export default function Dashboard() {
         pendingLeave: pendingLeave.data ?? [],
         unassigned: unassigned.data ?? [],
         profilesById: Object.fromEntries((profiles.data ?? []).map((p: any) => [p.id, p.full_name])),
+        myUpcoming: myUpcomingRes.data ?? [],
       });
     })();
   }, [business]);
@@ -40,7 +44,7 @@ export default function Dashboard() {
   if (!data) return <div className={s.loading}>Loading…</div>;
 
   const isMgr = role === 'owner' || role === 'manager';
-  const myUpcoming = data.shiftsToday.filter((sh: any) => sh.assigned_user_id === user?.id);
+  const myUpcoming = data.myUpcoming ?? [];
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
 
   return (
@@ -84,17 +88,20 @@ export default function Dashboard() {
         {!isMgr ? (
           <Card title="Your next shifts">
             {myUpcoming.length === 0 ? (
-              <EmptyState title="No shift today" description="Check the rota for upcoming dates." />
+              <EmptyState title="No upcoming shifts" description="Check the rota for upcoming dates." />
             ) : (
               <ul className={s.list}>
-                {myUpcoming.map((sh: any) => (
-                  <li key={sh.id} className={s.row}>
-                    <div className={s.rowMain}>
-                      <div className={s.rowName}>Today</div>
-                      <div className={s.rowMeta}>{fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}{sh.notes ? ` · ${sh.notes}` : ''}</div>
-                    </div>
-                  </li>
-                ))}
+                {myUpcoming.map((sh: any) => {
+                  const isToday = sh.shift_date === isoDate(new Date());
+                  return (
+                    <li key={sh.id} className={s.row}>
+                      <div className={s.rowMain}>
+                        <div className={s.rowName}>{isToday ? 'Today' : fmtDate(sh.shift_date, 'EEE, d MMM')}{sh.store_locations?.name ? ` · ${sh.store_locations.name}` : ''}</div>
+                        <div className={s.rowMeta}>{fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}{sh.notes ? ` · ${sh.notes}` : ''}</div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Card>
