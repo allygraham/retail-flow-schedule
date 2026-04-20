@@ -17,6 +17,9 @@
   color: $text;
   transition: border-color $dur $ease, box-shadow $dur $ease;
   &:focus { @include focus-ring; border-color: $brand-500; }
+}
+:global(.tenantTheme) .input:focus { border-color: var(--brand-primary, #{$brand-500}); }
+.input {
   &::placeholder { color: $ink-400; }
 }
 .select {
