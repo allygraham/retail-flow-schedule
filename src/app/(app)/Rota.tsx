@@ -438,8 +438,10 @@ export default function Rota() {
                 {days.map(d => {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
+                  const hol = holidays.get(dStr);
                   return (
                     <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={!isMgr}
+                      className={hol ? s.cellHoliday : ''}
                       onClick={() => isMgr && openCreate(dStr)}>
                       {cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
