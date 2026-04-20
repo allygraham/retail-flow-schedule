@@ -182,6 +182,47 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_holidays: {
+        Row: {
+          blocks_scheduling: boolean
+          business_id: string
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          blocks_scheduling?: boolean
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          blocks_scheduling?: boolean
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_holidays_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_profiles: {
         Row: {
           annual_leave_entitlement: number
