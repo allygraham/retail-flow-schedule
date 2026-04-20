@@ -86,22 +86,23 @@ export default function Dashboard() {
         </Card>
 
         {!isMgr ? (
-          <Card title="Your next shifts">
+          <Card title="Your next shifts" subtitle="Next 5 published">
             {myUpcoming.length === 0 ? (
               <EmptyState title="No upcoming shifts" description="Check the rota for upcoming dates." />
             ) : (
               <ul className={s.list}>
-                {myUpcoming.map((sh: any) => {
-                  const isToday = sh.shift_date === isoDate(new Date());
-                  return (
-                    <li key={sh.id} className={s.row}>
-                      <div className={s.rowMain}>
-                        <div className={s.rowName}>{isToday ? 'Today' : fmtDate(sh.shift_date, 'EEE, d MMM')}{sh.store_locations?.name ? ` · ${sh.store_locations.name}` : ''}</div>
-                        <div className={s.rowMeta}>{fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}{sh.notes ? ` · ${sh.notes}` : ''}</div>
-                      </div>
-                    </li>
-                  );
-                })}
+                {myUpcoming.map((sh: any) => (
+                  <li key={sh.id} className={s.shiftRow}>
+                    <div className={s.date}>
+                      <div className={s.dDay}>{fmtDate(sh.shift_date, 'EEE')}</div>
+                      <div className={s.dNum}>{fmtDate(sh.shift_date, 'd')}</div>
+                    </div>
+                    <div className={s.rowMain}>
+                      <div className={s.rowName}>{fmtTime(sh.start_time)} – {fmtTime(sh.end_time)}</div>
+                      <div className={s.rowMeta}>{sh.store_locations?.name}{sh.roles_catalog?.name ? ` · ${sh.roles_catalog.name}` : ''}{sh.notes ? ` · ${sh.notes}` : ''}</div>
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </Card>
