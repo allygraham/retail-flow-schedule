@@ -44,7 +44,7 @@ export default function Dashboard() {
   if (!data) return <div className={s.loading}>Loading…</div>;
 
   const isMgr = role === 'owner' || role === 'manager';
-  const myUpcoming = data.shiftsToday.filter((sh: any) => sh.assigned_user_id === user?.id);
+  const myUpcoming = data.myUpcoming ?? [];
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
 
   return (
