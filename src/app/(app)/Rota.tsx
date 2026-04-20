@@ -385,6 +385,7 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
         <div className={s.controls}>
+          {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>This week</button>
@@ -395,7 +396,6 @@ export default function Rota() {
             options={stores.map(st => ({ id: st.id, name: st.name }))}
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
           />
-          {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
           {isMgr && (
             <Button onClick={openPublishConfirm} disabled={draftCount === 0}>
               Publish{draftCount > 0 ? ` (${draftCount})` : ''}
