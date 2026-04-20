@@ -60,7 +60,7 @@
   &:focus-visible { @include focus-ring; }
 }
 .active { background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white) !important;
-  box-shadow: $shadow-glow;
+  box-shadow: $shadow-sm;
 }
 .linkBadge {
   display: inline-flex; align-items: center; justify-content: center;
