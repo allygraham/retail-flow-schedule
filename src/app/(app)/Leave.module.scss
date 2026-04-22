@@ -36,7 +36,7 @@
 .actions { display: flex; gap: 6px; justify-content: flex-end; }
 .sourceMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hintBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text-soft; font-size: $fs-sm; border: 1px solid $border; }
-.warnBox { padding: $sp-3; border-radius: $r-md; background: rgba($warn, 0.08); color: $text; font-size: $fs-sm; border: 1px solid rgba($warn, 0.22); }
+.warnBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text; font-size: $fs-sm; border: 1px solid $border; }
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
