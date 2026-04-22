@@ -1,6 +1,6 @@
 import type { AppRole } from '@/types/domain';
 
-export const PERMISSIONS = {
+export const PERMISSIONS: Record<string, readonly AppRole[]> = {
   manage_settings: ['owner'],
   manage_stores: ['owner'],
   manage_staff: ['owner', 'manager'],
@@ -11,7 +11,7 @@ export const PERMISSIONS = {
   view_own_schedule: ['owner', 'manager', 'employee'],
   request_leave: ['owner', 'manager', 'employee'],
   view_own_requests: ['owner', 'manager', 'employee'],
-} as const satisfies Record<string, readonly AppRole[]>;
+} as const;
 
 export type AppPermission = keyof typeof PERMISSIONS;
 
