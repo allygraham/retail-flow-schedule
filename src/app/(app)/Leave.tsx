@@ -15,10 +15,30 @@ import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePic
 import { EmptyState } from '@/components/common/EmptyState';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
+import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
 type Filter = 'pending' | 'reviewed' | 'all';
+type LeaveFilterState = {
+  status: '' | LeaveStatus;
+  leaveType: '' | Extract<LeaveType, 'annual' | 'sick' | 'unpaid'>;
+  source: '' | LeaveSource;
+  fromDate: string;
+  toDate: string;
+  employeeQuery: string;
+  storeName: string;
+};
+
+const INITIAL_LEAVE_FILTERS: LeaveFilterState = {
+  status: '',
+  leaveType: '',
+  source: '',
+  fromDate: '',
+  toDate: '',
+  employeeQuery: '',
+  storeName: '',
+};
 
 export default function Leave() {
   const { user } = useAuth();
@@ -48,16 +68,65 @@ export default function Leave() {
   const [reviewNote, setReviewNote] = useState('');
 
   const [filter, setFilter] = useState<Filter>('pending');
+  const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
+
+  const storeOptions = useMemo(
+    () => Array.from(new Set(
+      requests
+        .map((request) => request.primary_store?.name ?? null)
+        .filter((name): name is string => Boolean(name))
+    )).sort((a, b) => a.localeCompare(b)),
+    [requests],
+  );
 
   const filtered = useMemo(() => {
-    if (!isMgr) return requests; // employees see everything chronologically
-    if (filter === 'pending') return requests.filter(r => r.status === 'pending');
-    if (filter === 'reviewed') return requests.filter(r => r.status === 'approved' || r.status === 'rejected');
-    return requests;
-  }, [requests, filter, isMgr]);
+    let scoped = requests;
+
+    if (isMgr) {
+      if (filter === 'pending') scoped = scoped.filter(r => r.status === 'pending');
+      else if (filter === 'reviewed') scoped = scoped.filter(r => r.status === 'approved' || r.status === 'rejected');
+    }
+
+    return scoped.filter((request) => {
+      if (filters.status && request.status !== filters.status) return false;
+      if (filters.leaveType && request.leave_type !== filters.leaveType) return false;
+      if (filters.source && request.source !== filters.source) return false;
+      if (filters.fromDate && request.end_date < filters.fromDate) return false;
+      if (filters.toDate && request.start_date > filters.toDate) return false;
+
+      if (isMgr) {
+        const employeeName = request.profiles?.full_name?.toLowerCase() ?? '';
+        if (filters.employeeQuery && !employeeName.includes(filters.employeeQuery.trim().toLowerCase())) return false;
+        if (filters.storeName && (request.primary_store?.name ?? '') !== filters.storeName) return false;
+      }
+
+      return true;
+    });
+  }, [requests, filter, isMgr, filters]);
+
+  const activeFilterChips = useMemo(() => {
+    const chips: string[] = [];
+    if (filters.status) chips.push(`Status: ${STATUS_LABEL[filters.status]}`);
+    if (filters.leaveType) chips.push(`Type: ${TYPE_LABEL[filters.leaveType]}`);
+    if (filters.source) chips.push(`Source: ${SOURCE_LABEL[filters.source]}`);
+    if (filters.fromDate || filters.toDate) {
+      chips.push(`Dates: ${filters.fromDate ? fmtDate(filters.fromDate, 'd MMM yyyy') : 'Any'} → ${filters.toDate ? fmtDate(filters.toDate, 'd MMM yyyy') : 'Any'}`);
+    }
+    if (isMgr && filters.employeeQuery) chips.push(`Employee: ${filters.employeeQuery.trim()}`);
+    if (isMgr && filters.storeName) chips.push(`Store: ${filters.storeName}`);
+    return chips;
+  }, [filters, isMgr]);
+
+  const hasActiveFilters = activeFilterChips.length > 0;
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
   const selectedEmployee = employees.find((employee) => employee.user_id === mgmtForm.user_id);
+
+  const setLeaveFilter = <K extends keyof LeaveFilterState>(key: K, value: LeaveFilterState[K]) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const clearFilters = () => setFilters(INITIAL_LEAVE_FILTERS);
 
   const submitRequest = async () => {
     setFormErr(null);
@@ -193,15 +262,101 @@ export default function Leave() {
         </div>
       )}
 
+      <Card>
+        <div className={s.filterBar}>
+          <div className={s.filterGrid}>
+            <Field label="Status">
+              <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Declined</option>
+              </Select>
+            </Field>
+
+            <Field label="Leave type">
+              <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
+                <option value="">All leave types</option>
+                <option value="annual">Annual leave</option>
+                <option value="sick">Sick leave</option>
+                <option value="unpaid">Unpaid leave</option>
+              </Select>
+            </Field>
+
+            <Field label="From date">
+              <DatePicker
+                value={parseISODate(filters.fromDate)}
+                onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
+                placeholder="Any start date"
+              />
+            </Field>
+
+            <Field label="To date">
+              <DatePicker
+                value={parseISODate(filters.toDate)}
+                onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
+                placeholder="Any end date"
+              />
+            </Field>
+
+            <Field label="Source">
+              <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
+                <option value="">All sources</option>
+                <option value="employee_request">Employee requested</option>
+                <option value="manager_created">Manager created</option>
+                <option value="owner_created">Owner created</option>
+              </Select>
+            </Field>
+
+            {isMgr && (
+              <Field label="Employee name">
+                <Input
+                  value={filters.employeeQuery}
+                  onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
+                  placeholder="Search employee"
+                />
+              </Field>
+            )}
+
+            {isMgr && (
+              <Field label="Store / location">
+                <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
+                  <option value="">All stores</option>
+                  {storeOptions.map((storeName) => (
+                    <option key={storeName} value={storeName}>{storeName}</option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
+
+          <div className={s.filterFooter}>
+            <div className={s.filterSummary}>
+              {hasActiveFilters ? (
+                activeFilterChips.map((chip) => (
+                  <span key={chip} className={s.filterChip}>{chip}</span>
+                ))
+              ) : (
+                <span className={s.filterHint}>No filters applied</span>
+              )}
+            </div>
+            <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+          </div>
+        </div>
+      </Card>
+
       <Card padded={false}>
         {loading ? (
           <div className={s.loading}>Loading…</div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            title={isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}
-            description={isMgr && filter === 'pending'
-              ? 'No requests are waiting for review.'
-              : 'Submit a request to get started.'}
+            title={hasActiveFilters ? 'No leave matches those filters' : isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}
+            description={hasActiveFilters
+              ? 'Try broadening the filters or clear them to see more leave records.'
+              : isMgr && filter === 'pending'
+                ? 'No requests are waiting for review.'
+                : 'Submit a request to get started.'}
+            action={hasActiveFilters ? <Button variant="outline" onClick={clearFilters}>Clear filters</Button> : undefined}
           />
         ) : (
           <table className={s.table}>
