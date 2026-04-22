@@ -51,9 +51,9 @@ const STATUS_LABEL: Record<AccountStatus, string> = {
 };
 
 export default function Team() {
-  const { business, role, user } = useAuth();
-  const isMgr = role === 'owner' || role === 'manager';
-  const isOwner = role === 'owner';
+  const { business, role, user, hasPermission } = useAuth();
+  const canManageStaff = hasPermission('manage_staff');
+  const isOwner = hasPermission('manage_settings');
 
   const [rows, setRows] = useState<Row[]>([]);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
@@ -123,7 +123,7 @@ export default function Team() {
         .eq('business_id', business.id),
       supabase.from('store_locations').select('id, name').eq('business_id', business.id).order('name'),
       supabase.from('roles_catalog').select('id, name').eq('business_id', business.id).order('name'),
-      isMgr
+      canManageStaff
         ? supabase.from('invitations')
             .select('id, email, full_name, role, primary_store_id, primary_role_id, status, expires_at, token, contracted_hours')
             .eq('business_id', business.id)
@@ -133,7 +133,7 @@ export default function Team() {
     ]);
 
     let memberEmails: Record<string, string> = {};
-    if (isMgr && (roles ?? []).length) {
+    if (canManageStaff && (roles ?? []).length) {
       const ids = (roles ?? []).map((r: any) => r.user_id);
       memberEmails = Object.fromEntries(ids.map((id: string) => [id, '']));
     }
@@ -193,10 +193,10 @@ export default function Team() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, canManageStaff]);
 
   useEffect(() => {
-    if (!business || !isMgr) return;
+    if (!business || !canManageStaff) return;
     const ch = supabase
       .channel(`invitations:${business.id}`)
       .on('postgres_changes',
@@ -204,7 +204,7 @@ export default function Team() {
         () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [business, isMgr]);
+  }, [business, canManageStaff]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

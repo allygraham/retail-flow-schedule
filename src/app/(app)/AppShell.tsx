@@ -9,29 +9,30 @@ import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
 import { useBranding, buildThemeStyle } from '@/features/branding/BrandingProvider';
+import { NAV_PERMISSIONS, type AppNavItem } from '@/features/auth/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import s from './AppShell.module.scss';
 
 const ICON_SIZE = 18;
 
-const NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/rota', label: 'Rota', icon: Calendar },
-  { to: '/leave', label: 'Leave', icon: CalendarDays },
-  { to: '/team', label: 'Team', icon: Users, mgr: true },
-  { to: '/stores', label: 'Stores', icon: MapPin, mgr: true },
-  { to: '/profile', label: 'My profile', icon: User },
-  { to: '/settings', label: 'Settings', icon: Settings, mgr: true },
+const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof LayoutDashboard }> = [
+  { key: 'dashboard', to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { key: 'rota', to: '/rota', label: 'Rota', icon: Calendar },
+  { key: 'leave', to: '/leave', label: 'Leave', icon: CalendarDays },
+  { key: 'team', to: '/team', label: 'Team', icon: Users },
+  { key: 'stores', to: '/stores', label: 'Stores', icon: MapPin },
+  { key: 'profile', to: '/profile', label: 'My profile', icon: User },
+  { key: 'settings', to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
-  const { fullName, business, role, signOut } = useAuth();
+  const { fullName, business, role, signOut, hasPermission } = useAuth();
   const { theme } = useBranding();
   const workspaceName = theme.displayName || business?.name || 'Workspace';
   const nav = useNavigate();
   const location = useLocation();
-  const isMgr = role === 'owner' || role === 'manager';
+  const canManageLeave = hasPermission('manage_leave');
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingLeave, setPendingLeave] = useState(0);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -58,7 +59,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
 
   // Manager-only pending leave badge. Live via realtime + initial fetch.
   useEffect(() => {
-    if (!business || !isMgr) { setPendingLeave(0); return; }
+    if (!business || !canManageLeave) { setPendingLeave(0); return; }
     let cancelled = false;
     const fetchCount = () => {
       supabase
@@ -90,9 +91,12 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [business, isMgr, nav]);
+  }, [business, canManageLeave, nav]);
 
-  const items = NAV.filter(n => !n.mgr || isMgr);
+  const items = NAV.filter((item) => {
+    const permission = NAV_PERMISSIONS[item.key];
+    return permission ? hasPermission(permission) : true;
+  });
 
   const renderNav = (onClick?: () => void) => (
     <nav className={s.nav}>
@@ -109,7 +113,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
               <Icon size={ICON_SIZE} className={s.linkIcon} />
               <span>{n.label}</span>
             </div>
-            {n.to === '/leave' && isMgr && pendingLeave > 0 && (
+            {n.to === '/leave' && canManageLeave && pendingLeave > 0 && (
               <span className={s.linkBadge} aria-label={`${pendingLeave} pending`}>{pendingLeave}</span>
             )}
           </NavLink>
