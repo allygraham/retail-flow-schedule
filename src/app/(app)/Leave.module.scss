@@ -18,6 +18,35 @@
 }
 .tabActive { background: $surface; color: $text; box-shadow: $shadow-sm; font-weight: $fw-semibold; }
 
+.filterBar { @include col; gap: $sp-4; }
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $sp-3;
+  align-items: end;
+}
+.filterFooter {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $sp-3;
+  flex-wrap: wrap;
+}
+.filterSummary { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 $sp-3;
+  border-radius: $r-sm;
+  background: $ink-100;
+  border: 1px solid $border;
+  color: $text-soft;
+  font-size: $fs-xs;
+  font-weight: $fw-medium;
+}
+.filterHint { color: $text-muted; font-size: $fs-sm; }
+
 .loading { padding: $sp-6; text-align: center; color: $text-muted; font-size: $fs-sm; }
 
 .table { width: 100%; border-collapse: collapse; font-size: $fs-sm;
@@ -48,3 +77,8 @@
   p { margin: 4px 0 0; font-size: $fs-sm; color: $text; white-space: pre-wrap; }
 }
 .reasonLabel { font-size: $fs-xs; color: $text-muted; text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }
+
+@media (max-width: 720px) {
+  .filterGrid { grid-template-columns: 1fr; }
+  .filterFooter { align-items: stretch; }
+}
