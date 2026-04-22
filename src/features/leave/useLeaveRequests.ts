@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { LeaveRequest, LeaveStatus } from '@/types/domain';
@@ -14,6 +14,16 @@ interface ReviewInput {
   review_notes?: string | null;
 }
 
+interface ManagementLeaveInput {
+  user_id: string;
+  leave_type: 'annual' | 'unpaid' | 'sick';
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+  manager_note?: string | null;
+  status?: 'approved';
+}
+
 /**
  * Single source of truth for leave requests in the current business.
  * - Managers/owners see every request.
@@ -21,7 +31,7 @@ interface ReviewInput {
  * - On approval, unassigns any of the requester's shifts that fall in the date range.
  */
 export function useLeaveRequests() {
-  const { business, user, hasPermission } = useAuth();
+  const { business, user, role, hasPermission } = useAuth();
   const isMgr = hasPermission('manage_leave');
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,10 +106,65 @@ export function useLeaveRequests() {
       ...input,
       business_id: business.id,
       user_id: user.id,
+      source: 'employee_request',
+      created_by_user_id: user.id,
+      created_by_role: role ?? 'employee',
     } as any);
     if (error) throw error;
     await load();
-  }, [business, user, load]);
+  }, [business, user, role, load]);
+
+  const addForEmployee = useCallback(async (input: ManagementLeaveInput) => {
+    if (!business || !user || !role || !isMgr) throw new Error('Not authorised');
+
+    const { data: overlaps, error: overlapError } = await supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('business_id', business.id)
+      .eq('user_id', input.user_id)
+      .in('status', ['pending', 'approved'])
+      .lte('start_date', input.end_date)
+      .gte('end_date', input.start_date)
+      .limit(1);
+
+    if (overlapError) throw overlapError;
+    if ((overlaps ?? []).length > 0) {
+      throw new Error('This employee already has leave covering part of those dates');
+    }
+
+    const approvedAt = new Date().toISOString();
+    const source = role === 'owner' ? 'owner_created' : 'manager_created';
+    const { error } = await supabase.from('leave_requests').insert({
+      business_id: business.id,
+      user_id: input.user_id,
+      leave_type: input.leave_type,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      reason: input.reason ?? null,
+      manager_note: input.manager_note ?? null,
+      source,
+      status: 'approved',
+      created_by_user_id: user.id,
+      created_by_role: role,
+      approved_by: user.id,
+      approved_at: approvedAt,
+      reviewed_by: user.id,
+      reviewed_at: approvedAt,
+      review_notes: input.manager_note ?? null,
+    } as any);
+    if (error) throw error;
+
+    const { error: shiftError } = await supabase
+      .from('shifts')
+      .update({ assigned_user_id: null, status: 'unassigned' })
+      .eq('business_id', business.id)
+      .eq('assigned_user_id', input.user_id)
+      .gte('shift_date', input.start_date)
+      .lte('shift_date', input.end_date);
+    if (shiftError) throw shiftError;
+
+    await load();
+  }, [business, user, role, isMgr, load]);
 
   const cancelOwn = useCallback(async (id: string) => {
     const { error } = await supabase
@@ -138,6 +203,19 @@ export function useLeaveRequests() {
   }, [user, requests, load]);
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const employees = useMemo(() => {
+    const map = new Map<string, { user_id: string; full_name: string; primary_store_name: string | null }>();
+    for (const row of requests) {
+      if (!map.has(row.user_id)) {
+        map.set(row.user_id, {
+          user_id: row.user_id,
+          full_name: row.profiles?.full_name ?? 'Employee',
+          primary_store_name: row.primary_store?.name ?? null,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [requests]);
 
-  return { requests, loading, error, isMgr, pendingCount, load, submit, cancelOwn, review };
+  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review };
 }
