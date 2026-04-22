@@ -420,45 +420,63 @@ export type Database = {
       }
       leave_requests: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           business_id: string
           created_at: string
+          created_by_role: Database["public"]["Enums"]["app_role"] | null
+          created_by_user_id: string | null
           end_date: string
           id: string
           leave_type: Database["public"]["Enums"]["leave_type"]
+          manager_note: string | null
           reason: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          source: string
           start_date: string
           status: Database["public"]["Enums"]["leave_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           business_id: string
           created_at?: string
+          created_by_role?: Database["public"]["Enums"]["app_role"] | null
+          created_by_user_id?: string | null
           end_date: string
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"]
+          manager_note?: string | null
           reason?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          source?: string
           start_date: string
           status?: Database["public"]["Enums"]["leave_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           business_id?: string
           created_at?: string
+          created_by_role?: Database["public"]["Enums"]["app_role"] | null
+          created_by_user_id?: string | null
           end_date?: string
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"]
+          manager_note?: string | null
           reason?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          source?: string
           start_date?: string
           status?: Database["public"]["Enums"]["leave_status"]
           updated_at?: string
