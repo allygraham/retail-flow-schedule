@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, Business } from '@/types/domain';
+import { hasPermission, type AppPermission } from './permissions';
 
 interface TenancyState {
   loading: boolean;
@@ -10,6 +11,7 @@ interface TenancyState {
   fullName: string | null;
   business: Business | null;
   role: AppRole | null;
+  hasPermission: (permission: AppPermission) => boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const can = useCallback((permission: AppPermission) => hasPermission(role, permission), [role]);
 
   const loadTenancy = useCallback(async (uid: string) => {
     const [{ data: profile }, { data: membership }] = await Promise.all([
@@ -79,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <Ctx.Provider value={{ loading, session, user, fullName, business, role, signOut, refresh }}>
+    <Ctx.Provider value={{ loading, session, user, fullName, business, role, hasPermission: can, signOut, refresh }}>
       {children}
     </Ctx.Provider>
   );

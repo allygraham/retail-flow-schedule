@@ -67,8 +67,13 @@ Deno.serve(async (req) => {
       .select('role')
       .eq('business_id', body.business_id)
       .eq('user_id', caller.id);
-    const isMgr = (callerRoles ?? []).some((r) => r.role === 'owner' || r.role === 'manager');
-    if (!isMgr) return json({ error: 'Only managers can invite employees' }, 403);
+    const callerRole = (callerRoles ?? []).map((r) => r.role);
+    const isOwner = callerRole.includes('owner');
+    const canManageStaff = isOwner || callerRole.includes('manager');
+    if (!canManageStaff) return json({ error: 'Only owners and managers can invite employees' }, 403);
+    if (role === 'owner' && !isOwner) {
+      return json({ error: 'Only the owner can invite another owner' }, 403);
+    }
 
     // Block: already a member of this business with this email.
     const { data: existingUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });

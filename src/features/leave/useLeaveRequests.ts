@@ -21,8 +21,8 @@ interface ReviewInput {
  * - On approval, unassigns any of the requester's shifts that fall in the date range.
  */
 export function useLeaveRequests() {
-  const { business, role, user } = useAuth();
-  const isMgr = role === 'owner' || role === 'manager';
+  const { business, user, hasPermission } = useAuth();
+  const isMgr = hasPermission('manage_leave');
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -19,8 +19,8 @@ import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
 
 export default function Rota() {
-  const { business, role, user } = useAuth();
-  const isMgr = role === 'owner' || role === 'manager';
+  const { business, user, hasPermission } = useAuth();
+  const isMgr = hasPermission('manage_schedules');
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
   const [storeFilter, setStoreFilter] = useState<string>(() => sessionStorage.getItem('rota.storeFilter') ?? 'all');
   const [stores, setStores] = useState<any[]>([]);
@@ -45,7 +45,7 @@ export default function Rota() {
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
       supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
-      (role === 'owner' || role === 'manager'
+      (isMgr
         ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')
         : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')),
       supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
@@ -82,7 +82,7 @@ export default function Rota() {
     }));
     setShifts(sh.data ?? []); setLeave(lv.data ?? []);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, weekStart]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, weekStart, isMgr]);
 
   const filteredShifts = useMemo(() =>
     shifts.filter(x => storeFilter === 'all' || x.store_id === storeFilter)

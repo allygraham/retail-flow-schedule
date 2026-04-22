@@ -855,6 +855,10 @@ export type Database = {
           status: Database["public"]["Enums"]["invitation_status"]
         }[]
       }
+      has_permission: {
+        Args: { _business_id: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _business_id: string
@@ -868,6 +872,10 @@ export type Database = {
         Returns: boolean
       }
       is_member: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_owner: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
       }

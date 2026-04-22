@@ -15,8 +15,8 @@ import { useCustomHolidays } from './useCustomHolidays';
 import s from './HolidaySettings.module.scss';
 
 export function HolidaySettings() {
-  const { business, role, refresh } = useAuth();
-  const canEdit = role === 'owner' || role === 'manager';
+  const { business, refresh, hasPermission } = useAuth();
+  const canEdit = hasPermission('manage_settings');
   const [enabled, setEnabled] = useState<boolean>(!!business?.public_holidays_enabled);
   const [region, setRegion] = useState<HolidayRegion>(
     (business?.public_holidays_region as HolidayRegion) ?? 'england',
@@ -227,7 +227,7 @@ export function HolidaySettings() {
       </div>
 
       {!canEdit && (
-        <div className={s.disabledMsg}>Only owners and managers can change these settings.</div>
+        <div className={s.disabledMsg}>Only the owner can change these settings.</div>
       )}
     </Card>
   );
