@@ -19,7 +19,7 @@ import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
 
 export default function Rota() {
-  const { business, role, user, hasPermission } = useAuth();
+  const { business, user, hasPermission } = useAuth();
   const isMgr = hasPermission('manage_schedules');
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
   const [storeFilter, setStoreFilter] = useState<string>(() => sessionStorage.getItem('rota.storeFilter') ?? 'all');

@@ -422,12 +422,12 @@ export default function Team() {
   };
 
   const canEdit = (row: Row) => {
-    if (!isMgr || row.kind !== 'member') return false;
+    if (!canManageStaff || row.kind !== 'member') return false;
     if (row.role === 'owner' && !isOwner) return false;
     return true;
   };
   const canDeactivate = (row: Row) => {
-    if (!isMgr || row.kind !== 'member') return false;
+    if (!canManageStaff || row.kind !== 'member') return false;
     if (row.user_id === user?.id) return false; // can't disable self
     if (row.role === 'owner' && !isOwner) return false;
     return true;
@@ -445,7 +445,7 @@ export default function Team() {
             {counts.expired > 0 ? ` · ${counts.expired} expired` : ''}
           </p>
         </div>
-        {isMgr && <Button onClick={openInvite}>Add employee</Button>}
+        {canManageStaff && <Button onClick={openInvite}>Add employee</Button>}
       </header>
 
       <div className={t.toolbar}>
@@ -485,7 +485,7 @@ export default function Team() {
                 <th>Hours</th>
                 <th>Status</th>
                 <th>Annual leave</th>
-                {isMgr && <th></th>}
+                {canManageStaff && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -514,7 +514,7 @@ export default function Team() {
                   <td>
                     {m.kind === 'invite' ? (
                       <span className={s.muted}>—</span>
-                    ) : isMgr && editingId === m.user_id ? (
+                    ) : canManageStaff && editingId === m.user_id ? (
                       <span className={t.inlineEdit}>
                         <input
                           type="number"
@@ -534,19 +534,19 @@ export default function Team() {
                       </span>
                     ) : (
                       <span
-                        className={isMgr ? t.editable : ''}
+                        className={canManageStaff ? t.editable : ''}
                         onClick={() => {
-                          if (!isMgr || m.kind !== 'member') return;
+                          if (!canManageStaff || m.kind !== 'member') return;
                           setDraft(String(m.annual_leave_entitlement));
                           setEditingId(m.user_id!);
                         }}
-                        title={isMgr ? 'Click to edit' : undefined}
+                        title={canManageStaff ? 'Click to edit' : undefined}
                       >
                         {m.annual_leave_entitlement} days
                       </span>
                     )}
                   </td>
-                  {isMgr && (
+                  {canManageStaff && (
                     <td>
                       <div className={t.rowActions}>
                         {m.kind === 'invite' && m.account_status !== 'revoked' && (
