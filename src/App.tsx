@@ -64,13 +64,31 @@ const App = () => (
             {/* Protected manager-only */}
             <Route
               element={
-                <ProtectedRoute roles={["owner", "manager"]}>
+                <ProtectedRoute permission="manage_staff">
                   <AppShell />
                 </ProtectedRoute>
               }
             >
               <Route path="/team" element={<Team />} />
+            </Route>
+
+            <Route
+              element={
+                <ProtectedRoute permission="manage_stores" fallback="denied">
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/stores" element={<Stores />} />
+            </Route>
+
+            <Route
+              element={
+                <ProtectedRoute permission="manage_settings" fallback="denied">
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/settings" element={<Settings />} />
             </Route>
 

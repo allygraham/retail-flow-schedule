@@ -10,8 +10,8 @@ import { storeSchema } from '@/lib/validation';
 import s from './Stores.module.scss';
 
 export default function Stores() {
-  const { business, role } = useAuth();
-  const isMgr = role === 'owner' || role === 'manager';
+  const { business, hasPermission } = useAuth();
+  const canManageStores = hasPermission('manage_stores');
   const [stores, setStores] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ name: '', address: '', city: '', postcode: '' });
@@ -37,7 +37,7 @@ export default function Stores() {
     <div className={s.page}>
       <header className={s.header}>
         <div><span className={s.eye}>Stores</span><h1 className={s.h1}>Your locations</h1></div>
-        {isMgr && <Button onClick={() => setOpen(true)}>Add store</Button>}
+        {canManageStores && <Button onClick={() => setOpen(true)}>Add store</Button>}
       </header>
       {stores.length === 0 ? (
         <Card><EmptyState title="No stores yet" description="Add your first location." /></Card>
