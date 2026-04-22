@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
-import { STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
+import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
 import { useLeaveBalance, daysBetween } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import { LeaveBalanceInline } from '@/features/leave/LeaveBalanceInline';
@@ -14,7 +14,7 @@ import { Field, Input, Select, TextArea } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
 import { fmtDate, isoDate } from '@/lib/datetime';
-import { leaveSchema } from '@/lib/validation';
+import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
@@ -22,17 +22,28 @@ type Filter = 'pending' | 'reviewed' | 'all';
 
 export default function Leave() {
   const { user } = useAuth();
-  const { requests, loading, isMgr, submit, cancelOwn, review } = useLeaveRequests();
+  const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review } = useLeaveRequests();
   const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
   const [requestModal, setRequestModal] = useState(false);
+  const [addLeaveModal, setAddLeaveModal] = useState(false);
   const [form, setForm] = useState<any>({
     leave_type: 'annual',
     start_date: isoDate(new Date()),
     end_date: isoDate(new Date()),
     reason: '',
   });
+  const [mgmtForm, setMgmtForm] = useState<any>({
+    user_id: '',
+    leave_type: 'sick',
+    start_date: isoDate(new Date()),
+    end_date: isoDate(new Date()),
+    reason: '',
+    manager_note: '',
+    status: 'approved',
+  });
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [mgmtErr, setMgmtErr] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ row: LeaveRequestRow; action: 'approved' | 'rejected' } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
 
@@ -46,6 +57,7 @@ export default function Leave() {
   }, [requests, filter, isMgr]);
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const selectedEmployee = employees.find((employee) => employee.user_id === mgmtForm.user_id);
 
   const submitRequest = async () => {
     setFormErr(null);
@@ -69,6 +81,46 @@ export default function Leave() {
       reloadBalance();
     } catch (e: any) {
       setFormErr(e.message ?? 'Could not submit');
+    }
+  };
+
+  const openAddLeave = (userId?: string) => {
+    setMgmtErr(null);
+    setMgmtForm({
+      user_id: userId ?? employees[0]?.user_id ?? '',
+      leave_type: 'sick',
+      start_date: isoDate(new Date()),
+      end_date: isoDate(new Date()),
+      reason: '',
+      manager_note: '',
+      status: 'approved',
+    });
+    setAddLeaveModal(true);
+  };
+
+  const submitManagementLeave = async () => {
+    setMgmtErr(null);
+    const parsed = managementLeaveSchema.safeParse({
+      ...mgmtForm,
+      reason: mgmtForm.reason || null,
+      manager_note: mgmtForm.manager_note || null,
+    });
+    if (!parsed.success) {
+      setMgmtErr(parsed.error.issues[0].message);
+      return;
+    }
+
+    try {
+      const result = await addForEmployee(parsed.data);
+      setAddLeaveModal(false);
+      toast.success(
+        result.conflictingShiftCount > 0
+          ? `Leave recorded — ${result.conflictingShiftCount} shift${result.conflictingShiftCount === 1 ? '' : 's'} moved back to open coverage.`
+          : 'Leave recorded and approved.'
+      );
+      reloadBalance();
+    } catch (e: any) {
+      setMgmtErr(e.message ?? 'Could not record leave');
     }
   };
 
@@ -115,7 +167,10 @@ export default function Leave() {
             </p>
           )}
         </div>
-        <Button onClick={() => setRequestModal(true)}>Request time off</Button>
+        <div className={s.headerActions}>
+          {isMgr && <Button variant="outline" onClick={() => openAddLeave()}>Add leave</Button>}
+          <Button onClick={() => setRequestModal(true)}>Request time off</Button>
+        </div>
       </header>
 
       {!isMgr && (
@@ -154,6 +209,7 @@ export default function Leave() {
               <tr>
                 {isMgr && <th>Employee</th>}
                 {isMgr && <th>Store</th>}
+                <th>Source</th>
                 <th>Type</th>
                 <th>Dates</th>
                 <th>Reason</th>
@@ -177,6 +233,11 @@ export default function Leave() {
                     )}
                     {isMgr && <td className={s.muted}>{r.primary_store?.name ?? '—'}</td>}
                     <td>
+                      <div className={s.sourceMeta}>
+                        <Badge tone={SOURCE_TONE[r.source]}>{SOURCE_LABEL[r.source]}</Badge>
+                      </div>
+                    </td>
+                    <td>
                       <Badge tone={TYPE_TONE[r.leave_type]}>{TYPE_LABEL[r.leave_type]}</Badge>
                     </td>
                     <td className={s.dates}>
@@ -185,11 +246,17 @@ export default function Leave() {
                     <td className={s.reason} title={r.reason ?? undefined}>{r.reason ?? '—'}</td>
                     <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
                     <td>
-                      <div className={s.statusCell}>
+                      <div className={s.statusStack}>
                         <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
-                        {r.review_notes && (r.status === 'approved' || r.status === 'rejected') && (
-                          <span className={s.note} title={r.review_notes}>Note</span>
-                        )}
+                        <div className={s.sourceMeta}>
+                          {r.source !== 'employee_request' && r.created_by_role && (
+                            <Badge tone={SOURCE_TONE[r.source]}>{SOURCE_LABEL[r.source]}</Badge>
+                          )}
+                          {r.manager_note && <span className={s.note} title={r.manager_note}>Manager note</span>}
+                          {r.review_notes && (r.status === 'approved' || r.status === 'rejected') && (
+                            <span className={s.note} title={r.review_notes}>Review note</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className={s.actions}>
@@ -253,6 +320,86 @@ export default function Leave() {
             />
           </Field>
           {formErr && <div className={s.err}>{formErr}</div>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={addLeaveModal}
+        onClose={() => setAddLeaveModal(false)}
+        title="Add leave"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAddLeaveModal(false)}>Cancel</Button>
+            <Button onClick={submitManagementLeave}>Save as approved</Button>
+          </>
+        }
+      >
+        <div className={s.form}>
+          <Field label="Employee">
+            <Select value={mgmtForm.user_id} onChange={e => setMgmtForm({ ...mgmtForm, user_id: e.target.value })}>
+              <option value="">Select employee…</option>
+              {employees.map((employee) => (
+                <option key={employee.user_id} value={employee.user_id}>
+                  {employee.full_name}{employee.primary_store_name ? ` · ${employee.primary_store_name}` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className={s.row2}>
+            <Field label="Leave type">
+              <Select value={mgmtForm.leave_type} onChange={e => setMgmtForm({ ...mgmtForm, leave_type: e.target.value })}>
+                <option value="annual">Annual leave</option>
+                <option value="sick">Sick leave</option>
+                <option value="unpaid">Unpaid leave</option>
+              </Select>
+            </Field>
+            <Field label="Status">
+              <Input value="Approved / recorded" disabled readOnly />
+            </Field>
+          </div>
+          <Field label="Dates">
+            <DatePicker
+              mode="range"
+              value={{ from: parseISODate(mgmtForm.start_date), to: parseISODate(mgmtForm.end_date) }}
+              onChange={(r) => setMgmtForm({
+                ...mgmtForm,
+                start_date: toISODate(r.from) || mgmtForm.start_date,
+                end_date: toISODate(r.to) || toISODate(r.from) || mgmtForm.end_date,
+              })}
+              placeholder="Pick a date range"
+            />
+          </Field>
+          {selectedEmployee && (
+            <div className={s.hintBox}>
+              {selectedEmployee.full_name} will be marked unavailable immediately and any existing shifts in this range will be returned to open coverage.
+            </div>
+          )}
+          <Field label="Reason" hint="Optional context visible in leave history">
+            <TextArea
+              value={mgmtForm.reason}
+              onChange={e => setMgmtForm({ ...mgmtForm, reason: e.target.value })}
+              placeholder="Sickness reported by phone, approved unpaid leave, annual leave added by management…"
+              rows={3}
+            />
+          </Field>
+          <Field label="Manager note" hint="Optional internal context for the record">
+            <TextArea
+              value={mgmtForm.manager_note}
+              onChange={e => setMgmtForm({ ...mgmtForm, manager_note: e.target.value })}
+              placeholder="Optional note about handover, cover needed, or how this was confirmed"
+              rows={3}
+            />
+          </Field>
+          {mgmtForm.leave_type === 'annual' && mgmtForm.user_id && (
+            <LeaveBalanceInline
+              userId={mgmtForm.user_id}
+              pendingDays={daysBetween(mgmtForm.start_date, mgmtForm.end_date)}
+            />
+          )}
+          <div className={s.warnBox}>
+            Management-created leave skips the employee approval queue and is saved directly as approved.
+          </div>
+          {mgmtErr && <div className={s.err}>{mgmtErr}</div>}
         </div>
       </Modal>
 
