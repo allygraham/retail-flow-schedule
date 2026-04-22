@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { LeaveRequest, LeaveStatus } from '@/types/domain';
@@ -14,6 +14,16 @@ interface ReviewInput {
   review_notes?: string | null;
 }
 
+interface ManagementLeaveInput {
+  user_id: string;
+  leave_type: 'annual' | 'unpaid' | 'sick';
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+  manager_note?: string | null;
+  status?: 'approved';
+}
+
 /**
  * Single source of truth for leave requests in the current business.
  * - Managers/owners see every request.
@@ -21,9 +31,10 @@ interface ReviewInput {
  * - On approval, unassigns any of the requester's shifts that fall in the date range.
  */
 export function useLeaveRequests() {
-  const { business, user, hasPermission } = useAuth();
+  const { business, user, role, hasPermission } = useAuth();
   const isMgr = hasPermission('manage_leave');
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
+  const [employees, setEmployees] = useState<{ user_id: string; full_name: string; primary_store_name: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,29 +52,46 @@ export function useLeaveRequests() {
     if (error) { setError(error.message); setLoading(false); return; }
 
     let rows: LeaveRequestRow[] = (data ?? []).map((r: any) => ({ ...r }));
-    if (rows.length) {
-      const userIds = Array.from(new Set(rows.map(r => r.user_id)));
-      const [{ data: profs }, { data: emp }] = await Promise.all([
-        supabase.from('profiles').select('id, full_name').in('id', userIds),
-        isMgr
-          ? supabase
-              .from('employee_profiles')
-              .select('user_id, store_locations:primary_store_id(name)')
-              .eq('business_id', business.id)
-              .eq('memberships.is_active', true)
-              .in('user_id', userIds)
-          : Promise.resolve({ data: [] as any[] }),
-      ]);
-      const nameById: Record<string, string | null> = Object.fromEntries(
-        (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
-      );
-      const storeByUser: Record<string, { name: string | null } | null> = {};
-      for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
-      rows = rows.map(r => ({
-        ...r,
-        profiles: { full_name: nameById[r.user_id] ?? null },
-        primary_store: storeByUser[r.user_id] ?? null,
-      }));
+    const requestUserIds = Array.from(new Set(rows.map(r => r.user_id)));
+    const [{ data: emp }, { data: profs }, { data: members }] = await Promise.all([
+      isMgr
+        ? supabase
+            .from('employee_profiles')
+            .select('user_id, store_locations:primary_store_id(name)')
+            .eq('business_id', business.id)
+        : Promise.resolve({ data: [] as any[] }),
+      requestUserIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', requestUserIds)
+        : Promise.resolve({ data: [] as any[] }),
+      isMgr
+        ? supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const nameById: Record<string, string | null> = Object.fromEntries(
+      (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
+    );
+    const storeByUser: Record<string, { name: string | null } | null> = {};
+    for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
+    rows = rows.map(r => ({
+      ...r,
+      profiles: { full_name: nameById[r.user_id] ?? null },
+      primary_store: storeByUser[r.user_id] ?? null,
+    }));
+    if (isMgr) {
+      const memberIds = Array.from(new Set((members ?? []).map((m: any) => m.user_id)));
+      const missingIds = memberIds.filter(id => !(id in nameById));
+      const { data: missingProfiles } = missingIds.length
+        ? await supabase.from('profiles').select('id, full_name').in('id', missingIds)
+        : { data: [] as any[] };
+      for (const p of missingProfiles ?? []) nameById[p.id] = p.full_name ?? null;
+      setEmployees(memberIds.map((id) => ({
+        user_id: id,
+        full_name: nameById[id] ?? 'Employee',
+        primary_store_name: storeByUser[id]?.name ?? null,
+      })).sort((a, b) => a.full_name.localeCompare(b.full_name)));
+    } else {
+      setEmployees([]);
     }
     setRequests(rows);
     setLoading(false);
@@ -96,10 +124,75 @@ export function useLeaveRequests() {
       ...input,
       business_id: business.id,
       user_id: user.id,
+      source: 'employee_request',
+      created_by_user_id: user.id,
+      created_by_role: role ?? 'employee',
     } as any);
     if (error) throw error;
     await load();
-  }, [business, user, load]);
+  }, [business, user, role, load]);
+
+  const addForEmployee = useCallback(async (input: ManagementLeaveInput) => {
+    if (!business || !user || !role || !isMgr) throw new Error('Not authorised');
+
+    const { data: overlaps, error: overlapError } = await supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('business_id', business.id)
+      .eq('user_id', input.user_id)
+      .in('status', ['pending', 'approved'])
+      .lte('start_date', input.end_date)
+      .gte('end_date', input.start_date)
+      .limit(1);
+
+    if (overlapError) throw overlapError;
+    if ((overlaps ?? []).length > 0) {
+      throw new Error('This employee already has leave covering part of those dates');
+    }
+
+    const { data: conflictingShifts, error: shiftLookupError } = await supabase
+      .from('shifts')
+      .select('id')
+      .eq('business_id', business.id)
+      .eq('assigned_user_id', input.user_id)
+      .gte('shift_date', input.start_date)
+      .lte('shift_date', input.end_date);
+    if (shiftLookupError) throw shiftLookupError;
+
+    const approvedAt = new Date().toISOString();
+    const source = role === 'owner' ? 'owner_created' : 'manager_created';
+    const { error } = await supabase.from('leave_requests').insert({
+      business_id: business.id,
+      user_id: input.user_id,
+      leave_type: input.leave_type,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      reason: input.reason ?? null,
+      manager_note: input.manager_note ?? null,
+      source,
+      status: 'approved',
+      created_by_user_id: user.id,
+      created_by_role: role,
+      approved_by: user.id,
+      approved_at: approvedAt,
+      reviewed_by: user.id,
+      reviewed_at: approvedAt,
+      review_notes: input.manager_note ?? null,
+    } as any);
+    if (error) throw error;
+
+    const { error: shiftError } = await supabase
+      .from('shifts')
+      .update({ assigned_user_id: null, status: 'unassigned' })
+      .eq('business_id', business.id)
+      .eq('assigned_user_id', input.user_id)
+      .gte('shift_date', input.start_date)
+      .lte('shift_date', input.end_date);
+    if (shiftError) throw shiftError;
+
+    await load();
+    return { conflictingShiftCount: conflictingShifts?.length ?? 0 };
+  }, [business, user, role, isMgr, load]);
 
   const cancelOwn = useCallback(async (id: string) => {
     const { error } = await supabase
@@ -137,7 +230,7 @@ export function useLeaveRequests() {
     await load();
   }, [user, requests, load]);
 
-  const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests]);
 
-  return { requests, loading, error, isMgr, pendingCount, load, submit, cancelOwn, review };
+  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review };
 }

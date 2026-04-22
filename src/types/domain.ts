@@ -3,6 +3,7 @@ export type ScheduleStatus = 'draft' | 'published';
 export type ShiftStatus = 'scheduled' | 'unassigned' | 'cancelled';
 export type LeaveType = 'annual' | 'unpaid' | 'sick' | 'other';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type LeaveSource = 'employee_request' | 'manager_created' | 'owner_created';
 export type EmploymentType = 'full_time' | 'part_time' | 'casual' | 'contractor';
 
 export interface Business {
@@ -38,9 +39,11 @@ export interface Schedule {
 }
 export interface LeaveRequest {
   id: string; business_id: string; user_id: string;
-  leave_type: LeaveType; status: LeaveStatus;
+  leave_type: LeaveType; status: LeaveStatus; source: LeaveSource;
   start_date: string; end_date: string; reason: string | null;
   reviewed_by: string | null; reviewed_at: string | null; review_notes: string | null;
+  created_by_user_id: string | null; created_by_role: AppRole | null;
+  approved_at: string | null; approved_by: string | null; manager_note: string | null;
   created_at: string;
 }
 

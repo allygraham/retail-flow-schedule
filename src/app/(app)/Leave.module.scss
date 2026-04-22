@@ -6,6 +6,7 @@
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; }
 .sub { margin-top: $sp-2; display: flex; align-items: center; gap: $sp-2; color: $text-muted; font-size: $fs-sm; }
+.headerActions { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
 
 .tabs { display: inline-flex; gap: 2px; background: $ink-100; padding: 4px; border-radius: $r-md; align-self: flex-start; }
 .tab {
@@ -30,8 +31,12 @@
 .muted { color: $text-muted; font-size: $fs-xs; }
 .reason { color: $text-muted; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusCell { display: flex; align-items: center; gap: 6px; }
+.statusStack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .note { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: $text-muted; cursor: help; padding: 2px 6px; background: $ink-100; border-radius: $r-sm; }
 .actions { display: flex; gap: 6px; justify-content: flex-end; }
+.sourceMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.hintBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text-soft; font-size: $fs-sm; border: 1px solid $border; }
+.warnBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text; font-size: $fs-sm; border: 1px solid $border; }
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
