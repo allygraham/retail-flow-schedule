@@ -112,11 +112,18 @@ export default function Team() {
     manager_note: '',
   });
 
-  // filters modal
+  // filters
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const activeFilterCount =
-    (fRole !== 'all' ? 1 : 0) + (fStore !== 'all' ? 1 : 0) + (fStatus !== 'all' ? 1 : 0);
-  const clearFilters = () => { setFRole('all'); setFStore('all'); setFStatus('all'); };
+  const activeFilterChips = useMemo(() => {
+    const chips: string[] = [];
+    if (q.trim()) chips.push(`Search: ${q.trim()}`);
+    if (fRole !== 'all') chips.push(`Role: ${fRole}`);
+    if (fStore !== 'all') chips.push(`Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`);
+    if (fStatus !== 'all') chips.push(`Status: ${STATUS_LABEL[fStatus]}`);
+    return chips;
+  }, [fRole, fStatus, fStore, q, stores]);
+  const hasActiveFilters = activeFilterChips.length > 0;
+  const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
 
   const load = async () => {
     if (!business) return;
@@ -503,20 +510,66 @@ export default function Team() {
         {canManageStaff && <Button onClick={openInvite}>Add employee</Button>}
       </header>
 
-      <div className={t.toolbar}>
-        <Input
-          placeholder="Search name, email, role…"
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          className={t.search}
-        />
-        <Button variant="outline" onClick={() => setFiltersOpen(true)}>
-          Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
-        </Button>
-        {activeFilterCount > 0 && (
-          <button type="button" className={t.linkBtn} onClick={clearFilters}>Clear</button>
-        )}
-      </div>
+      <Card>
+        <div className={s.filterBar}>
+          <div className={s.filterFooter}>
+            <div className={s.filterSummary}>
+              {hasActiveFilters ? (
+                activeFilterChips.map((chip) => (
+                  <span key={chip} className={s.filterChip}>{chip}</span>
+                ))
+              ) : (
+                <span className={s.filterHint}>No filters applied</span>
+              )}
+            </div>
+            <div className={s.filterActions}>
+              <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
+                {filtersOpen ? 'Hide filters' : 'Show filters'}
+              </Button>
+              <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+            </div>
+          </div>
+
+          {filtersOpen && (
+            <div className={s.filterGrid}>
+              <Field label="Search">
+                <Input
+                  placeholder="Search name, email, role…"
+                  value={q}
+                  onChange={e => setQ(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Role">
+                <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
+                  <option value="all">All roles</option>
+                  <option value="owner">Owner</option>
+                  <option value="manager">Manager</option>
+                  <option value="employee">Employee</option>
+                </Select>
+              </Field>
+
+              <Field label="Store">
+                <Select value={fStore} onChange={e => setFStore(e.target.value)}>
+                  <option value="all">All stores</option>
+                  {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </Select>
+              </Field>
+
+              <Field label="Account status">
+                <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
+                  <option value="all">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="invited">Invited</option>
+                  <option value="disabled">Disabled</option>
+                  <option value="expired">Expired</option>
+                  <option value="revoked">Revoked</option>
+                </Select>
+              </Field>
+            </div>
+          )}
+        </div>
+      </Card>
 
       <Card padded={false}>
         {loading ? (
@@ -897,46 +950,6 @@ export default function Team() {
         </p>
       </Modal>
 
-      {/* Filters modal */}
-      <Modal
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        title="Filter team"
-        size="sm"
-        footer={
-          <>
-            <Button variant="ghost" onClick={clearFilters}>Clear all</Button>
-            <Button onClick={() => setFiltersOpen(false)}>Done</Button>
-          </>
-        }
-      >
-        <div className={s.form}>
-          <Field label="Role">
-            <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
-              <option value="all">All roles</option>
-              <option value="owner">Owner</option>
-              <option value="manager">Manager</option>
-              <option value="employee">Employee</option>
-            </Select>
-          </Field>
-          <Field label="Store">
-            <Select value={fStore} onChange={e => setFStore(e.target.value)}>
-              <option value="all">All stores</option>
-              {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </Select>
-          </Field>
-          <Field label="Account status">
-            <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="invited">Invited</option>
-              <option value="disabled">Disabled</option>
-              <option value="expired">Expired</option>
-              <option value="revoked">Revoked</option>
-            </Select>
-          </Field>
-        </div>
-      </Modal>
     </div>
   );
 }
