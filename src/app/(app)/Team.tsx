@@ -603,6 +603,16 @@ export default function Team() {
                   </td>
                   {canManageStaff && (
                     <td>
+                      {(() => {
+                        const canCopyInvite = m.kind === 'invite' && m.account_status !== 'revoked';
+                        const canRenewInvite = m.kind === 'invite' && m.account_status === 'expired';
+                        const canRevokeInvite = m.kind === 'invite' && m.account_status !== 'revoked';
+                        const canEditRow = canEdit(m);
+                        const canAddLeave = m.kind === 'member' && canManageStaff;
+                        const canDeactivateRow = canDeactivate(m) && m.account_status === 'active';
+                        const canReactivateRow = canDeactivate(m) && m.account_status === 'disabled';
+
+                        return (
                       <div className={t.rowActions}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -611,32 +621,27 @@ export default function Team() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className={t.menuContent}>
-                            {m.kind === 'invite' && m.account_status !== 'revoked' && (
-                              <>
-                                <DropdownMenuItem onSelect={() => copyAccept(m.accept_token)}>Copy link</DropdownMenuItem>
-                                {m.account_status === 'expired' && (
-                                  <DropdownMenuItem onSelect={() => resendInvite(m.invitation_id!)}>Renew invite</DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem className={t.menuDanger} onSelect={() => revokeInvite(m.invitation_id!)}>
-                                  Revoke invite
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {canEdit(m) && (
-                              <DropdownMenuItem onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
-                            )}
-                            {m.kind === 'member' && canManageStaff && (
-                              <DropdownMenuItem onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
-                            )}
-                            {canDeactivate(m) && (m.account_status === 'active' || m.account_status === 'disabled') && (
+                            <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>
+                              Copy link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={!canRenewInvite} onSelect={() => resendInvite(m.invitation_id!)}>
+                              Renew invite
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className={canRevokeInvite ? t.menuDanger : undefined} disabled={!canRevokeInvite} onSelect={() => revokeInvite(m.invitation_id!)}>
+                              Revoke invite
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem disabled={!canEditRow} onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
+                            <DropdownMenuItem disabled={!canAddLeave} onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
+                            {(canDeactivate(m) || m.account_status === 'active' || m.account_status === 'disabled') && (
                               <>
                                 <DropdownMenuSeparator />
                                 {m.account_status === 'active' ? (
-                                  <DropdownMenuItem className={t.menuDanger} onSelect={() => setConfirmRow(m)}>
+                                  <DropdownMenuItem className={canDeactivateRow ? t.menuDanger : undefined} disabled={!canDeactivateRow} onSelect={() => setConfirmRow(m)}>
                                     Deactivate
                                   </DropdownMenuItem>
                                 ) : (
-                                  <DropdownMenuItem onSelect={() => setMembershipActive(m, true)}>
+                                  <DropdownMenuItem disabled={!canReactivateRow} onSelect={() => setMembershipActive(m, true)}>
                                     Reactivate
                                   </DropdownMenuItem>
                                 )}
@@ -645,6 +650,8 @@ export default function Team() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
+                        );
+                      })()}
                     </td>
                   )}
                 </tr>
