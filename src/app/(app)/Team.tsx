@@ -632,7 +632,7 @@ export default function Team() {
                 <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as any })}>
                   <option value="employee">Employee</option>
                   <option value="manager">Manager</option>
-                  {role === 'owner' && <option value="owner">Owner</option>}
+                  {isOwner && <option value="owner">Owner</option>}
                 </Select>
               </Field>
               <Field label="Primary store">
