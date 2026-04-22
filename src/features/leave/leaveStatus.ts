@@ -1,4 +1,4 @@
-import type { LeaveStatus, LeaveType } from '@/types/domain';
+import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
 
 /** UI label for a leave status. We store 'rejected' in the DB but show 'Declined'. */
 export const STATUS_LABEL: Record<LeaveStatus, string> = {
@@ -27,4 +27,16 @@ export const TYPE_TONE: Record<LeaveType, 'leave' | 'sick' | 'unavail' | 'neutra
   sick: 'sick',
   unpaid: 'unavail',
   other: 'neutral',
+};
+
+export const SOURCE_LABEL: Record<LeaveSource, string> = {
+  employee_request: 'Requested by employee',
+  manager_created: 'Added by manager',
+  owner_created: 'Added by owner',
+};
+
+export const SOURCE_TONE: Record<LeaveSource, 'neutral' | 'info' | 'brand'> = {
+  employee_request: 'neutral',
+  manager_created: 'info',
+  owner_created: 'brand',
 };
