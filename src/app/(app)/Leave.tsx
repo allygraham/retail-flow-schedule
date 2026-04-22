@@ -66,6 +66,7 @@ export default function Leave() {
   const [mgmtErr, setMgmtErr] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ row: LeaveRequestRow; action: 'approved' | 'rejected' } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  const [noteViewer, setNoteViewer] = useState<{ title: string; body: string } | null>(null);
 
   const [filter, setFilter] = useState<Filter>('pending');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
@@ -224,6 +225,8 @@ export default function Leave() {
       cancel: { label: 'Keep', onClick: () => {} },
     });
   };
+
+  const openNote = (title: string, body: string) => setNoteViewer({ title, body });
 
   return (
     <div className={s.page}>
@@ -415,9 +418,23 @@ export default function Leave() {
                           {r.source !== 'employee_request' && r.created_by_role && (
                             <Badge tone={SOURCE_TONE[r.source]}>{SOURCE_LABEL[r.source]}</Badge>
                           )}
-                          {r.manager_note && <span className={s.note} title={r.manager_note}>Manager note</span>}
+                          {r.manager_note && (
+                            <button
+                              type="button"
+                              className={s.noteButton}
+                              onClick={() => openNote('Manager note', r.manager_note ?? '')}
+                            >
+                              Manager note
+                            </button>
+                          )}
                           {r.review_notes && (r.status === 'approved' || r.status === 'rejected') && (
-                            <span className={s.note} title={r.review_notes}>Review note</span>
+                            <button
+                              type="button"
+                              className={s.noteButton}
+                              onClick={() => openNote('Review note', r.review_notes ?? '')}
+                            >
+                              Review note
+                            </button>
                           )}
                         </div>
                       </div>
@@ -621,6 +638,19 @@ export default function Leave() {
                 placeholder={reviewing.action === 'approved' ? 'Enjoy your time off!' : 'Sorry — store is short-staffed that week.'}
               />
             </Field>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!noteViewer}
+        onClose={() => setNoteViewer(null)}
+        title={noteViewer?.title ?? 'Note'}
+        footer={<Button onClick={() => setNoteViewer(null)}>Close</Button>}
+      >
+        {noteViewer && (
+          <div className={s.noteViewer}>
+            <p>{noteViewer.body}</p>
           </div>
         )}
       </Modal>
