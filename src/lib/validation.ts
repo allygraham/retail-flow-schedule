@@ -43,6 +43,17 @@ export const leaveSchema = z.object({
 }).refine(v => v.end_date >= v.start_date, { message: 'End date must be after start', path: ['end_date'] });
 export type LeaveInput = z.infer<typeof leaveSchema>;
 
+export const managementLeaveSchema = z.object({
+  user_id: z.string().uuid('Pick an employee'),
+  leave_type: z.enum(['annual', 'unpaid', 'sick']),
+  start_date: z.string().min(8),
+  end_date: z.string().min(8),
+  reason: z.string().max(500).optional().nullable(),
+  manager_note: z.string().max(500).optional().nullable(),
+  status: z.literal('approved'),
+}).refine(v => v.end_date >= v.start_date, { message: 'End date must be after start', path: ['end_date'] });
+export type ManagementLeaveInput = z.infer<typeof managementLeaveSchema>;
+
 export const storeSchema = z.object({
   name: z.string().min(2, 'Required'),
   address: z.string().optional(),
