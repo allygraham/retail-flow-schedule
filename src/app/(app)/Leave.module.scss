@@ -62,7 +62,26 @@
 .reason { color: $text-muted; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusCell { display: flex; align-items: center; gap: 6px; }
 .statusStack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.note { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: $text-muted; cursor: help; padding: 2px 6px; background: $ink-100; border-radius: $r-sm; }
+.noteButton {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $text-muted;
+  cursor: pointer;
+  padding: 2px 6px;
+  background: $ink-100;
+  border-radius: $r-sm;
+  border: 1px solid $border;
+  transition: color $dur-fast $ease, background $dur-fast $ease, border-color $dur-fast $ease;
+
+  &:hover,
+  &:focus-visible {
+    color: $text;
+    background: $surface;
+    border-color: $text-muted;
+    outline: none;
+  }
+}
 .actions { display: flex; gap: 6px; justify-content: flex-end; }
 .sourceMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hintBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text-soft; font-size: $fs-sm; border: 1px solid $border; }
@@ -78,6 +97,15 @@
   p { margin: 4px 0 0; font-size: $fs-sm; color: $text; white-space: pre-wrap; }
 }
 .reasonLabel { font-size: $fs-xs; color: $text-muted; text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }
+.noteViewer {
+  p {
+    margin: 0;
+    color: $text;
+    font-size: $fs-sm;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+}
 
 @media (max-width: 720px) {
   .filterGrid { grid-template-columns: 1fr; }
