@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Card } from '@/components/common/Card';
@@ -9,6 +10,7 @@ import { Modal } from '@/components/common/Modal';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useLeaveRequests } from '@/features/leave/useLeaveRequests';
 import { inviteEmployeeSchema } from '@/lib/validation';
 import { toast } from 'sonner';
@@ -602,35 +604,46 @@ export default function Team() {
                   {canManageStaff && (
                     <td>
                       <div className={t.rowActions}>
-                        {m.kind === 'invite' && m.account_status !== 'revoked' && (
-                          <>
-                            <button className={t.linkBtn} onClick={() => copyAccept(m.accept_token)}>Copy link</button>
-                            {m.account_status === 'expired' && (
-                              <button className={t.linkBtn} onClick={() => resendInvite(m.invitation_id!)}>
-                                Renew
-                              </button>
-                            )}
-                            <button className={t.linkBtnDanger} onClick={() => revokeInvite(m.invitation_id!)}>
-                              Revoke
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button type="button" className={t.menuTrigger} aria-label={`Open actions for ${m.full_name}`}>
+                              <MoreHorizontal size={16} />
                             </button>
-                          </>
-                        )}
-                        {canEdit(m) && (
-                          <button className={t.linkBtn} onClick={() => openEdit(m)}>Edit</button>
-                        )}
-                        {m.kind === 'member' && canManageStaff && (
-                          <button className={t.linkBtn} onClick={() => openLeave(m)}>Add leave</button>
-                        )}
-                        {canDeactivate(m) && m.account_status === 'active' && (
-                          <button className={t.linkBtnDanger} onClick={() => setConfirmRow(m)}>
-                            Deactivate
-                          </button>
-                        )}
-                        {canDeactivate(m) && m.account_status === 'disabled' && (
-                          <button className={t.linkBtn} onClick={() => setMembershipActive(m, true)}>
-                            Reactivate
-                          </button>
-                        )}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className={t.menuContent}>
+                            {m.kind === 'invite' && m.account_status !== 'revoked' && (
+                              <>
+                                <DropdownMenuItem onSelect={() => copyAccept(m.accept_token)}>Copy link</DropdownMenuItem>
+                                {m.account_status === 'expired' && (
+                                  <DropdownMenuItem onSelect={() => resendInvite(m.invitation_id!)}>Renew invite</DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem className={t.menuDanger} onSelect={() => revokeInvite(m.invitation_id!)}>
+                                  Revoke invite
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {canEdit(m) && (
+                              <DropdownMenuItem onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
+                            )}
+                            {m.kind === 'member' && canManageStaff && (
+                              <DropdownMenuItem onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
+                            )}
+                            {canDeactivate(m) && (m.account_status === 'active' || m.account_status === 'disabled') && (
+                              <>
+                                <DropdownMenuSeparator />
+                                {m.account_status === 'active' ? (
+                                  <DropdownMenuItem className={t.menuDanger} onSelect={() => setConfirmRow(m)}>
+                                    Deactivate
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onSelect={() => setMembershipActive(m, true)}>
+                                    Reactivate
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   )}
