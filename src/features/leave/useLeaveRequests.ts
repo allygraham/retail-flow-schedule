@@ -34,6 +34,7 @@ export function useLeaveRequests() {
   const { business, user, role, hasPermission } = useAuth();
   const isMgr = hasPermission('manage_leave');
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
+  const [employees, setEmployees] = useState<{ user_id: string; full_name: string; primary_store_name: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +53,7 @@ export function useLeaveRequests() {
 
     let rows: LeaveRequestRow[] = (data ?? []).map((r: any) => ({ ...r }));
     const requestUserIds = Array.from(new Set(rows.map(r => r.user_id)));
-    const [{ data: emp }, { data: profs }] = await Promise.all([
+    const [{ data: emp }, { data: profs }, { data: members }] = await Promise.all([
       isMgr
         ? supabase
             .from('employee_profiles')
@@ -61,6 +62,9 @@ export function useLeaveRequests() {
         : Promise.resolve({ data: [] as any[] }),
       requestUserIds.length
         ? supabase.from('profiles').select('id, full_name').in('id', requestUserIds)
+        : Promise.resolve({ data: [] as any[] }),
+      isMgr
+        ? supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
@@ -74,6 +78,21 @@ export function useLeaveRequests() {
       profiles: { full_name: nameById[r.user_id] ?? null },
       primary_store: storeByUser[r.user_id] ?? null,
     }));
+    if (isMgr) {
+      const memberIds = Array.from(new Set((members ?? []).map((m: any) => m.user_id)));
+      const missingIds = memberIds.filter(id => !(id in nameById));
+      const { data: missingProfiles } = missingIds.length
+        ? await supabase.from('profiles').select('id, full_name').in('id', missingIds)
+        : { data: [] as any[] };
+      for (const p of missingProfiles ?? []) nameById[p.id] = p.full_name ?? null;
+      setEmployees(memberIds.map((id) => ({
+        user_id: id,
+        full_name: nameById[id] ?? 'Employee',
+        primary_store_name: storeByUser[id]?.name ?? null,
+      })).sort((a, b) => a.full_name.localeCompare(b.full_name)));
+    } else {
+      setEmployees([]);
+    }
     setRequests(rows);
     setLoading(false);
   }, [business, user, isMgr]);
@@ -131,6 +150,15 @@ export function useLeaveRequests() {
       throw new Error('This employee already has leave covering part of those dates');
     }
 
+    const { data: conflictingShifts, error: shiftLookupError } = await supabase
+      .from('shifts')
+      .select('id')
+      .eq('business_id', business.id)
+      .eq('assigned_user_id', input.user_id)
+      .gte('shift_date', input.start_date)
+      .lte('shift_date', input.end_date);
+    if (shiftLookupError) throw shiftLookupError;
+
     const approvedAt = new Date().toISOString();
     const source = role === 'owner' ? 'owner_created' : 'manager_created';
     const { error } = await supabase.from('leave_requests').insert({
@@ -163,6 +191,7 @@ export function useLeaveRequests() {
     if (shiftError) throw shiftError;
 
     await load();
+    return { conflictingShiftCount: conflictingShifts?.length ?? 0 };
   }, [business, user, role, isMgr, load]);
 
   const cancelOwn = useCallback(async (id: string) => {
@@ -201,20 +230,7 @@ export function useLeaveRequests() {
     await load();
   }, [user, requests, load]);
 
-  const pendingCount = requests.filter(r => r.status === 'pending').length;
-  const employees = useMemo(() => {
-    const map = new Map<string, { user_id: string; full_name: string; primary_store_name: string | null }>();
-    for (const row of requests) {
-      if (!map.has(row.user_id)) {
-        map.set(row.user_id, {
-          user_id: row.user_id,
-          full_name: row.profiles?.full_name ?? 'Employee',
-          primary_store_name: row.primary_store?.name ?? null,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [requests]);
+  const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests]);
 
   return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review };
 }
