@@ -621,16 +621,20 @@ export default function Team() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className={t.menuContent}>
-                            <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>
-                              Copy link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem disabled={!canRenewInvite} onSelect={() => resendInvite(m.invitation_id!)}>
-                              Renew invite
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className={canRevokeInvite ? t.menuDanger : undefined} disabled={!canRevokeInvite} onSelect={() => revokeInvite(m.invitation_id!)}>
-                              Revoke invite
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+                            {m.kind === 'invite' && (
+                              <>
+                                <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>
+                                  Copy link
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled={!canRenewInvite} onSelect={() => resendInvite(m.invitation_id!)}>
+                                  Renew invite
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className={canRevokeInvite ? t.menuDanger : undefined} disabled={!canRevokeInvite} onSelect={() => revokeInvite(m.invitation_id!)}>
+                                  Revoke invite
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             <DropdownMenuItem disabled={!canEditRow} onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
                             <DropdownMenuItem disabled={!canAddLeave} onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
                             {(canDeactivate(m) || m.account_status === 'active' || m.account_status === 'disabled') && (
