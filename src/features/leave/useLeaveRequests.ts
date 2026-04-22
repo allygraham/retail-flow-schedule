@@ -51,30 +51,29 @@ export function useLeaveRequests() {
     if (error) { setError(error.message); setLoading(false); return; }
 
     let rows: LeaveRequestRow[] = (data ?? []).map((r: any) => ({ ...r }));
-    if (rows.length) {
-      const userIds = Array.from(new Set(rows.map(r => r.user_id)));
-      const [{ data: profs }, { data: emp }] = await Promise.all([
-        supabase.from('profiles').select('id, full_name').in('id', userIds),
-        isMgr
-          ? supabase
-              .from('employee_profiles')
-              .select('user_id, store_locations:primary_store_id(name)')
-              .eq('business_id', business.id)
-              .eq('memberships.is_active', true)
-              .in('user_id', userIds)
-          : Promise.resolve({ data: [] as any[] }),
-      ]);
-      const nameById: Record<string, string | null> = Object.fromEntries(
-        (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
-      );
-      const storeByUser: Record<string, { name: string | null } | null> = {};
-      for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
-      rows = rows.map(r => ({
-        ...r,
-        profiles: { full_name: nameById[r.user_id] ?? null },
-        primary_store: storeByUser[r.user_id] ?? null,
-      }));
-    }
+    const requestUserIds = Array.from(new Set(rows.map(r => r.user_id)));
+    const [{ data: emp }, { data: profs }] = await Promise.all([
+      isMgr
+        ? supabase
+            .from('employee_profiles')
+            .select('user_id, store_locations:primary_store_id(name)')
+            .eq('business_id', business.id)
+        : Promise.resolve({ data: [] as any[] }),
+      requestUserIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', requestUserIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const nameById: Record<string, string | null> = Object.fromEntries(
+      (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
+    );
+    const storeByUser: Record<string, { name: string | null } | null> = {};
+    for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
+    rows = rows.map(r => ({
+      ...r,
+      profiles: { full_name: nameById[r.user_id] ?? null },
+      primary_store: storeByUser[r.user_id] ?? null,
+    }));
     setRequests(rows);
     setLoading(false);
   }, [business, user, isMgr]);
