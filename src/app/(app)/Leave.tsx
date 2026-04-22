@@ -69,6 +69,7 @@ export default function Leave() {
 
   const [filter, setFilter] = useState<Filter>('pending');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const storeOptions = useMemo(
     () => Array.from(new Set(
@@ -264,72 +265,6 @@ export default function Leave() {
 
       <Card>
         <div className={s.filterBar}>
-          <div className={s.filterGrid}>
-            <Field label="Status">
-              <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
-                <option value="">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Declined</option>
-              </Select>
-            </Field>
-
-            <Field label="Leave type">
-              <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
-                <option value="">All leave types</option>
-                <option value="annual">Annual leave</option>
-                <option value="sick">Sick leave</option>
-                <option value="unpaid">Unpaid leave</option>
-              </Select>
-            </Field>
-
-            <Field label="From date">
-              <DatePicker
-                value={parseISODate(filters.fromDate)}
-                onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
-                placeholder="Any start date"
-              />
-            </Field>
-
-            <Field label="To date">
-              <DatePicker
-                value={parseISODate(filters.toDate)}
-                onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
-                placeholder="Any end date"
-              />
-            </Field>
-
-            <Field label="Source">
-              <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
-                <option value="">All sources</option>
-                <option value="employee_request">Employee requested</option>
-                <option value="manager_created">Manager created</option>
-                <option value="owner_created">Owner created</option>
-              </Select>
-            </Field>
-
-            {isMgr && (
-              <Field label="Employee name">
-                <Input
-                  value={filters.employeeQuery}
-                  onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
-                  placeholder="Search employee"
-                />
-              </Field>
-            )}
-
-            {isMgr && (
-              <Field label="Store / location">
-                <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
-                  <option value="">All stores</option>
-                  {storeOptions.map((storeName) => (
-                    <option key={storeName} value={storeName}>{storeName}</option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-          </div>
-
           <div className={s.filterFooter}>
             <div className={s.filterSummary}>
               {hasActiveFilters ? (
@@ -340,8 +275,81 @@ export default function Leave() {
                 <span className={s.filterHint}>No filters applied</span>
               )}
             </div>
-            <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+            <div className={s.filterActions}>
+              <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
+                {filtersOpen ? 'Hide filters' : 'Show filters'}
+              </Button>
+              <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+            </div>
           </div>
+
+          {filtersOpen && (
+            <div className={s.filterGrid}>
+              <Field label="Status">
+                <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
+                  <option value="">All statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Declined</option>
+                </Select>
+              </Field>
+
+              <Field label="Leave type">
+                <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
+                  <option value="">All leave types</option>
+                  <option value="annual">Annual leave</option>
+                  <option value="sick">Sick leave</option>
+                  <option value="unpaid">Unpaid leave</option>
+                </Select>
+              </Field>
+
+              <Field label="From date">
+                <DatePicker
+                  value={parseISODate(filters.fromDate)}
+                  onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
+                  placeholder="Any start date"
+                />
+              </Field>
+
+              <Field label="To date">
+                <DatePicker
+                  value={parseISODate(filters.toDate)}
+                  onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
+                  placeholder="Any end date"
+                />
+              </Field>
+
+              <Field label="Source">
+                <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
+                  <option value="">All sources</option>
+                  <option value="employee_request">Employee requested</option>
+                  <option value="manager_created">Manager created</option>
+                  <option value="owner_created">Owner created</option>
+                </Select>
+              </Field>
+
+              {isMgr && (
+                <Field label="Employee name">
+                  <Input
+                    value={filters.employeeQuery}
+                    onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
+                    placeholder="Search employee"
+                  />
+                </Field>
+              )}
+
+              {isMgr && (
+                <Field label="Store / location">
+                  <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
+                    <option value="">All stores</option>
+                    {storeOptions.map((storeName) => (
+                      <option key={storeName} value={storeName}>{storeName}</option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+            </div>
+          )}
         </div>
       </Card>
 

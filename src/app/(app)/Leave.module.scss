@@ -33,6 +33,7 @@
   flex-wrap: wrap;
 }
 .filterSummary { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
+.filterActions { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
 .filterChip {
   display: inline-flex;
   align-items: center;
@@ -81,4 +82,5 @@
 @media (max-width: 720px) {
   .filterGrid { grid-template-columns: 1fr; }
   .filterFooter { align-items: stretch; }
+  .filterActions { width: 100%; justify-content: space-between; }
 }
