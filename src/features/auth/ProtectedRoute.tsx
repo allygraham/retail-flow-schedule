@@ -2,15 +2,21 @@ import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import type { AppRole } from '@/types/domain';
+import { EmptyState } from '@/components/common/EmptyState';
+import { Button } from '@/components/common/Button';
+import type { AppPermission } from './permissions';
 import s from './ProtectedRoute.module.scss';
 
 interface Props {
   children: ReactNode;
-  roles?: AppRole[]; // if provided, restrict
+  roles?: AppRole[];
+  permission?: AppPermission;
+  redirectTo?: string;
+  fallback?: 'redirect' | 'denied';
 }
 
-export function ProtectedRoute({ children, roles }: Props) {
-  const { loading, user, role } = useAuth();
+export function ProtectedRoute({ children, roles, permission, redirectTo = '/dashboard', fallback = 'redirect' }: Props) {
+  const { loading, user, role, hasPermission } = useAuth();
 
   if (loading) {
     return (
@@ -21,8 +27,21 @@ export function ProtectedRoute({ children, roles }: Props) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
-  if (roles && role && !roles.includes(role)) {
-    return <Navigate to="/dashboard" replace />;
+  const hasAllowedRole = !roles || (role ? roles.includes(role) : false);
+  const hasAllowedPermission = !permission || hasPermission(permission);
+  if (!hasAllowedRole || !hasAllowedPermission) {
+    if (fallback === 'denied') {
+      return (
+        <div className={s.denied}>
+          <EmptyState
+            title="Access denied"
+            description="You don’t have permission to view this area."
+            action={<Button onClick={() => window.history.back()}>Go back</Button>}
+          />
+        </div>
+      );
+    }
+    return <Navigate to={redirectTo} replace />;
   }
   return <>{children}</>;
 }

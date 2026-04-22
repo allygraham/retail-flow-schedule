@@ -22,4 +22,13 @@
   font-size: $fs-sm;
   letter-spacing: 0.04em;
 }
+
+.denied {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: $bg;
+  padding: $sp-8;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
