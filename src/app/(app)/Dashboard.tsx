@@ -17,8 +17,8 @@ import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Dashboard.module.scss';
 
 export default function Dashboard() {
-  const { business, role, user, fullName } = useAuth();
-  const isMgr = role === 'owner' || role === 'manager';
+  const { business, user, fullName, hasPermission } = useAuth();
+  const isMgr = hasPermission('view_operational_dashboards');
 
   if (!business) return null;
   return isMgr
