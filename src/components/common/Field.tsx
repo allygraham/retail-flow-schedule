@@ -4,11 +4,11 @@ import s from './Field.module.scss';
 interface Wrap { label?: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; }
 export function Field({ label, hint, error, children }: Wrap) {
   return (
-    <label className={s.field}>
-      {label && <span className={s.label}>{label}</span>}
+    <div className={s.field}>
+      {label && <div className={s.label}>{label}</div>}
       {children}
       {error ? <span className={s.error}>{error}</span> : hint ? <span className={s.hint}>{hint}</span> : null}
-    </label>
+    </div>
   );
 }
 
