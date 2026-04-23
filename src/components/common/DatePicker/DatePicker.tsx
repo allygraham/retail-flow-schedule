@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
@@ -96,11 +96,17 @@ export function DatePicker(props: DatePickerProps) {
     return v ? format(v, displayFormat) : '';
   }, [isRange, props, displayFormat]);
 
-  const handleClear = useCallback((e: React.MouseEvent) => {
+  const handleClear = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
     if (isRange) (props as RangeProps).onChange({ from: null, to: null });
     else (props as SingleProps).onChange(null);
   }, [isRange, props]);
+
+  const handleTriggerMouseDown = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (event.target instanceof HTMLElement && event.target.closest(`.${s.clear}`)) return;
+    event.preventDefault();
+    setOpen((current) => !current);
+  }, []);
 
   const handleSingleSelect = (d: Date | undefined) => {
     (props as SingleProps).onChange(d ?? null);
@@ -129,7 +135,7 @@ export function DatePicker(props: DatePickerProps) {
         aria-expanded={open}
         aria-required={required || undefined}
         className={`${s.trigger} ${hasValue ? '' : s.placeholder}`}
-        onClick={() => setOpen(o => !o)}
+        onMouseDown={handleTriggerMouseDown}
       >
         <CalendarIcon size={16} aria-hidden />
         <span>{hasValue ? label : placeholder}</span>
