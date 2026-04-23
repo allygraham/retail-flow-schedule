@@ -27,7 +27,7 @@ const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof Layo
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
-  const { fullName, business, role, signOut, hasPermission } = useAuth();
+  const { fullName, business, role, user, signOut, hasPermission } = useAuth();
   const { theme } = useBranding();
   const workspaceName = theme.displayName || business?.name || 'Workspace';
   const nav = useNavigate();
