@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, type MouseEvent as R
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, isAfter, isBefore, isSameDay, parseISO, isValid } from 'date-fns';
 import s from './DatePicker.module.scss';
 
 export type DateValue = Date | null;
@@ -56,8 +56,10 @@ export function DatePicker(props: DatePickerProps) {
   const isRange = props.mode === 'range';
 
   const [open, setOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<DateRangeValue | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const rangeValue = isRange ? (draftRange ?? (props as RangeProps).value) : null;
 
   // Close on outside click + Escape
   useEffect(() => {
@@ -76,6 +78,10 @@ export function DatePicker(props: DatePickerProps) {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open && draftRange) setDraftRange(null);
+  }, [open, draftRange]);
+
   const disabledMatchers = useMemo<Matcher[]>(() => {
     const m: Matcher[] = [];
     if (minDate) m.push({ before: minDate });
@@ -87,18 +93,21 @@ export function DatePicker(props: DatePickerProps) {
 
   const label = useMemo(() => {
     if (isRange) {
-      const r = (props as RangeProps).value;
+      const r = rangeValue;
       if (r?.from && r?.to) return `${format(r.from, displayFormat)} – ${format(r.to, displayFormat)}`;
       if (r?.from) return `${format(r.from, displayFormat)} – …`;
       return '';
     }
     const v = (props as SingleProps).value;
     return v ? format(v, displayFormat) : '';
-  }, [isRange, props, displayFormat]);
+  }, [isRange, props, displayFormat, rangeValue]);
 
   const handleClear = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
-    if (isRange) (props as RangeProps).onChange({ from: null, to: null });
+    if (isRange) {
+      setDraftRange(null);
+      (props as RangeProps).onChange({ from: null, to: null });
+    }
     else (props as SingleProps).onChange(null);
   }, [isRange, props]);
 
@@ -112,14 +121,48 @@ export function DatePicker(props: DatePickerProps) {
     (props as SingleProps).onChange(d ?? null);
     if (d) setOpen(false);
   };
-  const handleRangeSelect = (r: DateRange | undefined) => {
-    const next: DateRangeValue = { from: r?.from ?? null, to: r?.to ?? null };
-    (props as RangeProps).onChange(next);
-    if (next.from && next.to) setOpen(false);
+  const handleRangeSelect = (r: DateRange | undefined, selectedDay: Date) => {
+    const current = draftRange ?? (props as RangeProps).value;
+
+    if (current?.from && !current.to) {
+      if (isSameDay(selectedDay, current.from)) {
+        const next = { from: current.from, to: current.from };
+        setDraftRange(null);
+        (props as RangeProps).onChange(next);
+        setOpen(false);
+        return;
+      }
+
+      if (isBefore(selectedDay, current.from)) {
+        setDraftRange({ from: selectedDay, to: null });
+        return;
+      }
+
+      const next = { from: current.from, to: selectedDay };
+      setDraftRange(null);
+      (props as RangeProps).onChange(next);
+      setOpen(false);
+      return;
+    }
+
+    if (current?.from && current.to) {
+      setDraftRange({ from: selectedDay, to: null });
+      return;
+    }
+
+    const next: DateRangeValue = { from: r?.from ?? selectedDay ?? null, to: r?.to ?? null };
+    if (next.from && next.to) {
+      setDraftRange(null);
+      (props as RangeProps).onChange(next);
+      setOpen(false);
+      return;
+    }
+
+    setDraftRange({ from: next.from, to: next.to });
   };
 
   const hasValue = isRange
-    ? !!((props as RangeProps).value?.from || (props as RangeProps).value?.to)
+    ? !!(rangeValue?.from || rangeValue?.to)
     : !!(props as SingleProps).value;
 
   return (
@@ -160,11 +203,11 @@ export function DatePicker(props: DatePickerProps) {
             <DayPicker
               mode="range"
               selected={{
-                from: (props as RangeProps).value?.from ?? undefined,
-                to: (props as RangeProps).value?.to ?? undefined,
+                from: rangeValue?.from ?? undefined,
+                to: rangeValue?.to ?? undefined,
               }}
               onSelect={handleRangeSelect}
-              defaultMonth={(props as RangeProps).value?.from ?? minDate ?? new Date()}
+              defaultMonth={rangeValue?.from ?? minDate ?? new Date()}
               disabled={disabledMatchers.length ? disabledMatchers : undefined}
               numberOfMonths={1}
               showOutsideDays
