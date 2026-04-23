@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
 type Filter = 'pending' | 'reviewed' | 'all';
+type FilterChip = { key: keyof LeaveFilterState; label: string };
 type LeaveFilterState = {
   status: '' | LeaveStatus;
   leaveType: '' | Extract<LeaveType, 'annual' | 'sick' | 'unpaid'>;
@@ -107,15 +108,18 @@ export default function Leave() {
   }, [requests, filter, isMgr, filters]);
 
   const activeFilterChips = useMemo(() => {
-    const chips: string[] = [];
-    if (filters.status) chips.push(`Status: ${STATUS_LABEL[filters.status]}`);
-    if (filters.leaveType) chips.push(`Type: ${TYPE_LABEL[filters.leaveType]}`);
-    if (filters.source) chips.push(`Source: ${SOURCE_LABEL[filters.source]}`);
+    const chips: FilterChip[] = [];
+    if (filters.status) chips.push({ key: 'status', label: `Status: ${STATUS_LABEL[filters.status]}` });
+    if (filters.leaveType) chips.push({ key: 'leaveType', label: `Type: ${TYPE_LABEL[filters.leaveType]}` });
+    if (filters.source) chips.push({ key: 'source', label: `Source: ${SOURCE_LABEL[filters.source]}` });
     if (filters.fromDate || filters.toDate) {
-      chips.push(`Dates: ${filters.fromDate ? fmtDate(filters.fromDate, 'd MMM yyyy') : 'Any'} → ${filters.toDate ? fmtDate(filters.toDate, 'd MMM yyyy') : 'Any'}`);
+      chips.push({
+        key: 'fromDate',
+        label: `Dates: ${filters.fromDate ? fmtDate(filters.fromDate, 'd MMM yyyy') : 'Any'} → ${filters.toDate ? fmtDate(filters.toDate, 'd MMM yyyy') : 'Any'}`,
+      });
     }
-    if (isMgr && filters.employeeQuery) chips.push(`Employee: ${filters.employeeQuery.trim()}`);
-    if (isMgr && filters.storeName) chips.push(`Store: ${filters.storeName}`);
+    if (isMgr && filters.employeeQuery) chips.push({ key: 'employeeQuery', label: `Employee: ${filters.employeeQuery.trim()}` });
+    if (isMgr && filters.storeName) chips.push({ key: 'storeName', label: `Store: ${filters.storeName}` });
     return chips;
   }, [filters, isMgr]);
 
@@ -129,6 +133,22 @@ export default function Leave() {
   };
 
   const clearFilters = () => setFilters(INITIAL_LEAVE_FILTERS);
+
+  const clearFilterChip = (key: keyof LeaveFilterState) => {
+    if (key === 'fromDate' || key === 'toDate') {
+      setFilters((current) => ({ ...current, fromDate: '', toDate: '' }));
+      return;
+    }
+    setLeaveFilter(key as never, INITIAL_LEAVE_FILTERS[key] as never);
+  };
+
+  const upcomingLeave = useMemo(() => {
+    if (isMgr || !user) return null;
+    const today = isoDate(new Date());
+    return requests
+      .filter((request) => request.user_id === user.id && request.status === 'approved' && request.end_date >= today)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null;
+  }, [isMgr, requests, user]);
 
   const submitRequest = async () => {
     setFormErr(null);
@@ -250,6 +270,21 @@ export default function Leave() {
         <LeaveBalanceCard balance={balance} loading={balanceLoading} />
       )}
 
+      {!isMgr && upcomingLeave && (
+        <Card>
+          <div className={s.upcomingSummary}>
+            <div>
+              <div className={s.upcomingEyebrow}>Upcoming leave</div>
+              <div className={s.upcomingTitle}>{TYPE_LABEL[upcomingLeave.leave_type]}</div>
+              <div className={s.upcomingMeta}>
+                {fmtDate(upcomingLeave.start_date, 'd MMM')} → {fmtDate(upcomingLeave.end_date, 'd MMM yyyy')}
+              </div>
+            </div>
+            <Badge tone={STATUS_TONE[upcomingLeave.status]} dot>{STATUS_LABEL[upcomingLeave.status]}</Badge>
+          </div>
+        </Card>
+      )}
+
       {isMgr && (
         <div className={s.tabs} role="tablist">
           {(['pending','reviewed','all'] as Filter[]).map(f => (
@@ -272,7 +307,10 @@ export default function Leave() {
             <div className={s.filterSummary}>
               {hasActiveFilters ? (
                 activeFilterChips.map((chip) => (
-                  <span key={chip} className={s.filterChip}>{chip}</span>
+                  <button key={chip.label} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
+                    <span>{chip.label}</span>
+                    <span aria-hidden="true">×</span>
+                  </button>
                 ))
               ) : (
                 <span className={s.filterHint}>No filters applied</span>
@@ -357,6 +395,16 @@ export default function Leave() {
       </Card>
 
       <Card padded={false}>
+        {hasActiveFilters && (
+          <div className={s.activeFiltersRow}>
+            {activeFilterChips.map((chip) => (
+              <button key={`table-${chip.label}`} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
+                <span>{chip.label}</span>
+                <span aria-hidden="true">×</span>
+              </button>
+            ))}
+          </div>
+        )}
         {loading ? (
           <div className={s.loading}>Loading…</div>
         ) : filtered.length === 0 ? (
@@ -407,7 +455,7 @@ export default function Leave() {
                       <Badge tone={TYPE_TONE[r.leave_type]}>{TYPE_LABEL[r.leave_type]}</Badge>
                     </td>
                     <td className={s.dates}>
-                      {fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}
+                      <div className={s.dateRange}>{fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}</div>
                     </td>
                     <td className={s.reason} title={r.reason ?? undefined}>{r.reason ?? '—'}</td>
                     <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
@@ -447,7 +495,10 @@ export default function Leave() {
                         </>
                       )}
                       {!isMgr && isOwn && r.status === 'pending' && (
-                        <Button size="sm" variant="ghost" onClick={() => cancel(r.id)}>Cancel</Button>
+                        <Button size="sm" variant="ghost" onClick={() => cancel(r.id)}>Withdraw request</Button>
+                      )}
+                      {!isMgr && isOwn && r.status !== 'pending' && (
+                        <Button size="sm" variant="ghost" onClick={() => openNote('Leave details', r.reason ?? 'No additional details added.')}>View details</Button>
                       )}
                     </td>
                   </tr>

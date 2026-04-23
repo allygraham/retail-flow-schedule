@@ -19,15 +19,15 @@ export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', sub
       ) : (
         <div className={`${s.wrap} ${compact ? s.compact : ''}`}>
           <div className={s.stats}>
-            <Stat label="Remaining" value={balance.remaining} accent />
-            <Stat label="Taken" value={balance.taken} />
-            <Stat label="Entitlement" value={balance.entitlement} muted />
+            <Stat label="Remaining" value={`${balance.remaining} days remaining`} accent />
+            <Stat label="Taken" value={`${balance.taken} days taken`} />
+            <Stat label="Entitlement" value={`${balance.entitlement} days entitlement`} muted />
           </div>
           <Bar entitlement={balance.entitlement} taken={balance.taken} pending={balance.pending} />
           <div className={s.legend}>
-            <span><i className={s.dotTaken} /> Taken {balance.taken}</span>
+            <span><i className={s.dotTaken} /> {balance.taken} day{balance.taken === 1 ? '' : 's'} taken</span>
             {balance.pending > 0 && <span><i className={s.dotPending} /> Pending {balance.pending}</span>}
-            <span className={s.legendMuted}>{balance.remaining} day{balance.remaining === 1 ? '' : 's'} left</span>
+            <span className={s.legendMuted}>{balance.remaining} day{balance.remaining === 1 ? '' : 's'} remaining</span>
           </div>
         </div>
       )}
@@ -35,7 +35,7 @@ export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', sub
   );
 }
 
-function Stat({ label, value, accent, muted }: { label: string; value: number; accent?: boolean; muted?: boolean }) {
+function Stat({ label, value, accent, muted }: { label: string; value: string; accent?: boolean; muted?: boolean }) {
   return (
     <div className={`${s.stat} ${accent ? s.accent : ''} ${muted ? s.muted : ''}`}>
       <div className={s.statValue}>{value}</div>

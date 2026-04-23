@@ -18,46 +18,68 @@
 }
 .tabActive { background: $surface; color: $text; box-shadow: $shadow-sm; font-weight: $fw-semibold; }
 
-.filterBar { @include col; gap: $sp-4; }
+.filterBar { @include col; gap: $sp-3; }
 .filterGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: $sp-3;
   align-items: end;
+  padding-top: $sp-1;
 }
 .filterFooter {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: $sp-3;
   flex-wrap: wrap;
 }
-.filterSummary { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
+.filterSummary { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; flex: 1 1 320px; min-height: 36px; }
 .filterActions { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
 .filterChip {
   display: inline-flex;
   align-items: center;
+   gap: $sp-2;
   min-height: 30px;
   padding: 0 $sp-3;
   border-radius: $r-sm;
-  background: $ink-100;
+   background: $ink-50;
   border: 1px solid $border;
   color: $text-soft;
   font-size: $fs-xs;
   font-weight: $fw-medium;
+   cursor: pointer;
+   transition: background $dur-fast $ease, border-color $dur-fast $ease, color $dur-fast $ease;
+
+   &:hover,
+   &:focus-visible {
+     color: $text;
+     background: $surface;
+     border-color: $border-strong;
+     outline: none;
+   }
 }
-.filterHint { color: $text-muted; font-size: $fs-sm; }
+.filterHint { color: $text-muted; font-size: $fs-xs; }
+
+.activeFiltersRow {
+  display: flex;
+  align-items: center;
+  gap: $sp-2;
+  flex-wrap: wrap;
+  padding: $sp-3 $sp-5 0;
+}
 
 .loading { padding: $sp-6; text-align: center; color: $text-muted; font-size: $fs-sm; }
 
-.table { width: 100%; border-collapse: collapse; font-size: $fs-sm;
+.table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: $fs-sm;
   th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid $border; vertical-align: middle; }
   th { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; font-weight: $fw-semibold; background: $ink-50; }
+  tbody tr:nth-child(even) td { background: rgba($ink-50, 0.7); }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba($brand-50, 0.4); }
+  tbody tr:hover td { background: rgba($brand-50, 0.5); }
 }
 .who { display: flex; align-items: center; gap: $sp-2; font-weight: $fw-medium; }
-.dates { color: $text-soft; white-space: nowrap; }
+.dates { color: $text; white-space: nowrap; font-weight: $fw-semibold; }
+.dateRange { display: inline-flex; align-items: center; min-height: 28px; }
 .muted { color: $text-muted; font-size: $fs-xs; }
 .reason { color: $text-muted; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusCell { display: flex; align-items: center; gap: 6px; }
@@ -82,10 +104,15 @@
     outline: none;
   }
 }
-.actions { display: flex; gap: 6px; justify-content: flex-end; }
+.actions { display: flex; gap: 6px; justify-content: flex-end; min-width: 152px; }
 .sourceMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hintBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text-soft; font-size: $fs-sm; border: 1px solid $border; }
 .warnBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text; font-size: $fs-sm; border: 1px solid $border; }
+
+.upcomingSummary { display: flex; align-items: center; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
+.upcomingEyebrow { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; font-weight: $fw-semibold; }
+.upcomingTitle { margin-top: 4px; font-family: $font-display; font-size: $fs-xl; font-weight: $fw-extra; color: $text; }
+.upcomingMeta { margin-top: 4px; color: $text-soft; font-size: $fs-sm; }
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
@@ -111,4 +138,7 @@
   .filterGrid { grid-template-columns: 1fr; }
   .filterFooter { align-items: stretch; }
   .filterActions { width: 100%; justify-content: space-between; }
+  .activeFiltersRow { padding: $sp-3 $sp-3 0; }
+  .actions { min-width: 0; }
+  .upcomingSummary { align-items: flex-start; }
 }
