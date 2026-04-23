@@ -30,9 +30,9 @@ export const TYPE_TONE: Record<LeaveType, 'leave' | 'sick' | 'unavail' | 'neutra
 };
 
 export const SOURCE_LABEL: Record<LeaveSource, string> = {
-  employee_request: 'Requested by employee',
-  manager_created: 'Added by manager',
-  owner_created: 'Added by owner',
+  employee_request: 'Employee request',
+  manager_created: 'Manager added',
+  owner_created: 'Owner added',
 };
 
 export const SOURCE_TONE: Record<LeaveSource, 'neutral' | 'info' | 'brand'> = {
