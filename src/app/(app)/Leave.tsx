@@ -501,15 +501,15 @@ export default function Leave() {
             </thead>
             <tbody>
               {filtered.map(r => {
-                const isOwn = r.user_id === user?.id;
+                const isRowClickable = !isMgr;
                 return (
                   <tr
                     key={r.id}
-                    className={!isMgr && isOwn ? s.clickableRow : undefined}
-                    onClick={!isMgr && isOwn ? () => openLeaveDetails(r) : undefined}
-                    onKeyDown={!isMgr && isOwn ? (event) => onRowKeyDown(event, r) : undefined}
-                    tabIndex={!isMgr && isOwn ? 0 : undefined}
-                    aria-label={!isMgr && isOwn ? `Open details for ${TYPE_LABEL[r.leave_type]} leave from ${fmtDate(r.start_date, 'd MMM')} to ${fmtDate(r.end_date, 'd MMM yyyy')}` : undefined}
+                    className={isRowClickable ? s.clickableRow : undefined}
+                    onClick={isRowClickable ? () => openLeaveDetails(r) : undefined}
+                    onKeyDown={isRowClickable ? (event) => onRowKeyDown(event, r) : undefined}
+                    tabIndex={isRowClickable ? 0 : undefined}
+                    aria-label={isRowClickable ? `Open details for ${TYPE_LABEL[r.leave_type]} leave from ${fmtDate(r.start_date, 'd MMM')} to ${fmtDate(r.end_date, 'd MMM yyyy')}` : undefined}
                   >
                     {isMgr && (
                       <td>
@@ -564,7 +564,7 @@ export default function Leave() {
                               Review note
                             </button>
                           )}
-                          {!isMgr && isOwn && r.status === 'pending' && (
+                          {!isMgr && r.status === 'pending' && (
                             <button
                               type="button"
                               className={s.noteButton}
