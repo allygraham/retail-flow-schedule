@@ -101,28 +101,7 @@ export default function Rota() {
     return people.filter(p => p.store_ids?.includes(storeFilter) || assignedHere.has(p.user_id));
   }, [people, shifts, storeFilter]);
 
-  // Total scheduled hours per employee for the visible week (respects store filter).
-  const hoursByUser = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const sh of filteredShifts) {
-      if (!sh.assigned_user_id || sh.status === 'cancelled') continue;
-      const h = hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0);
-      map.set(sh.assigned_user_id, (map.get(sh.assigned_user_id) ?? 0) + h);
-    }
-    return map;
-  }, [filteredShifts]);
-  const totalWeekHours = useMemo(
-    () => Array.from(hoursByUser.values()).reduce((a, b) => a + b, 0),
-    [hoursByUser],
-  );
-  const openHours = useMemo(
-    () => filteredShifts
-      .filter(sh => !sh.assigned_user_id && sh.status !== 'cancelled')
-      .reduce((a, sh) => a + hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0), 0),
-    [filteredShifts],
-  );
   const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published).length, [filteredShifts]);
-  const fmtH = (n: number) => (Math.round(n * 10) / 10).toString();
 
   const conflictsFor = (sh: any): string[] => {
     const c: string[] = [];
@@ -407,8 +386,8 @@ export default function Rota() {
 
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className={s.grid}>
-            <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>
+          <div className={`${s.grid} ${!isMgr ? s.gridEmployee : ''}`}>
+            {isMgr && <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>}
             {days.map(d => {
               const dStr = isoDate(d);
               const hol = holidays.get(dStr);
@@ -424,17 +403,19 @@ export default function Rota() {
                 </div>
               );
             })}
-            <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>
+            {isMgr && <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>}
             {/* per-employee rows */}
             {visiblePeople.map(p => (
               <div key={p.user_id} className={s.contents}>
-                <div className={s.staffCell}>
-                  <Avatar name={p.name} size="sm" />
-                  <div>
-                    <div className={s.staffName}>{p.name}</div>
-                    <div className={s.staffRole}>{roleById[p.primary_role_id]?.name ?? '—'}</div>
+                {isMgr && (
+                  <div className={s.staffCell}>
+                    <Avatar name={p.name} size="sm" />
+                    <div>
+                      <div className={s.staffName}>{p.name}</div>
+                      <div className={s.staffRole}>{roleById[p.primary_role_id]?.name ?? '—'}</div>
+                    </div>
                   </div>
-                </div>
+                )}
                 {days.map(d => {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
@@ -465,7 +446,7 @@ export default function Rota() {
                     </DroppableCell>
                   );
                 })}
-                <div className={s.totalCell}>{fmtH(hoursByUser.get(p.user_id) ?? 0)}<span className={s.totalUnit}>h</span></div>
+                {isMgr && <div className={s.totalCell} />}
               </div>
             ))}
             {/* Unassigned row — managers only */}
@@ -495,7 +476,7 @@ export default function Rota() {
                     </DroppableCell>
                   );
                 })}
-                <div className={s.totalCell}>{fmtH(openHours)}<span className={s.totalUnit}>h</span></div>
+                <div className={s.totalCell} />
               </div>
             )}
           </div>
