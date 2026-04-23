@@ -1,25 +1,40 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { useLeaveRequests } from '@/features/leave/useLeaveRequests';
 import { Card } from '@/components/common/Card';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
-import { Field, Input } from '@/components/common/Field';
+import { Field, Input, Select, TextArea } from '@/components/common/Field';
+import { Modal } from '@/components/common/Modal';
+import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { fmtDate, fmtTime, isoDate } from '@/lib/datetime';
 import { useLeaveBalance } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import { useHolidays } from '@/features/holidays/useHolidays';
+import { leaveSchema } from '@/lib/validation';
+import { toast } from 'sonner';
 import s from './Profile.module.scss';
 
 export default function Profile() {
   const { user, fullName, role, business, refresh } = useAuth();
   const { balance, loading: balanceLoading } = useLeaveBalance();
+  const { submit } = useLeaveRequests();
   const [name, setName] = useState(fullName ?? '');
   const holidays = useHolidays();
   const [phone, setPhone] = useState('');
   const [shifts, setShifts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [requestModal, setRequestModal] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestForm, setRequestForm] = useState({
+    leave_type: 'annual',
+    start_date: isoDate(new Date()),
+    end_date: isoDate(new Date()),
+    reason: '',
+  });
 
   useEffect(() => { setName(fullName ?? ''); }, [fullName]);
 
@@ -43,6 +58,37 @@ export default function Profile() {
     refresh();
   };
 
+  const openRequestModal = () => {
+    setRequestError(null);
+    setRequestForm({
+      leave_type: 'annual',
+      start_date: isoDate(new Date()),
+      end_date: isoDate(new Date()),
+      reason: '',
+    });
+    setRequestModal(true);
+  };
+
+  const submitRequest = async () => {
+    setRequestError(null);
+    const parsed = leaveSchema.safeParse(requestForm);
+    if (!parsed.success) {
+      setRequestError(parsed.error.issues[0]?.message ?? 'Check your request details');
+      return;
+    }
+
+    try {
+      setRequesting(true);
+      await submit(parsed.data);
+      setRequestModal(false);
+      toast.success('Request submitted. Your manager has been notified.');
+    } catch (error: any) {
+      setRequestError(error.message ?? 'Could not submit request');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
   return (
     <div className={s.page}>
       <header className={s.header}><div><span className={s.eye}>My profile</span><h1 className={s.h1}>Your details</h1></div></header>
@@ -62,7 +108,11 @@ export default function Profile() {
           </div>
         </Card>
         <div className={s.col}>
-          <LeaveBalanceCard balance={balance} loading={balanceLoading} />
+          <LeaveBalanceCard
+            balance={balance}
+            loading={balanceLoading}
+            action={<Button size="sm" onClick={openRequestModal}>Request time off</Button>}
+          />
         <Card title="Upcoming shifts" subtitle="Next 10 published">
           {shifts.length === 0 ? (
             <div className={s.empty}>No upcoming shifts.</div>
@@ -91,6 +141,50 @@ export default function Profile() {
         </Card>
         </div>
       </div>
+
+      <Modal
+        open={requestModal}
+        onClose={() => setRequestModal(false)}
+        title="Request time off"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRequestModal(false)}>Cancel</Button>
+            <Button onClick={submitRequest} loading={requesting}>Submit</Button>
+          </>
+        }
+      >
+        <div className={s.requestForm}>
+          <Field label="Type">
+            <Select value={requestForm.leave_type} onChange={(event) => setRequestForm((current) => ({ ...current, leave_type: event.target.value as typeof current.leave_type }))}>
+              <option value="annual">Annual leave</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="sick">Sick</option>
+              <option value="other">Other</option>
+            </Select>
+          </Field>
+          <Field label="Dates">
+            <DatePicker
+              mode="range"
+              value={{ from: parseISODate(requestForm.start_date), to: parseISODate(requestForm.end_date) }}
+              onChange={(range) => setRequestForm((current) => ({
+                ...current,
+                start_date: toISODate(range.from) || current.start_date,
+                end_date: toISODate(range.to) || toISODate(range.from) || current.end_date,
+              }))}
+              placeholder="Pick a date range"
+            />
+          </Field>
+          <Field label="Reason">
+            <TextArea
+              value={requestForm.reason}
+              onChange={(event) => setRequestForm((current) => ({ ...current, reason: event.target.value }))}
+              placeholder="Optional context for your manager"
+              rows={3}
+            />
+          </Field>
+          {requestError && <div className={s.requestError}>{requestError}</div>}
+        </div>
+      </Modal>
     </div>
   );
 }

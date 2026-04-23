@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Card } from '@/components/common/Card';
 import type { LeaveBalance } from './useLeaveBalance';
 import s from './LeaveBalanceCard.module.scss';
@@ -8,12 +9,13 @@ interface Props {
   title?: string;
   subtitle?: string;
   compact?: boolean;
+  action?: ReactNode;
 }
 
-export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', subtitle, compact }: Props) {
+export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', subtitle, compact, action }: Props) {
   const sub = subtitle ?? (balance ? `${balance.year} entitlement` : undefined);
   return (
-    <Card title={title} subtitle={sub}>
+    <Card title={title} subtitle={sub} action={action}>
       {loading || !balance ? (
         <div className={s.loading}>Loading…</div>
       ) : (
