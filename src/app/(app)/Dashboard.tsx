@@ -37,6 +37,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   const { items: notifications } = useNotifications(userId);
   const holidays = useHolidays();
   const [data, setData] = useState<any>(null);
+  const [hiddenNotificationIds, setHiddenNotificationIds] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -116,7 +117,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
     .filter(l => l.status === 'rejected' || l.status === 'approved')
     .slice(0, 3);
 
-  const recentNotifs = notifications.slice(0, 5);
+  const recentNotifs = notifications.filter(n => !hiddenNotificationIds.includes(n.id)).slice(0, 5);
 
   return (
     <div className={s.page}>
@@ -262,7 +263,20 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         </Card>
 
         {/* Activity / alerts */}
-        <Card title="Recent updates" subtitle="Schedule changes & alerts">
+        <Card
+          title="Recent updates"
+          subtitle="Schedule changes & alerts"
+          action={(
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHiddenNotificationIds(prev => [...new Set([...prev, ...notifications.slice(0, 5).map(n => n.id)])])}
+              disabled={recentNotifs.length === 0}
+            >
+              Clear updates
+            </Button>
+          )}
+        >
           {recentNotifs.length === 0 ? (
             <EmptyState title="You're all caught up" description="No new updates right now." />
           ) : (
