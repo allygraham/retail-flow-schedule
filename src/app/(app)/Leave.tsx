@@ -501,7 +501,7 @@ export default function Leave() {
             </thead>
             <tbody>
               {filtered.map(r => {
-                const isRowClickable = !isMgr;
+                const isRowClickable = true;
                 return (
                   <tr
                     key={r.id}
@@ -583,8 +583,8 @@ export default function Leave() {
                       <td className={s.actions}>
                         {r.status === 'pending' && (
                         <>
-                          <Button size="sm" variant="outline" onClick={() => openReview(r, 'rejected')}>Decline</Button>
-                          <Button size="sm" onClick={() => openReview(r, 'approved')}>Approve</Button>
+                           <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); openReview(r, 'rejected'); }}>Decline</Button>
+                           <Button size="sm" onClick={(event) => { event.stopPropagation(); openReview(r, 'approved'); }}>Approve</Button>
                         </>
                       )}
                       </td>
