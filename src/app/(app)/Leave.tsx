@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
@@ -67,7 +67,7 @@ export default function Leave() {
   const [mgmtErr, setMgmtErr] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ row: LeaveRequestRow; action: 'approved' | 'rejected' } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
-  const [noteViewer, setNoteViewer] = useState<{ title: string; body: string } | null>(null);
+  const [noteViewer, setNoteViewer] = useState<{ title: string; body: ReactNode } | null>(null);
 
   const [filter, setFilter] = useState<Filter>('pending');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
@@ -143,12 +143,62 @@ export default function Leave() {
   };
 
   const upcomingLeave = useMemo(() => {
-    if (isMgr || !user) return null;
+    if (isMgr || !user) return { state: 'empty' as const, request: null };
+
     const today = isoDate(new Date());
-    return requests
+    const approved = requests
       .filter((request) => request.user_id === user.id && request.status === 'approved' && request.end_date >= today)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null;
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+    const current = approved.find((request) => request.start_date <= today && request.end_date >= today);
+    if (current) return { state: 'current' as const, request: current };
+
+    const next = approved.find((request) => request.start_date >= today) ?? null;
+    if (next) return { state: 'upcoming' as const, request: next };
+
+    return { state: 'empty' as const, request: null };
   }, [isMgr, requests, user]);
+
+  const openLeaveDetails = (request: LeaveRequestRow) => {
+    const duration = daysBetween(request.start_date, request.end_date);
+    setNoteViewer({
+      title: 'Leave details',
+      body: (
+        <div className={s.noteViewer}>
+          <div className={s.detailList}>
+            <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[request.leave_type]}</strong></div>
+            <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(request.start_date, 'd MMM')} → {fmtDate(request.end_date, 'd MMM yyyy')}</strong></div>
+            <div className={s.detailRow}><span>Duration</span><strong>{duration} day{duration === 1 ? '' : 's'}</strong></div>
+            <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[request.status]}</strong></div>
+            <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[request.source]}</strong></div>
+          </div>
+          <div className={s.detailBlock}>
+            <span className={s.reasonLabel}>Reason</span>
+            <p>{request.reason?.trim() || 'No additional details added.'}</p>
+          </div>
+          {request.manager_note && (
+            <div className={s.detailBlock}>
+              <span className={s.reasonLabel}>Manager note</span>
+              <p>{request.manager_note}</p>
+            </div>
+          )}
+          {request.review_notes && (
+            <div className={s.detailBlock}>
+              <span className={s.reasonLabel}>Review note</span>
+              <p>{request.review_notes}</p>
+            </div>
+          )}
+        </div>
+      ),
+    });
+  };
+
+  const onRowKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>, request: LeaveRequestRow) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openLeaveDetails(request);
+    }
+  };
 
   const submitRequest = async () => {
     setFormErr(null);
