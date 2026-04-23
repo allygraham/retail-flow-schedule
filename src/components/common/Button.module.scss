@@ -34,20 +34,20 @@
   &:hover:not(:disabled) { background: var(--brand-primary-hover, #{$brand-700}); }
 }
 .secondary {
-  background: $ink-100; color: $text;
-  &:hover:not(:disabled) { background: $ink-200; }
+  background: var(--theme-badge-bg, #{$ink-100}); color: var(--theme-badge-text, #{$text});
+  &:hover:not(:disabled) { background: var(--brand-primary-soft, #{$ink-200}); }
 }
 .ghost {
-  background: transparent; color: $text;
-  &:hover:not(:disabled) { background: $ink-100; }
+  background: transparent; color: var(--theme-text, #{$text});
+  &:hover:not(:disabled) { background: var(--brand-primary-soft, #{$ink-100}); }
 }
 .outline {
-  background: $surface; color: $text; border-color: $border-strong;
-  &:hover:not(:disabled) { background: $ink-50; border-color: $ink-300; }
+  background: var(--theme-surface-elevated, #{$surface}); color: var(--theme-text, #{$text}); border-color: var(--theme-border, #{$border-strong});
+  &:hover:not(:disabled) { background: var(--brand-primary-soft, #{$ink-50}); border-color: var(--brand-primary, #{$ink-300}); }
 }
 .danger {
-  background: $danger; color: $white;
-  &:hover:not(:disabled) { background: #b91c1c; }
+  background: var(--theme-status-declined-text, #{$danger}); color: $white;
+  &:hover:not(:disabled) { background: var(--theme-status-declined-text, #b91c1c); filter: brightness(0.92); }
 }
 
 .spin {

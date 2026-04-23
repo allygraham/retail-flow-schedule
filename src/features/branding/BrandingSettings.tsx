@@ -1,139 +1,93 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2, Upload, Check } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/features/auth/AuthProvider";
-import { useBranding } from "./BrandingProvider";
-import { Card } from "@/components/common/Card";
-import { Button } from "@/components/common/Button";
-import { Field } from "@/components/common/Field";
-import { contrastRatio, hexToRgb, isValidHex } from "./contrast";
-import { BrandingTheme, DEFAULT_THEME } from "./types";
-import s from "./BrandingSettings.module.scss";
+import { useEffect, useMemo, useState } from 'react';
+import { Check, Lock, Upload, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/features/auth/AuthProvider';
+import { Card } from '@/components/common/Card';
+import { Button } from '@/components/common/Button';
+import { useBranding, buildThemeStyle } from './BrandingProvider';
+import { DEFAULT_THEME, type BrandingTheme, type ThemePresetKey } from './types';
+import { getThemePreset, THEME_ORDER, THEME_PRESETS, themeFromPreset } from './presets';
+import s from './BrandingSettings.module.scss';
 
-type ColorKey = "primaryColor" | "secondaryColor" | "accentColor" | "surfaceColor";
-
-const COLOR_FIELDS: Array<{ key: ColorKey; label: string; help: string; checkAgainst: ColorKey }> = [
-  { key: "primaryColor", label: "Primary", help: "Buttons, links, active nav", checkAgainst: "surfaceColor" },
-  { key: "secondaryColor", label: "Sidebar", help: "Top bar and side nav background", checkAgainst: "surfaceColor" },
-  { key: "accentColor", label: "Accent", help: "Highlights and callouts", checkAgainst: "surfaceColor" },
-  { key: "surfaceColor", label: "Background", help: "App background surface", checkAgainst: "primaryColor" },
-];
-
-const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2MB
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
-
-function ContrastBadge({ a, b }: { a: string; b: string }) {
-  const ratio = useMemo(() => {
-    const ra = hexToRgb(a);
-    const rb = hexToRgb(b);
-    if (!ra || !rb) return null;
-    return contrastRatio(ra, rb);
-  }, [a, b]);
-  if (ratio == null) return null;
-  const ok = ratio >= 4.5;
-  return (
-    <span
-      className={`${s.contrast} ${ok ? s.contrastOk : s.contrastBad}`}
-      title={ok ? "Meets WCAG AA" : "Below WCAG AA — text may be hard to read"}
-    >
-      {ok ? <Check size={12} /> : "!"} {ratio.toFixed(2)}:1
-    </span>
-  );
-}
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
 
 export function BrandingSettings() {
   const { business, user, role } = useAuth();
   const { theme, refresh } = useBranding();
-  const canEdit = role === "owner" || role === "manager";
+  const canEdit = role === 'owner';
+  const canViewOnly = role === 'manager' || role === 'employee';
 
   const [draft, setDraft] = useState<BrandingTheme>(theme);
-  const [hexInputs, setHexInputs] = useState<Record<ColorKey, string>>({
-    primaryColor: theme.primaryColor,
-    secondaryColor: theme.secondaryColor,
-    accentColor: theme.accentColor,
-    surfaceColor: theme.surfaceColor,
-  });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDraft(theme);
-    setHexInputs({
-      primaryColor: theme.primaryColor,
-      secondaryColor: theme.secondaryColor,
-      accentColor: theme.accentColor,
-      surfaceColor: theme.surfaceColor,
-    });
   }, [theme]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(theme), [draft, theme]);
+  const activePreset = getThemePreset(draft.themeKey);
 
-  const setColor = (key: ColorKey, value: string) => {
-    setDraft((d) => ({ ...d, [key]: value }));
-    setHexInputs((h) => ({ ...h, [key]: value }));
+  const applyPreset = (themeKey: ThemePresetKey) => {
+    if (!canEdit) return;
+    setDraft((current) => ({
+      ...themeFromPreset(themeKey, current),
+      displayName: current.displayName,
+      logoUrl: current.logoUrl,
+    }));
   };
 
-  const onHexChange = (key: ColorKey, value: string) => {
-    const v = value.startsWith("#") ? value : `#${value}`;
-    setHexInputs((h) => ({ ...h, [key]: v }));
-    if (isValidHex(v)) setDraft((d) => ({ ...d, [key]: v.toLowerCase() }));
+  const reset = () => {
+    setDraft({
+      ...DEFAULT_THEME,
+      displayName: draft.displayName,
+      logoUrl: draft.logoUrl,
+    });
   };
 
   const onFile = async (file: File) => {
-    if (!business) return;
+    if (!business || !canEdit) return;
     setError(null);
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Use PNG, JPG, SVG or WEBP.");
+      setError('Use PNG, JPG, SVG or WEBP.');
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
-      setError("Image must be under 2MB.");
+      setError('Image must be under 2MB.');
       return;
     }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
       const path = `${business.id}/logo-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("business-logos").upload(path, file, {
-        cacheControl: "3600",
+      const { error: upErr } = await supabase.storage.from('business-logos').upload(path, file, {
+        cacheControl: '3600',
         upsert: false,
         contentType: file.type,
       });
       if (upErr) throw upErr;
-      const { data } = supabase.storage.from("business-logos").getPublicUrl(path);
-      setDraft((d) => ({ ...d, logoUrl: data.publicUrl }));
-      toast.success("Logo uploaded — remember to save.");
+      const { data } = supabase.storage.from('business-logos').getPublicUrl(path);
+      setDraft((current) => ({ ...current, logoUrl: data.publicUrl }));
+      toast.success('Logo uploaded — save to apply it for everyone.');
     } catch (e: any) {
-      setError(e.message ?? "Upload failed");
+      setError(e.message ?? 'Upload failed');
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
-  };
-
-  const removeLogo = () => setDraft((d) => ({ ...d, logoUrl: null }));
-
-  const reset = () => {
-    setDraft({ ...DEFAULT_THEME, displayName: draft.displayName, logoUrl: draft.logoUrl });
   };
 
   const save = async () => {
-    if (!business || !user) return;
-    setError(null);
-    for (const f of COLOR_FIELDS) {
-      if (!isValidHex(draft[f.key])) {
-        setError(`${f.label} colour is not a valid hex.`);
-        return;
-      }
-    }
+    if (!business || !user || !canEdit) return;
     setSaving(true);
-    const { error: dbErr } = await supabase.from("business_branding").upsert(
+    setError(null);
+    const { error: dbErr } = await supabase.from('business_branding').upsert(
       {
         business_id: business.id,
         display_name: draft.displayName,
+        theme_key: draft.themeKey,
         primary_color: draft.primaryColor,
         secondary_color: draft.secondaryColor,
         accent_color: draft.accentColor,
@@ -141,152 +95,141 @@ export function BrandingSettings() {
         logo_url: draft.logoUrl,
         updated_by: user.id,
       },
-      { onConflict: "business_id" },
+      { onConflict: 'business_id' },
     );
     setSaving(false);
     if (dbErr) {
       setError(dbErr.message);
       return;
     }
-    toast.success("Branding saved");
+    toast.success('Theme saved');
     refresh();
   };
 
   return (
-    <Card title="Branding & appearance" subtitle="Customise the look of your workspace. Visible only to your team.">
+    <Card title="Theme" subtitle="Choose a cohesive workspace theme for your business.">
       <div className={s.wrap}>
-        <div className={s.grid}>
-          {/* LEFT: form */}
-          <div className={s.section}>
-            <Field label="Workspace display name" hint="Shown in the header instead of the business name (optional).">
-              <input
-                value={draft.displayName ?? ""}
-                onChange={(e) => setDraft((d) => ({ ...d, displayName: e.target.value || null }))}
-                placeholder={business?.name ?? "Your workspace"}
+        <div className={s.headerRow}>
+          <div>
+            <div className={s.sectionTitle}>Preset themes</div>
+            <p className={s.help}>Owners can switch the workspace look instantly. Everyone else can preview the active theme.</p>
+          </div>
+          {!canEdit && (
+            <div className={s.readOnly}><Lock size={14} /> {canViewOnly ? 'Owner access required to change theme' : 'Sign in to edit'}</div>
+          )}
+        </div>
+
+        <div className={s.themeGrid}>
+          {THEME_ORDER.map((key) => {
+            const preset = THEME_PRESETS[key];
+            const selected = draft.themeKey === key;
+            return (
+              <button
+                key={preset.key}
+                type="button"
+                className={`${s.themeCard} ${selected ? s.themeCardActive : ''}`}
+                onClick={() => applyPreset(preset.key)}
                 disabled={!canEdit}
-                maxLength={60}
-              />
-            </Field>
-
-            <div className={s.section}>
-              <div className={s.sectionTitle}>Colours</div>
-              {COLOR_FIELDS.map((f) => (
-                <Field key={f.key} label={f.label} hint={f.help}>
-                  <div className={s.colorRow}>
-                    <input
-                      type="color"
-                      className={s.swatch}
-                      value={isValidHex(draft[f.key]) ? draft[f.key] : "#000000"}
-                      onChange={(e) => setColor(f.key, e.target.value)}
-                      disabled={!canEdit}
-                      aria-label={`${f.label} colour picker`}
-                    />
-                    <input
-                      className={s.hexInput}
-                      value={hexInputs[f.key]}
-                      onChange={(e) => onHexChange(f.key, e.target.value)}
-                      disabled={!canEdit}
-                      maxLength={7}
-                      spellCheck={false}
-                    />
-                    <ContrastBadge a={draft[f.key]} b={draft[f.checkAgainst]} />
+                aria-pressed={selected}
+              >
+                <div className={s.themePreview} style={buildThemeStyle(themeFromPreset(preset.key))}>
+                  <div className={s.themePreviewSidebar}>
+                    <span className={s.previewLogoMark} />
+                    <span className={s.previewNavItem} />
+                    <span className={`${s.previewNavItem} ${s.previewNavItemMuted}`} />
                   </div>
-                </Field>
-              ))}
-              <p className={s.help}>Text colour on coloured surfaces is auto-adjusted to stay readable.</p>
-            </div>
+                  <div className={s.themePreviewBody}>
+                    <div className={s.previewToolbar} />
+                    <div className={s.previewStatRow}>
+                      <span className={s.previewStatCard} />
+                      <span className={s.previewStatCard} />
+                    </div>
+                    <div className={s.previewBadgeRow}>
+                      <span className={s.previewBadgeApproved}>Approved</span>
+                      <span className={s.previewBadgePending}>Pending</span>
+                      <span className={s.previewBadgeDeclined}>Declined</span>
+                    </div>
+                  </div>
+                </div>
 
-            <div className={s.section}>
-              <div className={s.sectionTitle}>Logo</div>
-              <div className={s.logoBox}>
-                <div className={s.logoPreview}>
-                  {draft.logoUrl ? (
-                    <img src={draft.logoUrl} alt="Workspace logo" />
-                  ) : (
-                    <span className={s.logoEmpty}>No logo yet</span>
-                  )}
+                <div className={s.themeMeta}>
+                  <div>
+                    <div className={s.themeName}>{preset.name}</div>
+                    <div className={s.themeDesc}>{preset.description}</div>
+                  </div>
+                  {selected && <span className={s.selectedPill}><Check size={12} /> Active</span>}
                 </div>
-                <div className={s.logoActions}>
-                  <label className={s.fileBtn}>
-                    <Upload size={14} />
-                    <span>{uploading ? "Uploading…" : draft.logoUrl ? "Replace" : "Upload"}</span>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept={ALLOWED_TYPES.join(",")}
-                      disabled={!canEdit || uploading}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) onFile(f);
-                      }}
-                    />
-                  </label>
-                  {draft.logoUrl && canEdit && (
-                    <button type="button" className={s.fileBtn} onClick={removeLogo}>
-                      <Trash2 size={14} /> Remove
-                    </button>
-                  )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={s.detailGrid}>
+          <div className={s.section}>
+            <div className={s.sectionTitle}>Current theme</div>
+            <div className={s.summaryCard} style={buildThemeStyle(draft)}>
+              <div className={s.summaryBar}>
+                <div>
+                  <div className={s.summaryLabel}>Selected</div>
+                  <div className={s.summaryTitle}>{activePreset.name}</div>
                 </div>
-                <p className={s.help}>PNG, JPG, SVG or WEBP. Max 2MB. Transparent backgrounds work best.</p>
+                <span className={s.summaryAction}>Live preview</span>
+              </div>
+              <div className={s.swatches}>
+                <span><i style={{ background: draft.primaryColor }} /> Primary</span>
+                <span><i style={{ background: draft.secondaryColor }} /> Sidebar</span>
+                <span><i style={{ background: draft.surfaceColor }} /> Surface</span>
+                <span><i style={{ background: draft.accentColor }} /> Accent</span>
               </div>
             </div>
+
+            <label className={s.logoBox}>
+              <span className={s.sectionTitle}>Workspace logo</span>
+              <div className={s.logoPreview}>
+                {draft.logoUrl ? <img src={draft.logoUrl} alt="Workspace logo" /> : <span className={s.logoEmpty}>No logo</span>}
+              </div>
+              <div className={s.logoActions}>
+                <span className={s.uploadBtn}><Upload size={14} /> {uploading ? 'Uploading…' : 'Upload logo'}</span>
+                {draft.logoUrl && canEdit && (
+                  <button type="button" className={s.removeBtn} onClick={(e) => { e.preventDefault(); setDraft((current) => ({ ...current, logoUrl: null })); }}>
+                    <Trash2 size={14} /> Remove
+                  </button>
+                )}
+              </div>
+              <input
+                type="file"
+                accept={ALLOWED_TYPES.join(',')}
+                disabled={!canEdit || uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void onFile(file);
+                  e.currentTarget.value = '';
+                }}
+              />
+              <span className={s.help}>PNG, JPG, SVG or WEBP, up to 2MB.</span>
+            </label>
           </div>
 
-          {/* RIGHT: live preview */}
           <div className={s.section}>
-            <div className={s.sectionTitle}>Live preview</div>
-            <div
-              className={s.preview}
-              style={{
-                // Apply draft colors locally so preview always shows the unsaved state
-                ["--brand-primary" as any]: draft.primaryColor,
-                ["--brand-primary-fg" as any]: "#fff",
-                ["--brand-primary-soft" as any]: draft.primaryColor + "1a",
-                ["--brand-secondary" as any]: draft.secondaryColor,
-                ["--brand-secondary-fg" as any]: "#fff",
-                ["--brand-accent" as any]: draft.accentColor,
-                ["--brand-accent-fg" as any]: "#fff",
-                ["--brand-surface" as any]: draft.surfaceColor,
-              }}
-            >
-              <div className={s.previewBar}>
-                {draft.logoUrl ? (
-                  <img src={draft.logoUrl} alt="" />
-                ) : (
-                  <span className={s.previewBarBrand}>{draft.displayName || business?.name || "Workspace"}</span>
-                )}
-                <span className={s.previewBarBrand} style={{ opacity: 0.7, fontSize: 12 }}>
-                  Dashboard
-                </span>
-              </div>
-              <div className={s.previewBody}>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: "0.06em",
-                      color: "#64748b",
-                      textTransform: "uppercase",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Current week
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4, color: "#0f172a" }}>
-                    Good morning, team
+            <div className={s.sectionTitle}>Preview</div>
+            <div className={s.preview} style={buildThemeStyle(draft)}>
+              <div className={s.previewShell}>
+                <aside className={s.previewSidebarPane}>
+                  <div className={s.previewWorkspace}>{draft.displayName || business?.name || 'Workspace'}</div>
+                  <span className={s.previewSidebarActive}>Dashboard</span>
+                  <span className={s.previewSidebarLink}>Rota</span>
+                  <span className={s.previewSidebarLink}>Leave</span>
+                </aside>
+                <div className={s.previewMain}>
+                  <div className={s.previewTopline}>Current week</div>
+                  <div className={s.previewHeadline}>Good morning, team</div>
+                  <div className={s.previewButton}>Publish schedule</div>
+                  <div className={s.previewTable}>
+                    <div className={s.previewTableRow}><span>Team status</span><span className={s.previewBadgeApproved}>Approved</span></div>
+                    <div className={s.previewTableRow}><span>Pending leave</span><span className={s.previewBadgePending}>Pending</span></div>
+                    <div className={s.previewTableRow}><span>Declined request</span><span className={s.previewBadgeDeclined}>Declined</span></div>
                   </div>
                 </div>
-                <button type="button" className={s.previewBtnPrimary}>
-                  Publish schedule
-                </button>
-                <div className={s.previewBadgeRow}>
-                  <span className={s.previewBadge}>Working</span>
-                  <span className={s.previewBadge}>On leave</span>
-                  <span className={`${s.previewBadge} ${s.previewBadgeAccent}`}>Pending</span>
-                </div>
-                <a className={s.previewLink} href="#" onClick={(e) => e.preventDefault()}>
-                  View team →
-                </a>
               </div>
             </div>
           </div>
@@ -296,13 +239,9 @@ export function BrandingSettings() {
 
         {canEdit && (
           <div className={s.footer}>
-            {dirty && <span className={s.dirty}>You have unsaved changes</span>}
-            <Button variant="ghost" onClick={reset} disabled={saving}>
-              Reset to defaults
-            </Button>
-            <Button variant="primary" onClick={save} disabled={!dirty || saving}>
-              {saving ? "Saving…" : "Save branding"}
-            </Button>
+            {dirty && <span className={s.dirty}>You have unsaved theme changes.</span>}
+            <Button variant="ghost" onClick={reset} disabled={saving}>Reset</Button>
+            <Button variant="primary" onClick={save} disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save theme'}</Button>
           </div>
         )}
       </div>

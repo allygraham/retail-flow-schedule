@@ -12,23 +12,23 @@
 }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-.neutral { background: $ink-100; color: $ink-700; }
-.brand   { background: $brand-50; color: $brand-700; }
-.success { background: #dcfce7; color: #166534; }
-.warning { background: #fef3c7; color: #92400e; }
-.danger  { background: #fee2e2; color: #991b1b; }
-.info    { background: #e0f2fe; color: #075985; }
+.neutral { background: var(--theme-badge-bg, #{$ink-100}); color: var(--theme-badge-text, #{$ink-700}); }
+.brand   { background: var(--theme-badge-bg, #{$brand-50}); color: var(--theme-badge-text, #{$brand-700}); }
+.success { background: var(--theme-status-approved-bg, #dcfce7); color: var(--theme-status-approved-text, #166534); }
+.warning { background: var(--theme-status-pending-bg, #fef3c7); color: var(--theme-status-pending-text, #92400e); }
+.danger  { background: var(--theme-status-declined-bg, #fee2e2); color: var(--theme-status-declined-text, #991b1b); }
+.info    { background: var(--brand-primary-soft, #e0f2fe); color: var(--brand-primary, #075985); }
 
 /* Inside the tenant workspace, brand-tinted badges follow business branding. */
 :global(.tenantTheme) {
-  .brand { background: var(--brand-primary-soft, #{$brand-50}); color: var(--brand-primary, #{$brand-700}); }
-  .leave { background: var(--brand-primary-soft, #{$brand-50}); color: var(--brand-primary, #{$brand-700}); }
+  .brand { background: var(--theme-badge-bg, #{$brand-50}); color: var(--theme-badge-text, #{$brand-700}); }
+  .leave { background: var(--theme-badge-bg, #{$brand-50}); color: var(--theme-badge-text, #{$brand-700}); }
 }
 
-.working    { background: #dcfce7; color: #166534; }
-.leave      { background: $brand-50; color: $brand-700; }
-.sick       { background: #fee2e2; color: #991b1b; }
+.working    { background: var(--theme-status-approved-bg, #dcfce7); color: var(--theme-status-approved-text, #166534); }
+.leave      { background: var(--theme-badge-bg, #{$brand-50}); color: var(--theme-badge-text, #{$brand-700}); }
+.sick       { background: var(--theme-status-declined-bg, #fee2e2); color: var(--theme-status-declined-text, #991b1b); }
 .dayoff     { background: $ink-100; color: $ink-600; }
-.pending    { background: #fef3c7; color: #92400e; }
+.pending    { background: var(--theme-status-pending-bg, #fef3c7); color: var(--theme-status-pending-text, #92400e); }
 .unavail    { background: #f3e8ff; color: #6b21a8; }
 .unassigned { background: #ffe4e6; color: #9f1239; }

@@ -2,7 +2,7 @@
 @use '@/styles/mixins' as *;
 
 .page { @include col; gap: $sp-6; }
-.loading { color: $text-muted; padding: $sp-8; text-align: center; }
+.loading { color: var(--theme-text-muted, #{$text-muted}); padding: $sp-8; text-align: center; }
 
 .header {
   display: flex; align-items: end; justify-content: space-between;
@@ -10,7 +10,7 @@
 }
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; }
-.sub { color: $text-muted; font-size: $fs-sm; margin-top: 4px; }
+.sub { color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-sm; margin-top: 4px; }
 
 .quickActions {
   display: flex; gap: $sp-2; flex-wrap: wrap;
@@ -34,8 +34,8 @@
   padding: $sp-3 $sp-4;
   border-radius: $r-md;
   background: var(--brand-primary-soft, #{$brand-50});
-  border: 1px solid $border;
-  color: $text;
+  border: 1px solid var(--theme-border, #{$border});
+  color: var(--theme-text, #{$text});
   font-size: $fs-sm;
   strong { font-weight: $fw-semibold; }
   svg { flex-shrink: 0; color: var(--brand-primary, #{$brand-700}); }
@@ -54,8 +54,8 @@
   background:
     linear-gradient(135deg,
       var(--brand-primary-soft, #{$brand-50}) 0%,
-      $surface 70%);
-  border: 1px solid $border;
+      var(--theme-surface-elevated, #{$surface}) 70%);
+  border: 1px solid var(--theme-border, #{$border});
   box-shadow: $shadow-sm;
   overflow: hidden;
 
@@ -82,26 +82,26 @@
 .heroDay {
   font-family: $font-display; font-weight: $fw-extra;
   font-size: clamp(28px, 4vw, 40px); line-height: 1;
-  color: $text;
+  color: var(--theme-text, #{$text});
 }
 .heroDayNum {
-  color: $text-muted; font-size: $fs-md; font-weight: $fw-semibold;
+  color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-md; font-weight: $fw-semibold;
 }
 .heroTime {
   display: flex; align-items: center; gap: $sp-2;
-  font-size: $fs-lg; font-weight: $fw-semibold; color: $text;
+  font-size: $fs-lg; font-weight: $fw-semibold; color: var(--theme-text, #{$text});
 }
-.heroHours { color: $text-muted; font-weight: $fw-medium; font-size: $fs-sm; }
+.heroHours { color: var(--theme-text-muted, #{$text-muted}); font-weight: $fw-medium; font-size: $fs-sm; }
 .heroMeta {
   display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap;
-  color: $text-muted; font-size: $fs-sm;
+  color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-sm;
   span { display: inline-flex; align-items: center; gap: 4px; }
 }
 .dot { color: $border; }
 .heroNotes {
   margin: 0; padding: $sp-2 $sp-3;
-  background: $surface; border-left: 3px solid var(--brand-primary, #{$brand-700});
-  border-radius: $r-sm; font-size: $fs-sm; color: $text-muted; font-style: italic;
+  background: var(--theme-surface-elevated, #{$surface}); border-left: 3px solid var(--brand-primary, #{$brand-700});
+  border-radius: $r-sm; font-size: $fs-sm; color: var(--theme-text-muted, #{$text-muted}); font-style: italic;
 }
 
 /* ---------- Grid ---------- */
@@ -114,14 +114,14 @@
 .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
 .row {
   display: flex; align-items: center; gap: $sp-3;
-  padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
+  padding: $sp-3 $sp-5; border-bottom: 1px solid var(--theme-border, #{$border});
   &:last-child { border-bottom: none; }
 }
 .rowUnread { background: var(--brand-primary-soft, #{$brand-50}); }
 .rowMain { flex: 1; min-width: 0; }
 .rowName { font-weight: $fw-semibold; font-size: $fs-sm; @include truncate; }
-.rowMeta { color: $text-muted; font-size: $fs-xs; margin-top: 2px; }
-.rowTime { color: $text-muted; font-size: 11px; margin-top: 4px; }
+.rowMeta { color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-xs; margin-top: 2px; }
+.rowTime { color: var(--theme-text-muted, #{$text-muted}); font-size: 11px; margin-top: 4px; }
 .unreadDot {
   width: 8px; height: 8px; border-radius: 999px;
   background: var(--brand-primary, #{$brand-700}); flex-shrink: 0;
@@ -137,7 +137,7 @@
 .weekList { list-style: none; padding: 0; margin: 0; }
 .weekRow {
   display: flex; align-items: center; gap: $sp-3;
-  padding: $sp-3 $sp-5; border-bottom: 1px solid $border;
+  padding: $sp-3 $sp-5; border-bottom: 1px solid var(--theme-border, #{$border});
   &:last-child { border-bottom: none; }
 }
 .weekToday {
@@ -147,13 +147,13 @@
 .weekDate {
   width: 44px; text-align: center; flex-shrink: 0;
 }
-.wDay { font-size: 10px; font-weight: $fw-bold; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; }
-.wNum { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-lg; line-height: 1; color: $text; }
+.wDay { font-size: 10px; font-weight: $fw-bold; text-transform: uppercase; letter-spacing: 0.05em; color: var(--theme-text-muted, #{$text-muted}); }
+.wNum { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-lg; line-height: 1; color: var(--theme-text, #{$text}); }
 .weekBody { flex: 1; min-width: 0; @include col; gap: 2px; }
 .weekShift { display: flex; align-items: baseline; gap: $sp-2; flex-wrap: wrap; }
-.weekTime { font-weight: $fw-semibold; font-size: $fs-sm; color: $text; }
-.weekStore { font-size: $fs-xs; color: $text-muted; @include truncate; }
-.weekOff { color: $text-muted; font-size: $fs-sm; font-style: italic; }
+.weekTime { font-weight: $fw-semibold; font-size: $fs-sm; color: var(--theme-text, #{$text}); }
+.weekStore { font-size: $fs-xs; color: var(--theme-text-muted, #{$text-muted}); @include truncate; }
+.weekOff { color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-sm; font-style: italic; }
 
 /* ---------- Compact "then after that" shift rows ---------- */
 .shiftRow {

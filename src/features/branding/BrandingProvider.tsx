@@ -2,7 +2,8 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { readableForeground, shade, withAlpha } from './contrast';
-import { BrandingTheme, DEFAULT_THEME } from './types';
+import { BrandingTheme, DEFAULT_THEME, ThemePresetKey } from './types';
+import { getThemePreset } from './presets';
 
 type BrandingState = {
   theme: BrandingTheme;
@@ -17,6 +18,7 @@ const Ctx = createContext<BrandingState | undefined>(undefined);
  * never to :root. This prevents tenant branding from leaking into public pages.
  */
 export function buildThemeStyle(theme: BrandingTheme): React.CSSProperties {
+  const preset = getThemePreset(theme.themeKey);
   const fgPrimary = readableForeground(theme.primaryColor);
   const fgSecondary = readableForeground(theme.secondaryColor);
   const fgAccent = readableForeground(theme.accentColor);
@@ -30,6 +32,23 @@ export function buildThemeStyle(theme: BrandingTheme): React.CSSProperties {
     ['--brand-accent' as any]: theme.accentColor,
     ['--brand-accent-fg' as any]: fgAccent,
     ['--brand-surface' as any]: theme.surfaceColor,
+    ['--theme-surface' as any]: theme.surfaceColor,
+    ['--theme-surface-elevated' as any]: preset.surfaceElevatedColor,
+    ['--theme-sidebar' as any]: preset.sidebarColor,
+    ['--theme-sidebar-hover' as any]: preset.sidebarHoverColor,
+    ['--theme-text' as any]: preset.textColor,
+    ['--theme-text-muted' as any]: preset.mutedTextColor,
+    ['--theme-border' as any]: preset.borderColor,
+    ['--theme-badge-bg' as any]: preset.badgeBg,
+    ['--theme-badge-text' as any]: preset.badgeText,
+    ['--theme-status-approved-bg' as any]: preset.approvedBg,
+    ['--theme-status-approved-text' as any]: preset.approvedText,
+    ['--theme-status-pending-bg' as any]: preset.pendingBg,
+    ['--theme-status-pending-text' as any]: preset.pendingText,
+    ['--theme-status-declined-bg' as any]: preset.declinedBg,
+    ['--theme-status-declined-text' as any]: preset.declinedText,
+    ['--theme-focus-ring' as any]: withAlpha(theme.primaryColor, 0.22),
+    ['--theme-row-highlight' as any]: withAlpha(theme.primaryColor, 0.08),
   };
 }
 
@@ -51,6 +70,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
     const next: BrandingTheme = {
       displayName: data?.display_name ?? null,
+      themeKey: (data?.theme_key as ThemePresetKey | null) ?? DEFAULT_THEME.themeKey,
       primaryColor: data?.primary_color ?? DEFAULT_THEME.primaryColor,
       secondaryColor: data?.secondary_color ?? DEFAULT_THEME.secondaryColor,
       accentColor: data?.accent_color ?? DEFAULT_THEME.accentColor,
