@@ -2,12 +2,12 @@
 
 @mixin focus-ring {
   outline: none;
-  box-shadow: 0 0 0 3px rgba($brand-500, 0.35);
+  box-shadow: 0 0 0 3px var(--theme-focus-ring, rgba($brand-500, 0.35));
 }
 
 @mixin card {
-  background: $surface;
-  border: 1px solid $border;
+  background: var(--theme-surface-elevated, #{$surface});
+  border: 1px solid var(--theme-border, #{$border});
   border-radius: $r-lg;
   box-shadow: $shadow-sm;
 }

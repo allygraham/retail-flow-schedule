@@ -4,11 +4,11 @@
 .card { @include card; }
 .head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: $sp-4 $sp-5; border-bottom: 1px solid $border;
+  padding: $sp-4 $sp-5; border-bottom: 1px solid var(--theme-border, #{$border});
   gap: $sp-4;
 }
-.title { font-weight: $fw-semibold; font-size: $fs-md; color: $text; }
-.sub { color: $text-muted; font-size: $fs-sm; margin-top: 2px; }
+.title { font-weight: $fw-semibold; font-size: $fs-md; color: var(--theme-text, #{$text}); }
+.sub { color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-sm; margin-top: 2px; }
 .action { display: flex; gap: $sp-2; }
 .body { padding: $sp-5; }
 .bodyFlush { padding: 0; }
