@@ -27,7 +27,7 @@ const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof Layo
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
-  const { fullName, business, role, signOut, hasPermission } = useAuth();
+  const { fullName, business, role, user, signOut, hasPermission } = useAuth();
   const { theme } = useBranding();
   const workspaceName = theme.displayName || business?.name || 'Workspace';
   const nav = useNavigate();
@@ -64,10 +64,14 @@ export default function AppShell({ children }: { children?: ReactNode }) {
     const fetchCount = () => {
       supabase
         .from('leave_requests')
-        .select('id', { count: 'exact', head: true })
+        .select('id, user_id')
         .eq('business_id', business.id)
         .eq('status', 'pending')
-        .then(({ count }) => { if (!cancelled) setPendingLeave(count ?? 0); });
+        .then(({ data }) => {
+          if (cancelled) return;
+          const reviewable = (data ?? []).filter((request) => role !== 'manager' || request.user_id !== user?.id);
+          setPendingLeave(reviewable.length);
+        });
     };
     fetchCount();
     const channel = supabase
@@ -91,7 +95,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [business, canManageLeave, nav]);
+  }, [business, canManageLeave, nav, role, user?.id]);
 
   const items = NAV.filter((item) => {
     const permission = NAV_PERMISSIONS[item.key];
