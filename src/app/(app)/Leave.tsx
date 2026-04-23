@@ -311,8 +311,11 @@ export default function Leave() {
           )}
         </div>
         <div className={s.headerActions}>
-          {isMgr && <Button variant="outline" onClick={() => openAddLeave()}>Add leave</Button>}
-          <Button onClick={() => setRequestModal(true)}>Request time off</Button>
+          {isMgr ? (
+            <Button onClick={() => openAddLeave()}>Add leave</Button>
+          ) : (
+            <Button onClick={() => setRequestModal(true)}>Request time off</Button>
+          )}
         </div>
       </header>
 
