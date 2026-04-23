@@ -2,7 +2,7 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { readableForeground, shade, withAlpha } from './contrast';
-import { BrandingTheme, DEFAULT_THEME } from './types';
+import { BrandingTheme, DEFAULT_THEME, ThemePresetKey } from './types';
 import { getThemePreset } from './presets';
 
 type BrandingState = {
@@ -70,7 +70,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
     const next: BrandingTheme = {
       displayName: data?.display_name ?? null,
-      themeKey: data?.theme_key ?? DEFAULT_THEME.themeKey,
+      themeKey: (data?.theme_key as ThemePresetKey | null) ?? DEFAULT_THEME.themeKey,
       primaryColor: data?.primary_color ?? DEFAULT_THEME.primaryColor,
       secondaryColor: data?.secondary_color ?? DEFAULT_THEME.secondaryColor,
       accentColor: data?.accent_color ?? DEFAULT_THEME.accentColor,
