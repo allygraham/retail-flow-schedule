@@ -29,7 +29,7 @@ export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', sub
           <div className={s.legend}>
             <span><i className={s.dotTaken} /> {balance.taken} day{balance.taken === 1 ? '' : 's'} taken</span>
             {balance.pending > 0 && <span><i className={s.dotPending} /> Pending {balance.pending}</span>}
-            <span className={s.legendMuted}>{balance.remaining} day{balance.remaining === 1 ? '' : 's'} remaining</span>
+            <span className={s.legendMuted}>​</span>
           </div>
         </div>
       )}
