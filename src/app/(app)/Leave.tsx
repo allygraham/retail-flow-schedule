@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
@@ -193,7 +193,7 @@ export default function Leave() {
     });
   };
 
-  const onRowKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>, request: LeaveRequestRow) => {
+  const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, request: LeaveRequestRow) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       openLeaveDetails(request);
@@ -296,7 +296,7 @@ export default function Leave() {
     });
   };
 
-  const openNote = (title: string, body: string) => setNoteViewer({ title, body });
+  const openNote = (title: string, body: ReactNode) => setNoteViewer({ title, body });
 
   return (
     <div className={s.page}>
@@ -320,17 +320,34 @@ export default function Leave() {
         <LeaveBalanceCard balance={balance} loading={balanceLoading} />
       )}
 
-      {!isMgr && upcomingLeave && (
+      {!isMgr && (
         <Card>
           <div className={s.upcomingSummary}>
             <div>
               <div className={s.upcomingEyebrow}>Upcoming leave</div>
-              <div className={s.upcomingTitle}>{TYPE_LABEL[upcomingLeave.leave_type]}</div>
-              <div className={s.upcomingMeta}>
-                {fmtDate(upcomingLeave.start_date, 'd MMM')} → {fmtDate(upcomingLeave.end_date, 'd MMM yyyy')}
-              </div>
+              {upcomingLeave.request ? (
+                <>
+                  <div className={s.upcomingTitle}>
+                    {upcomingLeave.state === 'current' ? 'Currently on leave' : TYPE_LABEL[upcomingLeave.request.leave_type]}
+                  </div>
+                  <div className={s.upcomingMeta}>
+                    {fmtDate(upcomingLeave.request.start_date, 'd MMM')} → {fmtDate(upcomingLeave.request.end_date, 'd MMM yyyy')}
+                    <span className={s.upcomingPill}>{daysBetween(upcomingLeave.request.start_date, upcomingLeave.request.end_date)} day{daysBetween(upcomingLeave.request.start_date, upcomingLeave.request.end_date) === 1 ? '' : 's'}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={s.upcomingTitle}>No upcoming leave</div>
+                  <div className={s.upcomingMeta}>Your next approved time off will appear here.</div>
+                </>
+              )}
             </div>
-            <Badge tone={STATUS_TONE[upcomingLeave.status]} dot>{STATUS_LABEL[upcomingLeave.status]}</Badge>
+            {upcomingLeave.request ? (
+              <div className={s.rowMeta}>
+                <Badge tone={TYPE_TONE[upcomingLeave.request.leave_type]}>{TYPE_LABEL[upcomingLeave.request.leave_type]}</Badge>
+                <Badge tone={STATUS_TONE[upcomingLeave.request.status]} dot>{STATUS_LABEL[upcomingLeave.request.status]}</Badge>
+              </div>
+            ) : null}
           </div>
         </Card>
       )}
@@ -486,7 +503,14 @@ export default function Leave() {
               {filtered.map(r => {
                 const isOwn = r.user_id === user?.id;
                 return (
-                  <tr key={r.id}>
+                  <tr
+                    key={r.id}
+                    className={!isMgr && isOwn ? s.clickableRow : undefined}
+                    onClick={!isMgr && isOwn ? () => openLeaveDetails(r) : undefined}
+                    onKeyDown={!isMgr && isOwn ? (event) => onRowKeyDown(event, r) : undefined}
+                    tabIndex={!isMgr && isOwn ? 0 : undefined}
+                    aria-label={!isMgr && isOwn ? `Open details for ${TYPE_LABEL[r.leave_type]} leave from ${fmtDate(r.start_date, 'd MMM')} to ${fmtDate(r.end_date, 'd MMM yyyy')}` : undefined}
+                  >
                     {isMgr && (
                       <td>
                         <div className={s.who}>
@@ -520,7 +544,10 @@ export default function Leave() {
                             <button
                               type="button"
                               className={s.noteButton}
-                              onClick={() => openNote('Manager note', r.manager_note ?? '')}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openNote('Manager note', r.manager_note ?? '');
+                              }}
                             >
                               Manager note
                             </button>
@@ -529,7 +556,10 @@ export default function Leave() {
                             <button
                               type="button"
                               className={s.noteButton}
-                              onClick={() => openNote('Review note', r.review_notes ?? '')}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openNote('Review note', r.review_notes ?? '');
+                              }}
                             >
                               Review note
                             </button>
@@ -545,10 +575,7 @@ export default function Leave() {
                         </>
                       )}
                       {!isMgr && isOwn && r.status === 'pending' && (
-                        <Button size="sm" variant="ghost" onClick={() => cancel(r.id)}>Withdraw request</Button>
-                      )}
-                      {!isMgr && isOwn && r.status !== 'pending' && (
-                        <Button size="sm" variant="ghost" onClick={() => openNote('Leave details', r.reason ?? 'No additional details added.')}>View details</Button>
+                        <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); cancel(r.id); }}>Withdraw request</Button>
                       )}
                     </td>
                   </tr>
@@ -751,7 +778,7 @@ export default function Leave() {
       >
         {noteViewer && (
           <div className={s.noteViewer}>
-            <p>{noteViewer.body}</p>
+            {noteViewer.body}
           </div>
         )}
       </Modal>
