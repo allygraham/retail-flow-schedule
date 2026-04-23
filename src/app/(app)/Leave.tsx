@@ -496,7 +496,7 @@ export default function Leave() {
                 <th>Reason</th>
                 <th>Submitted</th>
                 <th>Status</th>
-                <th aria-label="Actions" />
+                {isMgr && <th aria-label="Actions" />}
               </tr>
             </thead>
             <tbody>
@@ -564,20 +564,31 @@ export default function Leave() {
                               Review note
                             </button>
                           )}
+                          {!isMgr && isOwn && r.status === 'pending' && (
+                            <button
+                              type="button"
+                              className={s.noteButton}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                cancel(r.id);
+                              }}
+                            >
+                              Withdraw request
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className={s.actions}>
-                      {isMgr && r.status === 'pending' && (
+                    {isMgr && (
+                      <td className={s.actions}>
+                        {r.status === 'pending' && (
                         <>
                           <Button size="sm" variant="outline" onClick={() => openReview(r, 'rejected')}>Decline</Button>
                           <Button size="sm" onClick={() => openReview(r, 'approved')}>Approve</Button>
                         </>
                       )}
-                      {!isMgr && isOwn && r.status === 'pending' && (
-                        <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); cancel(r.id); }}>Withdraw request</Button>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
