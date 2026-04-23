@@ -21,9 +21,9 @@ export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', sub
       ) : (
         <div className={`${s.wrap} ${compact ? s.compact : ''}`}>
           <div className={s.stats}>
-            <Stat label="Remaining" value={`${balance.remaining} days remaining`} accent />
-            <Stat label="Taken" value={`${balance.taken} days taken`} />
-            <Stat label="Entitlement" value={`${balance.entitlement} days entitlement`} muted />
+            <Stat label="Remaining" value={`${balance.remaining} days`} accent />
+            <Stat label="Taken" value={`${balance.taken} days\n`} />
+            <Stat label="Entitlement" value={`${balance.entitlement} days`} muted />
           </div>
           <Bar entitlement={balance.entitlement} taken={balance.taken} pending={balance.pending} />
           <div className={s.legend}>
