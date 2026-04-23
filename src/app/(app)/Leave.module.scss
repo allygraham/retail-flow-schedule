@@ -77,6 +77,22 @@
   tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: rgba($brand-50, 0.5); }
 }
+.clickableRow {
+  cursor: pointer;
+
+  td { transition: background $dur-fast $ease, box-shadow $dur-fast $ease; }
+
+  &:hover td { background: rgba($brand-50, 0.58); }
+
+  &:focus-visible {
+    outline: 2px solid $brand-500;
+    outline-offset: -2px;
+  }
+
+  &:focus-visible td {
+    background: rgba($brand-50, 0.62);
+  }
+}
 .who { display: flex; align-items: center; gap: $sp-2; font-weight: $fw-medium; }
 .dates { color: $text; white-space: nowrap; font-weight: $fw-semibold; }
 .dateRange { display: inline-flex; align-items: center; min-height: 28px; }
@@ -106,13 +122,26 @@
 }
 .actions { display: flex; gap: 6px; justify-content: flex-end; min-width: 152px; }
 .sourceMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rowMeta { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; justify-content: flex-end; }
 .hintBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text-soft; font-size: $fs-sm; border: 1px solid $border; }
 .warnBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text; font-size: $fs-sm; border: 1px solid $border; }
 
 .upcomingSummary { display: flex; align-items: center; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
 .upcomingEyebrow { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; font-weight: $fw-semibold; }
 .upcomingTitle { margin-top: 4px; font-family: $font-display; font-size: $fs-xl; font-weight: $fw-extra; color: $text; }
-.upcomingMeta { margin-top: 4px; color: $text-soft; font-size: $fs-sm; }
+.upcomingMeta { margin-top: 4px; color: $text-soft; font-size: $fs-sm; display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
+.upcomingPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 $sp-2;
+  border-radius: 999px;
+  background: $ink-100;
+  border: 1px solid $border;
+  color: $text-soft;
+  font-size: $fs-xs;
+  font-weight: $fw-medium;
+}
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
@@ -125,6 +154,9 @@
 }
 .reasonLabel { font-size: $fs-xs; color: $text-muted; text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }
 .noteViewer {
+  @include col;
+  gap: $sp-4;
+
   p {
     margin: 0;
     color: $text;
@@ -132,6 +164,38 @@
     line-height: 1.6;
     white-space: pre-wrap;
   }
+}
+.detailList { @include col; gap: $sp-2; }
+.detailRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $sp-4;
+  padding-bottom: $sp-2;
+  border-bottom: 1px solid $border;
+
+  span {
+    color: $text-muted;
+    font-size: $fs-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: $fw-semibold;
+  }
+
+  strong {
+    color: $text;
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    text-align: right;
+  }
+}
+.detailBlock {
+  @include col;
+  gap: $sp-2;
+  padding: $sp-3;
+  border-radius: $r-md;
+  background: $ink-50;
+  border: 1px solid $border;
 }
 
 @media (max-width: 720px) {
@@ -141,4 +205,8 @@
   .activeFiltersRow { padding: $sp-3 $sp-3 0; }
   .actions { min-width: 0; }
   .upcomingSummary { align-items: flex-start; }
+  .rowMeta { width: 100%; justify-content: flex-start; }
+  .detailRow { flex-direction: column; gap: $sp-1;
+    strong { text-align: left; }
+  }
 }
