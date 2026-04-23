@@ -126,11 +126,11 @@ export function useLeaveRequests() {
       user_id: user.id,
       source: 'employee_request',
       created_by_user_id: user.id,
-      created_by_role: role ?? 'employee',
+      created_by_role: 'employee',
     } as any);
     if (error) throw error;
     await load();
-  }, [business, user, role, load]);
+  }, [business, user, load]);
 
   const addForEmployee = useCallback(async (input: ManagementLeaveInput) => {
     if (!business || !user || !role || !isMgr) throw new Error('Not authorised');
