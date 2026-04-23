@@ -6,34 +6,34 @@
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: $sp-3; }
 .stat {
-  background: $ink-50; border-radius: $r-md; padding: $sp-3;
+  background: var(--theme-surface, #{$ink-50}); border-radius: $r-md; padding: $sp-3;
   display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
 }
-.statValue { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-xl; line-height: 1.15; color: $text; }
-.statLabel { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.06em; color: $text-muted; font-weight: $fw-semibold; }
-.accent { background: $brand-50;
-  .statValue { color: $brand-700; }
-  .statLabel { color: $brand-700; }
+.statValue { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-xl; line-height: 1.15; color: var(--theme-text, #{$text}); }
+.statLabel { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.06em; color: var(--theme-text-muted, #{$text-muted}); font-weight: $fw-semibold; }
+.accent { background: var(--theme-badge-bg, #{$brand-50});
+  .statValue { color: var(--theme-badge-text, #{$brand-700}); }
+  .statLabel { color: var(--theme-badge-text, #{$brand-700}); }
 }
-.muted .statValue { color: $text-soft; }
+.muted .statValue { color: var(--theme-text-muted, #{$text-soft}); }
 
 .bar {
-  position: relative; height: 10px; background: $ink-100; border-radius: 999px; overflow: hidden;
+  position: relative; height: 10px; background: var(--theme-border, #{$ink-100}); border-radius: 999px; overflow: hidden;
   display: flex;
 }
-.barTaken { background: $brand-600; height: 100%; transition: width $dur $ease; }
-.barPending { background: repeating-linear-gradient(45deg, $brand-300, $brand-300 4px, $brand-200 4px, $brand-200 8px); height: 100%; transition: width $dur $ease; }
+.barTaken { background: var(--brand-primary, #{$brand-600}); height: 100%; transition: width $dur $ease; }
+.barPending { background: repeating-linear-gradient(45deg, var(--theme-status-pending-bg, #{$brand-300}), var(--theme-status-pending-bg, #{$brand-300}) 4px, var(--brand-primary-soft, #{$brand-200}) 4px, var(--brand-primary-soft, #{$brand-200}) 8px); height: 100%; transition: width $dur $ease; }
 
-.legend { display: flex; gap: $sp-3; flex-wrap: wrap; font-size: $fs-xs; color: $text-muted; align-items: center;
+.legend { display: flex; gap: $sp-3; flex-wrap: wrap; font-size: $fs-xs; color: var(--theme-text-muted, #{$text-muted}); align-items: center;
   i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 }
-.dotTaken { background: $brand-600; }
-.dotPending { background: $brand-300; }
-.legendMuted { margin-left: auto; color: $text-soft; }
+.dotTaken { background: var(--brand-primary, #{$brand-600}); }
+.dotPending { background: var(--theme-status-pending-bg, #{$brand-300}); }
+.legendMuted { margin-left: auto; color: var(--theme-text-muted, #{$text-soft}); }
 
 @media (max-width: 720px) {
   .stats { grid-template-columns: 1fr; }
   .legendMuted { margin-left: 0; width: 100%; }
 }
 
-.loading { padding: $sp-5; text-align: center; color: $text-muted; font-size: $fs-sm; }
+.loading { padding: $sp-5; text-align: center; color: var(--theme-text-muted, #{$text-muted}); font-size: $fs-sm; }
