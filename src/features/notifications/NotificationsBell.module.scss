@@ -13,15 +13,15 @@
   &:focus-visible { @include focus-ring; }
 }
 .btnDesktop {
-  color: $ink-200;
-  &:hover { background: rgba(255,255,255,0.06); color: $white; }
+  color: color-mix(in srgb, var(--brand-secondary-fg, #{$ink-200}) 92%, transparent);
+  &:hover { background: var(--theme-sidebar-hover, rgba(255,255,255,0.06)); color: var(--brand-secondary-fg, $white); }
 }
 
 .dot {
   position: absolute; top: 6px; right: 6px;
   min-width: 18px; height: 18px; padding: 0 5px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: #ef4444; color: $white;
+  background: var(--theme-status-declined-text, #ef4444); color: $white;
   border-radius: $r-pill;
   font-size: 10px; font-weight: $fw-bold; line-height: 1;
   border: 2px solid $ink-900;
@@ -31,9 +31,9 @@
   position: fixed;
   width: min(360px, calc(100vw - 24px));
   max-height: 70vh;
-  background: $surface;
-  color: $ink-900;
-  border: 1px solid $border;
+  background: var(--theme-surface-elevated, #{$surface});
+  color: var(--theme-text, #{$ink-900});
+  border: 1px solid var(--theme-border, #{$border});
   border-radius: $r-lg;
   box-shadow: $shadow-lg;
   z-index: 1000;
@@ -45,39 +45,39 @@
 .head {
   display: flex; align-items: center; justify-content: space-between;
   padding: $sp-3 $sp-4;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--theme-border, #{$border});
 }
 .title { font-weight: $fw-semibold; font-size: $fs-sm; }
 .markAll {
   background: transparent; border: none; cursor: pointer;
-  color: $brand-600; font-size: $fs-xs; font-weight: $fw-medium;
+  color: var(--brand-primary, #{$brand-600}); font-size: $fs-xs; font-weight: $fw-medium;
   &:hover { text-decoration: underline; }
-  &:disabled { color: $ink-400; cursor: default; text-decoration: none; }
+  &:disabled { color: var(--theme-text-muted, #{$ink-400}); cursor: default; text-decoration: none; }
 }
 
 .list { overflow-y: auto; @include scrollbar; }
-.empty { padding: $sp-6 $sp-4; text-align: center; color: $ink-500; font-size: $fs-sm; }
+.empty { padding: $sp-6 $sp-4; text-align: center; color: var(--theme-text-muted, #{$ink-500}); font-size: $fs-sm; }
 
 .item {
   display: block; width: 100%; text-align: left;
   padding: $sp-3 $sp-4;
   border: none; background: transparent;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--theme-border, #{$border});
   cursor: pointer;
   transition: background $dur $ease;
-  &:hover { background: $bg; }
+  &:hover { background: var(--theme-surface, #{$bg}); }
   &:last-child { border-bottom: none; }
 }
-.itemUnread { background: rgba(99,102,241,0.06); }
+.itemUnread { background: var(--theme-row-highlight, rgba(99,102,241,0.06)); }
 .itemRow { display: flex; align-items: flex-start; gap: $sp-2; }
 .unreadDot {
   width: 8px; height: 8px; border-radius: 50%;
-  background: $brand-600; margin-top: 6px; flex-shrink: 0;
+  background: var(--brand-primary, #{$brand-600}); margin-top: 6px; flex-shrink: 0;
 }
 .itemBody { flex: 1; min-width: 0; }
-.itemTitle { font-size: $fs-sm; font-weight: $fw-semibold; color: $ink-900; }
-.itemText { font-size: $fs-xs; color: $ink-600; margin-top: 2px; line-height: 1.4; }
-.itemTime { font-size: 11px; color: $ink-500; margin-top: 4px; }
+.itemTitle { font-size: $fs-sm; font-weight: $fw-semibold; color: var(--theme-text, #{$ink-900}); }
+.itemText { font-size: $fs-xs; color: var(--theme-text-muted, #{$ink-600}); margin-top: 2px; line-height: 1.4; }
+.itemTime { font-size: 11px; color: var(--theme-text-muted, #{$ink-500}); margin-top: 4px; }
 
 .backdrop {
   position: fixed; inset: 0; z-index: 999;
