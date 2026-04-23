@@ -38,6 +38,9 @@
   overflow-x: auto;
   @include scrollbar;
 }
+.gridEmployee {
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+}
 .gridHeadTotal {
   text-align: right; border-left: 1px solid $border;
 }
