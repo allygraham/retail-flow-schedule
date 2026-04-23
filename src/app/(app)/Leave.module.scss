@@ -4,19 +4,21 @@
 .page { @include col; gap: $sp-5; }
 .header { display: flex; align-items: end; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
 .eye { @include eyebrow; }
-.h1 { @include text-h2; margin-top: 6px; }
-.sub { margin-top: $sp-2; display: flex; align-items: center; gap: $sp-2; color: $text-muted; font-size: $fs-sm; }
+.h1 { @include text-h2; margin-top: 6px; color: var(--color-text-primary, #{$text}); }
+.sub { margin-top: $sp-2; display: flex; align-items: center; gap: $sp-2; color: var(--color-text-secondary, #{$text-muted}); font-size: $fs-sm; }
 .headerActions { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
 
-.tabs { display: inline-flex; gap: 2px; background: $ink-100; padding: 4px; border-radius: $r-md; align-self: flex-start; }
+.tabs {
+  display: inline-flex; gap: 2px; background: var(--color-surface-muted, #{$ink-100}); padding: 4px; border-radius: $r-md; align-self: flex-start;
+}
 .tab {
   background: transparent; border: none; cursor: pointer;
   padding: 6px 14px; border-radius: $r-sm;
-  font-size: $fs-sm; font-weight: $fw-medium; color: $text-muted;
+  font-size: $fs-sm; font-weight: $fw-medium; color: var(--color-text-secondary, #{$text-muted});
   transition: all $dur-fast $ease;
-  &:hover { color: $text; }
+  &:hover { color: var(--color-text-primary, #{$text}); }
 }
-.tabActive { background: $surface; color: $text; box-shadow: $shadow-sm; font-weight: $fw-semibold; }
+.tabActive { background: var(--color-surface, #{$surface}); color: var(--color-text-primary, #{$text}); box-shadow: $shadow-sm; font-weight: $fw-semibold; }
 
 .filterBar { @include col; gap: $sp-3; }
 .filterGrid {
@@ -38,27 +40,27 @@
 .filterChip {
   display: inline-flex;
   align-items: center;
-   gap: $sp-2;
+  gap: $sp-2;
   min-height: 30px;
   padding: 0 $sp-3;
   border-radius: $r-sm;
-   background: $ink-50;
-  border: 1px solid $border;
-  color: $text-soft;
+  background: var(--color-surface, $ink-50);
+  border: 1px solid var(--color-border, $border);
+  color: var(--color-text-secondary, $text-soft);
   font-size: $fs-xs;
   font-weight: $fw-medium;
-   cursor: pointer;
-   transition: background $dur-fast $ease, border-color $dur-fast $ease, color $dur-fast $ease;
+  cursor: pointer;
+  transition: background $dur-fast $ease, border-color $dur-fast $ease, color $dur-fast $ease;
 
-   &:hover,
-   &:focus-visible {
-     color: $text;
-     background: $surface;
-     border-color: $border-strong;
-     outline: none;
-   }
+  &:hover,
+  &:focus-visible {
+    color: var(--color-text-primary, $text);
+    background: var(--color-surface-muted, $surface);
+    border-color: var(--color-border-strong, $border-strong);
+    outline: none;
+  }
 }
-.filterHint { color: $text-muted; font-size: $fs-xs; }
+.filterHint { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; }
 
 .activeFiltersRow {
   display: flex;
@@ -68,98 +70,96 @@
   padding: $sp-3 $sp-5 0;
 }
 
-.loading { padding: $sp-6; text-align: center; color: $text-muted; font-size: $fs-sm; }
+.loading { padding: $sp-6; text-align: center; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; }
 
-.table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: $fs-sm;
-  th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid $border; vertical-align: middle; }
-  th { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; font-weight: $fw-semibold; background: $ink-50; }
-  tbody tr:nth-child(even) td { background: rgba($ink-50, 0.7); }
+.table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: $fs-sm;
+  th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid var(--color-border, $border); vertical-align: middle; }
+  th {
+    font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold;
+    background: var(--color-surface-muted, $ink-50);
+  }
+  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--color-surface-muted, #{$ink-50}) 78%, transparent); }
   tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: rgba($brand-50, 0.5); }
+  tbody tr:hover td { background: var(--color-row-hover, rgba($brand-50, 0.5)); }
 }
 .clickableRow {
   cursor: pointer;
-
   td { transition: background $dur-fast $ease, box-shadow $dur-fast $ease; }
-
-  &:hover td { background: rgba($brand-50, 0.58); }
-
+  &:hover td { background: color-mix(in srgb, var(--color-row-hover, #{$brand-50}) 88%, var(--color-surface, #{$surface})); }
   &:focus-visible {
-    outline: 2px solid $brand-500;
+    outline: 2px solid var(--color-primary, $brand-500);
     outline-offset: -2px;
   }
-
-  &:focus-visible td {
-    background: rgba($brand-50, 0.62);
-  }
+  &:focus-visible td { background: var(--color-row-hover, rgba($brand-50, 0.62)); }
 }
-.who { display: flex; align-items: center; gap: $sp-2; font-weight: $fw-medium; }
-.dates { color: $text; white-space: nowrap; font-weight: $fw-semibold; }
+.who { display: flex; align-items: center; gap: $sp-2; font-weight: $fw-medium; color: var(--color-text-primary, $text); }
+.dates { color: var(--color-text-primary, $text); white-space: nowrap; font-weight: $fw-semibold; }
 .dateRange { display: inline-flex; align-items: center; min-height: 28px; }
-.muted { color: $text-muted; font-size: $fs-xs; }
-.reason { color: $text-muted; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.muted { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; }
+.reason { color: var(--color-text-secondary, $text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusCell { display: flex; align-items: center; gap: 6px; }
 .statusStack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .noteButton {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: $text-muted;
+  color: var(--color-text-secondary, $text-muted);
   cursor: pointer;
   padding: 2px 6px;
-  background: $ink-100;
+  background: var(--color-surface-muted, $ink-100);
   border-radius: $r-sm;
-  border: 1px solid $border;
+  border: 1px solid var(--color-border, $border);
   transition: color $dur-fast $ease, background $dur-fast $ease, border-color $dur-fast $ease;
 
   &:hover,
   &:focus-visible {
-    color: $text;
-    background: $surface;
-    border-color: $text-muted;
+    color: var(--color-text-primary, $text);
+    background: var(--color-surface, $surface);
+    border-color: var(--color-border-strong, $text-muted);
     outline: none;
   }
 }
 .actions { display: flex; gap: 6px; justify-content: flex-end; min-width: 152px; }
 .sourceMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .rowMeta { display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; justify-content: flex-end; }
-.hintBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text-soft; font-size: $fs-sm; border: 1px solid $border; }
-.warnBox { padding: $sp-3; border-radius: $r-md; background: $ink-50; color: $text; font-size: $fs-sm; border: 1px solid $border; }
+.hintBox { padding: $sp-3; border-radius: $r-md; background: var(--color-surface-muted, $ink-50); color: var(--color-text-secondary, $text-soft); font-size: $fs-sm; border: 1px solid var(--color-border, $border); }
+.warnBox { padding: $sp-3; border-radius: $r-md; background: var(--color-surface-muted, $ink-50); color: var(--color-text-primary, $text); font-size: $fs-sm; border: 1px solid var(--color-border, $border); }
 
 .upcomingSummary { display: flex; align-items: center; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
-.upcomingEyebrow { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: $text-muted; font-weight: $fw-semibold; }
-.upcomingTitle { margin-top: 4px; font-family: $font-display; font-size: $fs-xl; font-weight: $fw-extra; color: $text; }
-.upcomingMeta { margin-top: 4px; color: $text-soft; font-size: $fs-sm; display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
+.upcomingEyebrow { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold; }
+.upcomingTitle { margin-top: 4px; font-family: $font-display; font-size: $fs-xl; font-weight: $fw-extra; color: var(--color-text-primary, $text); }
+.upcomingMeta { margin-top: 4px; color: var(--color-text-secondary, $text-soft); font-size: $fs-sm; display: flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
 .upcomingPill {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
   padding: 0 $sp-2;
   border-radius: 999px;
-  background: $ink-100;
-  border: 1px solid $border;
-  color: $text-soft;
+  background: var(--color-surface-muted, $ink-100);
+  border: 1px solid var(--color-border, $border);
+  color: var(--color-text-secondary, $text-soft);
   font-size: $fs-xs;
   font-weight: $fw-medium;
 }
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
-.err { background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
+.err { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
 
-.reviewSummary { display: flex; align-items: center; gap: $sp-3; padding: $sp-3; background: $ink-50; border-radius: $r-md; }
-.reviewName { font-weight: $fw-semibold; font-size: $fs-sm; }
-.reviewReason { background: $surface; border: 1px solid $border; border-radius: $r-md; padding: $sp-3;
-  p { margin: 4px 0 0; font-size: $fs-sm; color: $text; white-space: pre-wrap; }
+.reviewSummary { display: flex; align-items: center; gap: $sp-3; padding: $sp-3; background: var(--color-surface-muted, $ink-50); border-radius: $r-md; }
+.reviewName { font-weight: $fw-semibold; font-size: $fs-sm; color: var(--color-text-primary, $text); }
+.reviewReason { background: var(--color-surface, $surface); border: 1px solid var(--color-border, $border); border-radius: $r-md; padding: $sp-3;
+  p { margin: 4px 0 0; font-size: $fs-sm; color: var(--color-text-primary, $text); white-space: pre-wrap; }
 }
-.reasonLabel { font-size: $fs-xs; color: $text-muted; text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }
+.reasonLabel { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: $fw-semibold; }
 .noteViewer {
   @include col;
   gap: $sp-4;
 
   p {
     margin: 0;
-    color: $text;
+    color: var(--color-text-primary, $text);
     font-size: $fs-sm;
     line-height: 1.6;
     white-space: pre-wrap;
@@ -172,10 +172,10 @@
   justify-content: space-between;
   gap: $sp-4;
   padding-bottom: $sp-2;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--color-border, $border);
 
   span {
-    color: $text-muted;
+    color: var(--color-text-secondary, $text-muted);
     font-size: $fs-xs;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -183,7 +183,7 @@
   }
 
   strong {
-    color: $text;
+    color: var(--color-text-primary, $text);
     font-size: $fs-sm;
     font-weight: $fw-semibold;
     text-align: right;
@@ -194,8 +194,8 @@
   gap: $sp-2;
   padding: $sp-3;
   border-radius: $r-md;
-  background: $ink-50;
-  border: 1px solid $border;
+  background: var(--color-surface-muted, $ink-50);
+  border: 1px solid var(--color-border, $border);
 }
 
 @media (max-width: 720px) {

@@ -4,14 +4,14 @@
 .page { @include col; gap: $sp-5; }
 .header { display: flex; align-items: end; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
 .eye { @include eyebrow; }
-.h1 { @include text-h2; margin-top: 6px; }
+.h1 { @include text-h2; margin-top: 6px; color: var(--color-text-primary, $text); }
 .controls { display: flex; gap: $sp-2; align-items: center; flex-wrap: wrap; }
 
 .weekNav {
   display: inline-flex;
   align-items: center;
-  background: $surface;
-  border: 1px solid $border;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
   border-radius: $r-sm;
   overflow: hidden;
   height: 42.5px;
@@ -21,15 +21,15 @@
   padding: 0 12px;
   background: none;
   border: none;
-  border-right: 1px solid $border;
+  border-right: 1px solid var(--color-border, $border);
   font-size: $fs-sm;
   font-weight: $fw-medium;
-  color: $text;
+  color: var(--color-text-primary, $text);
   cursor: pointer;
-  transition: background $dur-fast $ease;
+  transition: background $dur-fast $ease, color $dur-fast $ease;
   &:last-child { border-right: none; }
-  &:hover { background: $ink-50; }
-  &:focus-visible { outline: 2px solid $brand-500; outline-offset: -2px; }
+  &:hover { background: var(--color-surface-muted, $ink-50); }
+  &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: -2px; }
 }
 
 .grid {
@@ -41,34 +41,32 @@
 .gridEmployee {
   grid-template-columns: repeat(7, minmax(140px, 1fr));
 }
-.gridHeadTotal {
-  text-align: right; border-left: 1px solid $border;
-}
+.gridHeadTotal { text-align: right; border-left: 1px solid var(--color-border, $border); }
 .totalCell {
   display: flex; align-items: center; justify-content: flex-end;
-  padding: $sp-3 $sp-4; border-left: 1px solid $border; border-bottom: 1px solid $border;
-  background: $ink-50; font-weight: $fw-bold; font-size: $fs-sm; color: $text;
+  padding: $sp-3 $sp-4; border-left: 1px solid var(--color-border, $border); border-bottom: 1px solid var(--color-border, $border);
+  background: var(--color-surface-muted, $ink-50); font-weight: $fw-bold; font-size: $fs-sm; color: var(--color-text-primary, $text);
   min-height: 80px;
 }
-.totalUnit { color: $text-muted; font-weight: $fw-medium; margin-left: 2px; font-size: $fs-xs; }
+.totalUnit { color: var(--color-text-secondary, $text-muted); font-weight: $fw-medium; margin-left: 2px; font-size: $fs-xs; }
 .contents { display: contents; }
 .gridHead {
-  background: $ink-50; border-bottom: 1px solid $border;
+  background: var(--color-surface-muted, $ink-50); border-bottom: 1px solid var(--color-border, $border);
   padding: $sp-3 $sp-4; font-size: $fs-xs; font-weight: $fw-semibold;
-  color: $text-soft; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--color-text-secondary, $text-soft); text-transform: uppercase; letter-spacing: 0.05em;
   position: sticky; top: 0; z-index: 1;
 }
 .gridHeadStaff {
-  border-right: 1px solid $border;
+  border-right: 1px solid var(--color-border, $border);
   @include md { position: sticky; left: 0; top: 0; z-index: 3; }
 }
 .gridHeadDay { z-index: 1; }
 .gridHeadDayHoliday {
-  background: linear-gradient(180deg, rgba(217, 119, 6, 0.12), $ink-50);
-  border-bottom-color: rgba(217, 119, 6, 0.4);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-warning, #d97706) 12%, transparent), var(--color-surface-muted, $ink-50));
+  border-bottom-color: color-mix(in srgb, var(--color-warning, #d97706) 40%, transparent);
 }
-.dayName { color: $text; font-weight: $fw-bold; text-transform: none; letter-spacing: 0; font-size: $fs-sm; }
-.dayDate { color: $text-muted; font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
+.dayName { color: var(--color-text-primary, $text); font-weight: $fw-bold; text-transform: none; letter-spacing: 0; font-size: $fs-sm; }
+.dayDate { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
 .holidayLabel {
   display: inline-flex;
   align-items: center;
@@ -76,7 +74,7 @@
   margin-top: 4px;
   font-size: 10px;
   font-weight: $fw-semibold;
-  color: #b45309;
+  color: var(--color-warning-text, #b45309);
   text-transform: none;
   letter-spacing: 0;
   @include truncate;
@@ -84,57 +82,57 @@
 }
 .holidayDot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: #d97706;
+  background: var(--color-warning, #d97706);
   flex-shrink: 0;
 }
 .cellHoliday {
-  background: rgba(217, 119, 6, 0.04);
-  &:hover { background: rgba(217, 119, 6, 0.08); }
+  background: color-mix(in srgb, var(--color-warning, #d97706) 4%, transparent);
+  &:hover { background: color-mix(in srgb, var(--color-warning, #d97706) 8%, transparent); }
 }
 
-.staffCell { display: flex; align-items: center; gap: $sp-2; padding: $sp-3 $sp-4; border-right: 1px solid $border; border-bottom: 1px solid $border; background: $surface; min-height: 80px;
+.staffCell { display: flex; align-items: center; gap: $sp-2; padding: $sp-3 $sp-4; border-right: 1px solid var(--color-border, $border); border-bottom: 1px solid var(--color-border, $border); background: var(--color-surface, $surface); min-height: 80px;
   @include md { position: sticky; left: 0; z-index: 2; }
 }
-.staffName { font-size: $fs-sm; font-weight: $fw-semibold; @include truncate; max-width: 130px; }
-.staffRole { font-size: $fs-xs; color: $text-muted; }
+.staffName { font-size: $fs-sm; font-weight: $fw-semibold; @include truncate; max-width: 130px; color: var(--color-text-primary, $text); }
+.staffRole { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
 
-.cell { padding: 6px; border-right: 1px solid $border; border-bottom: 1px solid $border; min-height: 80px; cursor: pointer; transition: background $dur-fast $ease; display: flex; flex-direction: column; gap: 4px;
-  &:hover { background: $ink-50; }
+.cell { padding: 6px; border-right: 1px solid var(--color-border, $border); border-bottom: 1px solid var(--color-border, $border); min-height: 80px; cursor: pointer; transition: background $dur-fast $ease; display: flex; flex-direction: column; gap: 4px;
+  &:hover { background: var(--color-surface-muted, $ink-50); }
 }
-.cellOver { background: $brand-50; outline: 2px dashed $brand-500; outline-offset: -3px; }
-.dragGhost { box-shadow: $shadow-md; transform: rotate(-2deg); background: $surface; border: 1px solid $brand-500; }
+.cellOver { background: var(--color-row-hover, $brand-50); outline: 2px dashed var(--color-primary, $brand-500); outline-offset: -3px; }
+.dragGhost { box-shadow: $shadow-md; transform: rotate(-2deg); background: var(--color-surface, $surface); border: 1px solid var(--color-primary, $brand-500); }
 
 .shift {
-  background: $brand-50; border: 1px solid $brand-100; border-left: 3px solid $brand-500;
+  background: var(--color-row-hover, $brand-50); border: 1px solid color-mix(in srgb, var(--color-primary, #{$brand-100}) 24%, var(--color-border, #{$border})); border-left: 3px solid var(--color-primary, $brand-500);
   border-radius: $r-sm; padding: 6px 8px;
   cursor: pointer; transition: all $dur-fast $ease;
   &:hover { box-shadow: $shadow-sm; }
 }
-.shiftTime { font-size: $fs-sm; font-weight: $fw-bold; color: $text; line-height: 1.2; }
-.shiftMeta { font-size: 11px; color: $text-muted; margin: 2px 0 4px; }
+.shiftTime { font-size: $fs-sm; font-weight: $fw-bold; color: var(--color-text-primary, $text); line-height: 1.2; }
+.shiftMeta { font-size: 11px; color: var(--color-text-secondary, $text-muted); margin: 2px 0 4px; }
 
-.cancelled { opacity: 0.55; text-decoration: line-through; background: $ink-100; }
-.draft { background: repeating-linear-gradient(45deg, $brand-50, $brand-50 6px, #fff 6px, #fff 12px); }
-.openShift { background: #ffe4e6; border-color: #fecdd3; border-left-color: $status-unassigned; }
-.annual { background: $brand-50; border-left-color: $status-leave; }
-.sick   { background: #fee2e2; border-left-color: $status-sick; }
-.unpaid { background: #f3e8ff; border-left-color: $status-unavail; }
-.other  { background: $ink-100; border-left-color: $ink-400; }
+.cancelled { opacity: 0.55; text-decoration: line-through; background: var(--color-surface-muted, $ink-100); }
+.draft { background: repeating-linear-gradient(45deg, var(--color-row-hover, $brand-50), var(--color-row-hover, $brand-50) 6px, var(--color-surface, #fff) 6px, var(--color-surface, #fff) 12px); }
+.openShift { background: var(--color-danger-bg, #ffe4e6); border-color: color-mix(in srgb, var(--color-danger, #fecdd3) 35%, var(--color-border, #{$border})); border-left-color: var(--color-danger, $status-unassigned); }
+.annual { background: var(--color-row-hover, $brand-50); border-left-color: var(--color-primary, $status-leave); }
+.sick   { background: var(--color-danger-bg, #fee2e2); border-left-color: var(--color-danger, $status-sick); }
+.unpaid { background: var(--color-surface-muted, #f3e8ff); border-left-color: var(--color-text-secondary, $status-unavail); }
+.other  { background: var(--color-surface-muted, $ink-100); border-left-color: var(--color-text-secondary, $ink-400); }
 
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
-.err { background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
+.err { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
 
 .emptyBanner {
   display: flex;
   align-items: center;
   gap: $sp-2;
   padding: $sp-3 $sp-4;
-  background: $ink-50;
-  border: 1px solid $border;
+  background: var(--color-surface-muted, $ink-50);
+  border: 1px solid var(--color-border, $border);
   border-radius: $r-sm;
-  color: $text-muted;
+  color: var(--color-text-secondary, $text-muted);
   font-size: $fs-sm;
 }
 .emptyIcon { font-size: 14px; }
-.emptyText { color: $text-soft; }
+.emptyText { color: var(--color-text-secondary, $text-soft); }
