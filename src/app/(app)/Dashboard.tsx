@@ -332,7 +332,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
    ============================================================ */
 
 function ManagerDashboard() {
-  const { business, user, fullName } = useAuth();
+  const { business, user, fullName, role } = useAuth();
   const holidays = useHolidays();
   const [data, setData] = useState<any>(null);
 
@@ -355,16 +355,20 @@ function ManagerDashboard() {
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
       ]);
+      const pendingLeaveRows = (pendingLeave.data ?? []).filter((request: any) => (
+        role !== 'manager' || request.user_id !== user?.id
+      ));
+
       setData({
         shiftsToday: shiftsToday.data ?? [],
         leaveApproved: leaveApproved.data ?? [],
         sickToday: sickToday.data ?? [],
-        pendingLeave: pendingLeave.data ?? [],
+        pendingLeave: pendingLeaveRows,
         unassigned: unassigned.data ?? [],
         profilesById: Object.fromEntries((profiles.data ?? []).map((p: any) => [p.id, p.full_name])),
       });
     })();
-  }, [business]);
+  }, [business, role, user?.id]);
 
   if (!business) return null;
   if (!data) return <div className={s.loading}>Loading…</div>;
