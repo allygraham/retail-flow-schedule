@@ -145,7 +145,7 @@ export function DatePicker(props: DatePickerProps) {
       return;
     }
 
-    if (current?.from && current.to && (isBefore(selectedDay, current.from) || isAfter(selectedDay, current.to) || isSameDay(selectedDay, current.from) || isSameDay(selectedDay, current.to))) {
+    if (current?.from && current.to) {
       setDraftRange({ from: selectedDay, to: null });
       return;
     }
