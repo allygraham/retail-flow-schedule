@@ -102,7 +102,7 @@ export function DatePicker(props: DatePickerProps) {
     return v ? format(v, displayFormat) : '';
   }, [isRange, props, displayFormat, rangeValue]);
 
-  const handleClear = useCallback((e: ReactMouseEvent) => {
+  const handleClear = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (isRange) {
       setDraftRange(null);
@@ -111,9 +111,7 @@ export function DatePicker(props: DatePickerProps) {
     else (props as SingleProps).onChange(null);
   }, [isRange, props]);
 
-  const handleTriggerMouseDown = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
-    if (event.target instanceof HTMLElement && event.target.closest(`.${s.clear}`)) return;
-    event.preventDefault();
+  const handleTriggerClick = useCallback(() => {
     setOpen((current) => !current);
   }, []);
 
@@ -167,35 +165,35 @@ export function DatePicker(props: DatePickerProps) {
 
   return (
     <div className={`${s.wrap} ${className ?? ''}`} ref={wrapRef}>
-      <button
-        ref={triggerRef}
-        type="button"
-        id={id}
-        name={name}
-        disabled={disabled}
-        aria-label={ariaLabel ?? placeholder}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-required={required || undefined}
-        className={`${s.trigger} ${hasValue ? '' : s.placeholder}`}
-        onMouseDown={handleTriggerMouseDown}
-      >
-        <CalendarIcon size={16} aria-hidden />
-        <span>{hasValue ? label : placeholder}</span>
-        {allowClear && hasValue && !disabled ? (
-          <span
-            role="button"
+      <div className={s.triggerWrap}>
+        <button
+          ref={triggerRef}
+          type="button"
+          id={id}
+          name={name}
+          disabled={disabled}
+          aria-label={ariaLabel ?? placeholder}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-required={required || undefined}
+          className={`${s.trigger} ${hasValue ? '' : s.placeholder} ${allowClear && hasValue && !disabled ? s.triggerWithClear : ''}`}
+          onClick={handleTriggerClick}
+        >
+          <CalendarIcon size={16} aria-hidden />
+          <span>{hasValue ? label : placeholder}</span>
+          <CalendarIcon size={14} className={s.icon} aria-hidden />
+        </button>
+        {allowClear && hasValue && !disabled && (
+          <button
+            type="button"
             aria-label="Clear date"
-            tabIndex={-1}
             className={s.clear}
             onClick={handleClear}
           >
             <X size={12} />
-          </span>
-        ) : (
-          <CalendarIcon size={14} className={s.icon} aria-hidden style={{ visibility: 'hidden' }} />
+          </button>
         )}
-      </button>
+      </div>
 
       {open && (
         <div className={s.popover} role="dialog" aria-modal="false">

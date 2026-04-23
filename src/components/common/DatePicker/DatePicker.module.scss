@@ -3,6 +3,8 @@
 
 .wrap { position: relative; width: 100%; }
 
+.triggerWrap { position: relative; width: 100%; }
+
 .trigger {
   width: 100%;
   display: inline-flex;
@@ -23,8 +25,10 @@
   &:disabled { opacity: .55; cursor: not-allowed; }
   &.placeholder { color: $ink-400; }
 }
+.triggerWithClear { padding-right: 40px; }
 .icon { margin-left: auto; color: $text-muted; flex-shrink: 0; }
 .clear {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; border-radius: $r-pill;
   border: 0; background: transparent; color: $text-muted; cursor: pointer;
