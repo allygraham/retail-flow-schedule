@@ -2,24 +2,23 @@
 @use '@/styles/mixins' as *;
 
 .field { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.label { font-size: $fs-sm; font-weight: $fw-semibold; color: var(--theme-text-muted, #{$text-soft}); }
-.hint  { font-size: $fs-xs; color: var(--theme-text-muted, #{$text-muted}); }
-.error { font-size: $fs-xs; color: var(--theme-status-declined-text, #{$danger}); font-weight: $fw-medium; }
+.label { font-size: $fs-sm; font-weight: $fw-semibold; color: var(--color-text-secondary, var(--theme-text-muted, #{$text-soft})); }
+.hint  { font-size: $fs-xs; color: var(--color-text-secondary, var(--theme-text-muted, #{$text-muted})); }
+.error { font-size: $fs-xs; color: var(--color-danger-text, var(--theme-status-declined-text, #{$danger})); font-weight: $fw-medium; }
 
 .input {
   width: 100%;
-  background: var(--theme-surface-elevated, #{$surface});
-  border: 1px solid var(--theme-border, #{$border-strong});
+  background: var(--color-input-bg, var(--theme-surface-elevated, #{$surface}));
+  border: 1px solid var(--color-border, var(--theme-border, #{$border-strong}));
   border-radius: $r-md;
   padding: 10px 12px;
   font-family: inherit;
   font-size: $fs-base;
-  color: var(--theme-text, #{$text});
-  transition: border-color $dur $ease, box-shadow $dur $ease;
-  &:focus { @include focus-ring; border-color: var(--brand-primary, #{$brand-500}); }
-  &::placeholder { color: var(--theme-text-muted, #{$ink-400}); }
+  color: var(--color-text-primary, var(--theme-text, #{$text}));
+  transition: border-color $dur $ease, box-shadow $dur $ease, background $dur $ease;
+  &:focus { @include focus-ring; border-color: var(--color-primary, #{$brand-500}); }
+  &::placeholder { color: var(--color-placeholder, var(--theme-text-muted, #{$ink-400})); }
 }
-:global(.tenantTheme) .input:focus { border-color: var(--brand-primary, #{$brand-500}); }
 .select {
   appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2364748b' d='M6 8 0 0h12z'/></svg>");

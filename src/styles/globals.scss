@@ -8,6 +8,39 @@
   --lv-surface: #{$surface};
   --lv-text: #{$text};
   --lv-brand: #{$brand-600};
+
+  --color-primary: #5B5FEF;
+  --color-primary-hover: #4A4ED8;
+  --color-bg: #F8F9FC;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F3F5FA;
+  --color-surface-raised: #FFFFFF;
+  --color-sidebar: #0F172A;
+  --color-sidebar-hover: rgba(255,255,255,0.08);
+  --color-text-primary: #0B1220;
+  --color-text-secondary: #64748B;
+  --color-text-inverse: #FFFFFF;
+  --color-text-on-primary: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-success: #22C55E;
+  --color-success-bg: rgba(34,197,94,0.14);
+  --color-success-text: #15803D;
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245,158,11,0.16);
+  --color-warning-text: #B45309;
+  --color-danger: #EF4444;
+  --color-danger-bg: rgba(239,68,68,0.14);
+  --color-danger-text: #B91C1C;
+  --color-neutral-badge-bg: rgba(11,18,32,0.06);
+  --color-neutral-badge-text: #64748B;
+  --color-nav-active-bg: #5B5FEF;
+  --color-nav-active-text: #FFFFFF;
+  --color-row-hover: rgba(91,95,239,0.08);
+  --color-input-bg: #FFFFFF;
+  --color-placeholder: rgba(100,116,139,0.86);
+  --color-focus-ring: rgba(91,95,239,0.22);
+  --color-overlay: rgba(15,23,42,0.62);
 }
 
 * { box-sizing: border-box; }
@@ -18,8 +51,8 @@ body {
   margin: 0;
   font-family: $font-sans;
   font-size: $fs-base;
-  color: $text;
-  background: $bg;
+  color: var(--color-text-primary, $text);
+  background: var(--color-bg, $bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -31,4 +64,4 @@ button { font-family: inherit; }
 h1,h2,h3,h4,h5 { margin: 0; font-family: $font-display; }
 p { margin: 0; }
 
-::selection { background: rgba($brand-500, 0.25); }
+::selection { background: var(--color-row-hover, rgba($brand-500, 0.25)); }

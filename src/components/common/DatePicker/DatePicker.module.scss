@@ -10,29 +10,29 @@
   display: inline-flex;
   align-items: center;
   gap: $sp-2;
-  background: $surface;
-  border: 1px solid $border-strong;
+  background: var(--color-input-bg, #{$surface});
+  border: 1px solid var(--color-border, #{$border-strong});
   border-radius: $r-md;
   padding: 10px 12px;
   font-family: inherit;
   font-size: $fs-base;
-  color: $text;
+  color: var(--color-text-primary, #{$text});
   text-align: left;
   cursor: pointer;
-  transition: border-color $dur $ease, box-shadow $dur $ease;
-  &:hover:not(:disabled) { border-color: $ink-400; }
-  &:focus-visible { @include focus-ring; border-color: $brand-500; outline: none; }
+  transition: border-color $dur $ease, box-shadow $dur $ease, background $dur $ease;
+  &:hover:not(:disabled) { border-color: var(--color-border-strong, #{$ink-400}); }
+  &:focus-visible { @include focus-ring; border-color: var(--color-primary, #{$brand-500}); outline: none; }
   &:disabled { opacity: .55; cursor: not-allowed; }
-  &.placeholder { color: $ink-400; }
+  &.placeholder { color: var(--color-placeholder, #{$ink-400}); }
 }
 .triggerWithClear { padding-right: 40px; }
-.icon { margin-left: auto; color: $text-muted; flex-shrink: 0; }
+.icon { margin-left: auto; color: var(--color-text-secondary, #{$text-muted}); flex-shrink: 0; }
 .clear {
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; border-radius: $r-pill;
-  border: 0; background: transparent; color: $text-muted; cursor: pointer;
-  &:hover { background: $surface-2; color: $text; }
+  border: 0; background: transparent; color: var(--color-text-secondary, #{$text-muted}); cursor: pointer;
+  &:hover { background: var(--color-surface-muted, #{$surface-2}); color: var(--color-text-primary, #{$text}); }
 }
 
 .popover {
@@ -40,8 +40,8 @@
   top: calc(100% + 6px);
   left: 0;
   z-index: $z-overlay;
-  background: $surface;
-  border: 1px solid $border;
+  background: var(--color-surface, #{$surface});
+  border: 1px solid var(--color-border, #{$border});
   border-radius: $r-lg;
   box-shadow: $shadow-lg;
   padding: $sp-2;
@@ -53,60 +53,51 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-// react-day-picker v8 styling overrides
 .rdp {
   --rdp-cell-size: 38px;
-  --rdp-accent-color: #{$brand-600};
-  --rdp-background-color: #{$brand-50};
-  --rdp-accent-color-dark: #{$brand-700};
-  --rdp-background-color-dark: #{$brand-100};
-  --rdp-outline: 2px solid #{$brand-300};
-  --rdp-outline-selected: 2px solid #{$brand-600};
+  --rdp-accent-color: var(--color-primary, #{$brand-600});
+  --rdp-background-color: var(--color-row-hover, #{$brand-50});
+  --rdp-accent-color-dark: var(--color-primary-hover, #{$brand-700});
+  --rdp-background-color-dark: var(--color-surface-muted, #{$brand-100});
+  --rdp-outline: 2px solid var(--color-focus-ring, #{$brand-300});
+  --rdp-outline-selected: 2px solid var(--color-primary, #{$brand-600});
   margin: 0;
   font-family: inherit;
   font-size: $fs-sm;
-  color: $text;
+  color: var(--color-text-primary, #{$text});
 
-  :global(.rdp-caption_label) { font-weight: $fw-semibold; color: $text; }
-  :global(.rdp-head_cell) { color: $text-muted; font-weight: $fw-medium; text-transform: none; font-size: $fs-xs; }
+  :global(.rdp-caption_label) { font-weight: $fw-semibold; color: var(--color-text-primary, #{$text}); }
+  :global(.rdp-head_cell) { color: var(--color-text-secondary, #{$text-muted}); font-weight: $fw-medium; text-transform: none; font-size: $fs-xs; }
   :global(.rdp-nav_button) {
-    color: $text-soft;
+    color: var(--color-text-secondary, #{$text-soft});
     border-radius: $r-sm;
-    &:hover:not([disabled]) { background: $surface-2; color: $text; }
+    &:hover:not([disabled]) { background: var(--color-surface-muted, #{$surface-2}); color: var(--color-text-primary, #{$text}); }
   }
   :global(.rdp-day) {
     border-radius: $r-sm;
-    color: $text;
-    &:hover:not([disabled]):not(.rdp-day_selected) { background: $surface-2; }
+    color: var(--color-text-primary, #{$text});
+    &:hover:not([disabled]):not(.rdp-day_selected) { background: var(--color-surface-muted, #{$surface-2}); }
   }
   :global(.rdp-day_today):not(:global(.rdp-day_selected)) {
-    color: $brand-700;
+    color: var(--color-primary-hover, #{$brand-700});
     font-weight: $fw-semibold;
   }
   :global(.rdp-day_selected),
   :global(.rdp-day_selected:focus-visible),
   :global(.rdp-day_selected:hover) {
-    background: $brand-600;
-    color: $white;
+    background: var(--color-primary, #{$brand-600});
+    color: var(--color-text-on-primary, #{$white});
   }
   :global(.rdp-day_range_middle) {
-    background: $brand-50;
-    color: $brand-800;
+    background: var(--color-row-hover, #{$brand-50});
+    color: var(--color-primary-hover, #{$brand-800});
     border-radius: 0;
   }
   :global(.rdp-day_range_start),
   :global(.rdp-day_range_end) {
-    background: $brand-600;
-    color: $white;
+    background: var(--color-primary, #{$brand-600});
+    color: var(--color-text-on-primary, #{$white});
   }
   :global(.rdp-day_disabled) { opacity: .35; cursor: not-allowed; }
-  :global(.rdp-day_outside) { color: $text-muted; opacity: .55; }
-}
-
-:global(.tenantTheme) {
-  .rdp {
-    --rdp-accent-color: var(--brand-primary, #{$brand-600});
-    --rdp-accent-color-dark: var(--brand-primary, #{$brand-700});
-  }
-  .trigger:focus-visible { border-color: var(--brand-primary, #{$brand-500}); }
+  :global(.rdp-day_outside) { color: var(--color-text-secondary, #{$text-muted}); opacity: .55; }
 }

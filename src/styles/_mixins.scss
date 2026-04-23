@@ -2,18 +2,18 @@
 
 @mixin focus-ring {
   outline: none;
-  box-shadow: 0 0 0 3px var(--theme-focus-ring, rgba($brand-500, 0.35));
+  box-shadow: 0 0 0 3px var(--color-focus-ring, var(--theme-focus-ring, rgba($brand-500, 0.35)));
 }
 
 @mixin card {
-  background: var(--theme-surface-elevated, #{$surface});
-  border: 1px solid var(--theme-border, #{$border});
+  background: var(--color-surface, var(--theme-surface-elevated, #{$surface}));
+  border: 1px solid var(--color-border, var(--theme-border, #{$border}));
   border-radius: $r-lg;
   box-shadow: $shadow-sm;
 }
 
 @mixin surface-2 {
-  background: $surface-2;
+  background: var(--color-surface-muted, #{$surface-2});
   border-radius: $r-md;
 }
 
@@ -27,13 +27,17 @@
 @mixin col { display: flex; flex-direction: column; }
 
 @mixin gradient-brand {
-  background: linear-gradient(135deg, $brand-600 0%, $brand-500 50%, $accent-500 130%);
+  background: linear-gradient(135deg, var(--color-primary, #{$brand-600}) 0%, var(--color-primary-hover, #{$brand-500}) 100%);
 }
 
 @mixin scrollbar {
   &::-webkit-scrollbar { width: 10px; height: 10px; }
-  &::-webkit-scrollbar-thumb { background: $ink-300; border-radius: 8px; border: 2px solid $surface; }
-  &::-webkit-scrollbar-thumb:hover { background: $ink-400; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong, #{$ink-300});
+    border-radius: 8px;
+    border: 2px solid var(--color-surface, #{$surface});
+  }
+  &::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary, #{$ink-400}); }
 }
 
 @mixin md { @media (min-width: $bp-md) { @content; } }
@@ -66,5 +70,5 @@
   letter-spacing: 0.12em;
   font-size: $fs-xs;
   font-weight: $fw-semibold;
-  color: $brand-600;
+  color: var(--color-primary, #{$brand-600});
 }
