@@ -112,6 +112,7 @@ export type Database = {
           primary_color: string | null
           secondary_color: string | null
           surface_color: string | null
+          theme_key: string
           updated_at: string
           updated_by: string | null
         }
@@ -124,6 +125,7 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           surface_color?: string | null
+          theme_key?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -136,6 +138,7 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           surface_color?: string | null
+          theme_key?: string
           updated_at?: string
           updated_by?: string | null
         }
