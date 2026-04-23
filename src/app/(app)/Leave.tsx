@@ -42,7 +42,7 @@ const INITIAL_LEAVE_FILTERS: LeaveFilterState = {
 };
 
 export default function Leave() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review } = useLeaveRequests();
   const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
@@ -505,6 +505,7 @@ export default function Leave() {
             <tbody>
               {filtered.map(r => {
                 const isRowClickable = true;
+                const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
                 return (
                   <tr
                     key={r.id}
@@ -584,7 +585,7 @@ export default function Leave() {
                     </td>
                     {isMgr && (
                       <td className={s.actions}>
-                        {r.status === 'pending' && (
+                        {canReviewPending && (
                         <>
                            <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); openReview(r, 'rejected'); }}>Decline</Button>
                            <Button size="sm" onClick={(event) => { event.stopPropagation(); openReview(r, 'approved'); }}>Approve</Button>
