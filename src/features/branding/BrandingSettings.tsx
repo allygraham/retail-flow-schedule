@@ -5,9 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
-import { useBranding, buildThemeStyle } from './BrandingProvider';
-import { DEFAULT_THEME, type BrandingTheme, type ThemePresetKey } from './types';
-import { getThemePreset, THEME_ORDER, THEME_PRESETS, themeFromPreset } from './presets';
+import { buildThemeStyle, useBranding } from './BrandingProvider';
+import type { BrandingTheme, ThemePresetKey } from './types';
+import { THEME_ORDER, THEME_PRESETS, getThemePreset, themeFromPreset } from './presets';
 import s from './BrandingSettings.module.scss';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -15,21 +15,27 @@ const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']
 
 export function BrandingSettings() {
   const { business, user, role } = useAuth();
-  const { theme, refresh } = useBranding();
+  const { theme, savedTheme, refresh, previewTheme, clearPreviewTheme } = useBranding();
   const canEdit = role === 'owner';
   const canViewOnly = role === 'manager' || role === 'employee';
 
-  const [draft, setDraft] = useState<BrandingTheme>(theme);
+  const [draft, setDraft] = useState<BrandingTheme>(savedTheme);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft(theme);
-  }, [theme]);
+    setDraft(savedTheme);
+  }, [savedTheme]);
 
-  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(theme), [draft, theme]);
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(savedTheme), [draft, savedTheme]);
   const activePreset = getThemePreset(draft.themeKey);
+
+  useEffect(() => {
+    if (!canEdit) return undefined;
+    previewTheme(dirty ? draft : null);
+    return () => clearPreviewTheme();
+  }, [canEdit, dirty, draft, previewTheme, clearPreviewTheme]);
 
   const applyPreset = (themeKey: ThemePresetKey) => {
     if (!canEdit) return;
@@ -41,11 +47,8 @@ export function BrandingSettings() {
   };
 
   const reset = () => {
-    setDraft({
-      ...DEFAULT_THEME,
-      displayName: draft.displayName,
-      logoUrl: draft.logoUrl,
-    });
+    setDraft(savedTheme);
+    setError(null);
   };
 
   const onFile = async (file: File) => {
@@ -59,19 +62,20 @@ export function BrandingSettings() {
       setError('Image must be under 2MB.');
       return;
     }
+
     setUploading(true);
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
       const path = `${business.id}/logo-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('business-logos').upload(path, file, {
+      const { error: uploadError } = await supabase.storage.from('business-logos').upload(path, file, {
         cacheControl: '3600',
         upsert: false,
         contentType: file.type,
       });
-      if (upErr) throw upErr;
+      if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('business-logos').getPublicUrl(path);
       setDraft((current) => ({ ...current, logoUrl: data.publicUrl }));
-      toast.success('Logo uploaded — save to apply it for everyone.');
+      toast.success('Logo uploaded. Save to apply it for everyone.');
     } catch (e: any) {
       setError(e.message ?? 'Upload failed');
     } finally {
@@ -83,39 +87,39 @@ export function BrandingSettings() {
     if (!business || !user || !canEdit) return;
     setSaving(true);
     setError(null);
-    const { error: dbErr } = await supabase.from('business_branding').upsert(
-      {
-        business_id: business.id,
-        display_name: draft.displayName,
-        theme_key: draft.themeKey,
-        primary_color: draft.primaryColor,
-        secondary_color: draft.secondaryColor,
-        accent_color: draft.accentColor,
-        surface_color: draft.surfaceColor,
-        logo_url: draft.logoUrl,
-        updated_by: user.id,
-      },
-      { onConflict: 'business_id' },
-    );
+
+    const { error: dbErr } = await supabase.from('business_branding').upsert({
+      business_id: business.id,
+      display_name: draft.displayName,
+      theme_key: draft.themeKey,
+      primary_color: draft.primaryColor,
+      secondary_color: draft.secondaryColor,
+      accent_color: draft.accentColor,
+      surface_color: draft.surfaceColor,
+      logo_url: draft.logoUrl,
+      updated_by: user.id,
+    }, { onConflict: 'business_id' });
+
     setSaving(false);
     if (dbErr) {
       setError(dbErr.message);
       return;
     }
+
     toast.success('Theme saved');
-    refresh();
+    await refresh();
   };
 
   return (
-    <Card title="Theme" subtitle="Choose a cohesive workspace theme for your business.">
+    <Card title="Theme" subtitle="Apply a curated business theme across the workspace.">
       <div className={s.wrap}>
         <div className={s.headerRow}>
           <div>
             <div className={s.sectionTitle}>Preset themes</div>
-            <p className={s.help}>Owners can switch the workspace look instantly. Everyone else can preview the active theme.</p>
+            <p className={s.help}>Owners can preview themes live before saving them for the whole business.</p>
           </div>
           {!canEdit && (
-            <div className={s.readOnly}><Lock size={14} /> {canViewOnly ? 'Owner access required to change theme' : 'Sign in to edit'}</div>
+            <div className={s.readOnly}><Lock size={14} /> {canViewOnly ? 'Only Owners can change the active theme' : 'Sign in to edit theme settings'}</div>
           )}
         </div>
 
@@ -137,6 +141,7 @@ export function BrandingSettings() {
                     <span className={s.previewLogoMark} />
                     <span className={s.previewNavItem} />
                     <span className={`${s.previewNavItem} ${s.previewNavItemMuted}`} />
+                    <span className={`${s.previewNavItem} ${s.previewNavItemMuted}`} />
                   </div>
                   <div className={s.themePreviewBody}>
                     <div className={s.previewToolbar} />
@@ -147,7 +152,11 @@ export function BrandingSettings() {
                     <div className={s.previewBadgeRow}>
                       <span className={s.previewBadgeApproved}>Approved</span>
                       <span className={s.previewBadgePending}>Pending</span>
-                      <span className={s.previewBadgeDeclined}>Declined</span>
+                    </div>
+                    <div className={s.previewMiniTable}>
+                      <span />
+                      <span />
+                      <span />
                     </div>
                   </div>
                 </div>
@@ -157,7 +166,7 @@ export function BrandingSettings() {
                     <div className={s.themeName}>{preset.name}</div>
                     <div className={s.themeDesc}>{preset.description}</div>
                   </div>
-                  {selected && <span className={s.selectedPill}><Check size={12} /> Active</span>}
+                  {selected && <span className={s.selectedPill}><Check size={12} /> Selected</span>}
                 </div>
               </button>
             );
@@ -166,26 +175,28 @@ export function BrandingSettings() {
 
         <div className={s.detailGrid}>
           <div className={s.section}>
-            <div className={s.sectionTitle}>Current theme</div>
+            <div className={s.sectionTitle}>Live theme summary</div>
             <div className={s.summaryCard} style={buildThemeStyle(draft)}>
               <div className={s.summaryBar}>
                 <div>
-                  <div className={s.summaryLabel}>Selected</div>
+                  <div className={s.summaryLabel}>Current selection</div>
                   <div className={s.summaryTitle}>{activePreset.name}</div>
                 </div>
-                <span className={s.summaryAction}>Live preview</span>
+                <span className={s.summaryAction}>{dirty ? 'Unsaved live preview' : 'Saved theme'}</span>
               </div>
               <div className={s.swatches}>
-                <span><i style={{ background: draft.primaryColor }} /> Primary</span>
-                <span><i style={{ background: draft.secondaryColor }} /> Sidebar</span>
-                <span><i style={{ background: draft.surfaceColor }} /> Surface</span>
-                <span><i style={{ background: draft.accentColor }} /> Accent</span>
+                <span><i style={{ background: activePreset.primaryColor }} /> Primary</span>
+                <span><i style={{ background: activePreset.bgColor }} /> Canvas</span>
+                <span><i style={{ background: activePreset.surfaceColor }} /> Surface</span>
+                <span><i style={{ background: activePreset.sidebarColor }} /> Sidebar</span>
+                <span><i style={{ background: activePreset.successColor }} /> Success</span>
+                <span><i style={{ background: activePreset.warningColor }} /> Warning</span>
               </div>
             </div>
 
             <label className={s.logoBox}>
               <span className={s.sectionTitle}>Workspace logo</span>
-              <div className={s.logoPreview}>
+              <div className={s.logoPreview} style={buildThemeStyle(draft)}>
                 {draft.logoUrl ? <img src={draft.logoUrl} alt="Workspace logo" /> : <span className={s.logoEmpty}>No logo</span>}
               </div>
               <div className={s.logoActions}>
@@ -211,8 +222,8 @@ export function BrandingSettings() {
           </div>
 
           <div className={s.section}>
-            <div className={s.sectionTitle}>Preview</div>
-            <div className={s.preview} style={buildThemeStyle(draft)}>
+            <div className={s.sectionTitle}>Workspace preview</div>
+            <div className={s.preview} style={buildThemeStyle(theme)}>
               <div className={s.previewShell}>
                 <aside className={s.previewSidebarPane}>
                   <div className={s.previewWorkspace}>{draft.displayName || business?.name || 'Workspace'}</div>
@@ -221,12 +232,17 @@ export function BrandingSettings() {
                   <span className={s.previewSidebarLink}>Leave</span>
                 </aside>
                 <div className={s.previewMain}>
-                  <div className={s.previewTopline}>Current week</div>
-                  <div className={s.previewHeadline}>Good morning, team</div>
+                  <div className={s.previewTopline}>This week</div>
+                  <div className={s.previewHeadline}>Team overview</div>
                   <div className={s.previewButton}>Publish schedule</div>
+                  <div className={s.previewCardRow}>
+                    <span className={s.previewInfoCard} />
+                    <span className={s.previewInfoCard} />
+                  </div>
                   <div className={s.previewTable}>
-                    <div className={s.previewTableRow}><span>Team status</span><span className={s.previewBadgeApproved}>Approved</span></div>
-                    <div className={s.previewTableRow}><span>Pending leave</span><span className={s.previewBadgePending}>Pending</span></div>
+                    <div className={s.previewTableHead}><span>Request</span><span>Status</span></div>
+                    <div className={s.previewTableRow}><span>Approved leave</span><span className={s.previewBadgeApproved}>Approved</span></div>
+                    <div className={s.previewTableRow}><span>Pending review</span><span className={s.previewBadgePending}>Pending</span></div>
                     <div className={s.previewTableRow}><span>Declined request</span><span className={s.previewBadgeDeclined}>Declined</span></div>
                   </div>
                 </div>
@@ -239,7 +255,7 @@ export function BrandingSettings() {
 
         {canEdit && (
           <div className={s.footer}>
-            {dirty && <span className={s.dirty}>You have unsaved theme changes.</span>}
+            {dirty && <span className={s.dirty}>Theme preview is live locally until you save or reset.</span>}
             <Button variant="ghost" onClick={reset} disabled={saving}>Reset</Button>
             <Button variant="primary" onClick={save} disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save theme'}</Button>
           </div>
