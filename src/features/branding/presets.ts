@@ -1,164 +1,176 @@
 import type { BrandingTheme, ThemePresetKey } from './types';
+import { readableForeground, shade, withAlpha } from './contrast';
 
 export type ThemePreset = {
   key: ThemePresetKey;
   name: string;
   description: string;
   primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
+  primaryHoverColor: string;
+  bgColor: string;
   surfaceColor: string;
-  surfaceElevatedColor: string;
   sidebarColor: string;
-  sidebarHoverColor: string;
-  textColor: string;
-  mutedTextColor: string;
+  textPrimaryColor: string;
+  textSecondaryColor: string;
   borderColor: string;
-  approvedBg: string;
-  approvedText: string;
-  pendingBg: string;
-  pendingText: string;
-  declinedBg: string;
-  declinedText: string;
-  badgeBg: string;
-  badgeText: string;
+  successColor: string;
+  warningColor: string;
+  dangerColor: string;
+};
+
+export type ResolvedThemePreset = ThemePreset & {
+  sidebarTextColor: string;
+  primaryTextColor: string;
+  surfaceMutedColor: string;
+  surfaceRaisedColor: string;
+  borderStrongColor: string;
+  neutralBadgeBg: string;
+  neutralBadgeText: string;
+  successBg: string;
+  successText: string;
+  warningBg: string;
+  warningText: string;
+  dangerBg: string;
+  dangerText: string;
+  rowHoverColor: string;
+  sidebarHoverColor: string;
+  navActiveBg: string;
+  navActiveText: string;
+  inputBg: string;
+  placeholderColor: string;
+  focusRingColor: string;
+  overlayColor: string;
 };
 
 export const THEME_PRESETS: Record<ThemePresetKey, ThemePreset> = {
   default: {
     key: 'default',
     name: 'Default',
-    description: 'Confident indigo with warm scheduling accents.',
-    primaryColor: '#4f46e5',
-    secondaryColor: '#0f172a',
-    accentColor: '#f59e0b',
-    surfaceColor: '#f8fafc',
-    surfaceElevatedColor: '#ffffff',
-    sidebarColor: '#0f172a',
-    sidebarHoverColor: '#1e293b',
-    textColor: '#0f172a',
-    mutedTextColor: '#64748b',
-    borderColor: '#e2e8f0',
-    approvedBg: '#dcfce7',
-    approvedText: '#166534',
-    pendingBg: '#fef3c7',
-    pendingText: '#92400e',
-    declinedBg: '#fee2e2',
-    declinedText: '#991b1b',
-    badgeBg: '#eef2ff',
-    badgeText: '#4338ca',
+    description: 'Confident indigo with crisp neutral surfaces.',
+    primaryColor: '#5B5FEF',
+    primaryHoverColor: '#4A4ED8',
+    bgColor: '#F8F9FC',
+    surfaceColor: '#FFFFFF',
+    sidebarColor: '#0F172A',
+    textPrimaryColor: '#0B1220',
+    textSecondaryColor: '#64748B',
+    borderColor: '#E2E8F0',
+    successColor: '#22C55E',
+    warningColor: '#F59E0B',
+    dangerColor: '#EF4444',
   },
-  dark: {
-    key: 'dark',
-    name: 'Dark',
-    description: 'High-contrast charcoal workspace with electric highlights.',
-    primaryColor: '#60a5fa',
-    secondaryColor: '#020617',
-    accentColor: '#22c55e',
-    surfaceColor: '#0f172a',
-    surfaceElevatedColor: '#111827',
+  midnight: {
+    key: 'midnight',
+    name: 'Midnight',
+    description: 'Dark, polished and high-contrast for focused teams.',
+    primaryColor: '#7C82FF',
+    primaryHoverColor: '#6B70F0',
+    bgColor: '#0B1220',
+    surfaceColor: '#111827',
     sidebarColor: '#020617',
-    sidebarHoverColor: '#111827',
-    textColor: '#e5eefb',
-    mutedTextColor: '#94a3b8',
-    borderColor: '#1e293b',
-    approvedBg: '#052e16',
-    approvedText: '#86efac',
-    pendingBg: '#3b2f05',
-    pendingText: '#fcd34d',
-    declinedBg: '#3f1015',
-    declinedText: '#fda4af',
-    badgeBg: '#172554',
-    badgeText: '#bfdbfe',
+    textPrimaryColor: '#F1F5F9',
+    textSecondaryColor: '#94A3B8',
+    borderColor: '#1E293B',
+    successColor: '#22C55E',
+    warningColor: '#FBBF24',
+    dangerColor: '#F87171',
   },
-  light: {
-    key: 'light',
-    name: 'Light',
-    description: 'Minimal, bright and neutral for clean daily operations.',
-    primaryColor: '#2563eb',
-    secondaryColor: '#e2e8f0',
-    accentColor: '#14b8a6',
-    surfaceColor: '#fdfefe',
-    surfaceElevatedColor: '#ffffff',
-    sidebarColor: '#f1f5f9',
-    sidebarHoverColor: '#e2e8f0',
-    textColor: '#0f172a',
-    mutedTextColor: '#475569',
-    borderColor: '#dbe4ee',
-    approvedBg: '#dcfce7',
-    approvedText: '#166534',
-    pendingBg: '#fef3c7',
-    pendingText: '#92400e',
-    declinedBg: '#fee2e2',
-    declinedText: '#991b1b',
-    badgeBg: '#dbeafe',
-    badgeText: '#1d4ed8',
+  forest: {
+    key: 'forest',
+    name: 'Forest',
+    description: 'Calm operational green with fresh light surfaces.',
+    primaryColor: '#16A34A',
+    primaryHoverColor: '#15803D',
+    bgColor: '#F7FDF9',
+    surfaceColor: '#FFFFFF',
+    sidebarColor: '#052E16',
+    textPrimaryColor: '#052E16',
+    textSecondaryColor: '#4D7C0F',
+    borderColor: '#D1FAE5',
+    successColor: '#22C55E',
+    warningColor: '#F59E0B',
+    dangerColor: '#DC2626',
   },
-  green: {
-    key: 'green',
-    name: 'Green',
-    description: 'Operations-led palette with calm success-first cues.',
-    primaryColor: '#15803d',
-    secondaryColor: '#052e16',
-    accentColor: '#84cc16',
-    surfaceColor: '#f6fef9',
-    surfaceElevatedColor: '#ffffff',
-    sidebarColor: '#14532d',
-    sidebarHoverColor: '#166534',
-    textColor: '#0f2f1c',
-    mutedTextColor: '#4d6b5a',
-    borderColor: '#d7eadb',
-    approvedBg: '#dcfce7',
-    approvedText: '#166534',
-    pendingBg: '#ecfccb',
-    pendingText: '#3f6212',
-    declinedBg: '#fee2e2',
-    declinedText: '#991b1b',
-    badgeBg: '#dcfce7',
-    badgeText: '#166534',
+  sunset: {
+    key: 'sunset',
+    name: 'Sunset',
+    description: 'Warm retail energy grounded by deep brown navigation.',
+    primaryColor: '#F97316',
+    primaryHoverColor: '#EA580C',
+    bgColor: '#FFF7ED',
+    surfaceColor: '#FFFFFF',
+    sidebarColor: '#431407',
+    textPrimaryColor: '#1C1917',
+    textSecondaryColor: '#78716C',
+    borderColor: '#FED7AA',
+    successColor: '#16A34A',
+    warningColor: '#F59E0B',
+    dangerColor: '#DC2626',
   },
-  orange: {
-    key: 'orange',
-    name: 'Orange',
-    description: 'Warm retail tone with energetic, approachable contrast.',
-    primaryColor: '#ea580c',
-    secondaryColor: '#431407',
-    accentColor: '#f59e0b',
-    surfaceColor: '#fffaf5',
-    surfaceElevatedColor: '#ffffff',
-    sidebarColor: '#7c2d12',
-    sidebarHoverColor: '#9a3412',
-    textColor: '#431407',
-    mutedTextColor: '#7c5a4b',
-    borderColor: '#fed7aa',
-    approvedBg: '#dcfce7',
-    approvedText: '#166534',
-    pendingBg: '#ffedd5',
-    pendingText: '#9a3412',
-    declinedBg: '#fee2e2',
-    declinedText: '#991b1b',
-    badgeBg: '#ffedd5',
-    badgeText: '#c2410c',
+  slate: {
+    key: 'slate',
+    name: 'Slate',
+    description: 'Muted executive neutrals with restrained contrast.',
+    primaryColor: '#475569',
+    primaryHoverColor: '#334155',
+    bgColor: '#F8FAFC',
+    surfaceColor: '#FFFFFF',
+    sidebarColor: '#020617',
+    textPrimaryColor: '#020617',
+    textSecondaryColor: '#64748B',
+    borderColor: '#E2E8F0',
+    successColor: '#16A34A',
+    warningColor: '#D97706',
+    dangerColor: '#DC2626',
   },
 };
 
-export const THEME_ORDER: ThemePresetKey[] = ['default', 'dark', 'light', 'green', 'orange'];
+export const THEME_ORDER: ThemePresetKey[] = ['default', 'midnight', 'forest', 'sunset', 'slate'];
 
-export function getThemePreset(themeKey?: string | null): ThemePreset {
-  if (themeKey && themeKey in THEME_PRESETS) {
-    return THEME_PRESETS[themeKey as ThemePresetKey];
-  }
-  return THEME_PRESETS.default;
+export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
+  const base = themeKey && themeKey in THEME_PRESETS
+    ? THEME_PRESETS[themeKey as ThemePresetKey]
+    : THEME_PRESETS.default;
+
+  const sidebarTextColor = readableForeground(base.sidebarColor);
+  const primaryTextColor = readableForeground(base.primaryColor);
+  const neutralBadgeBg = withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.16 : 0.06);
+  const neutralBadgeText = base.textSecondaryColor;
+
+  return {
+    ...base,
+    sidebarTextColor,
+    primaryTextColor,
+    surfaceMutedColor: withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.06 : 0.035),
+    surfaceRaisedColor: shade(base.surfaceColor, base.key === 'midnight' ? 0.04 : 0),
+    borderStrongColor: shade(base.borderColor, -0.08),
+    neutralBadgeBg,
+    neutralBadgeText,
+    successBg: withAlpha(base.successColor, base.key === 'midnight' ? 0.18 : 0.13),
+    successText: base.key === 'midnight' ? shade(base.successColor, 0.25) : shade(base.successColor, -0.35),
+    warningBg: withAlpha(base.warningColor, base.key === 'midnight' ? 0.2 : 0.16),
+    warningText: base.key === 'midnight' ? shade(base.warningColor, 0.16) : shade(base.warningColor, -0.42),
+    dangerBg: withAlpha(base.dangerColor, base.key === 'midnight' ? 0.2 : 0.13),
+    dangerText: base.key === 'midnight' ? shade(base.dangerColor, 0.16) : shade(base.dangerColor, -0.28),
+    rowHoverColor: withAlpha(base.primaryColor, base.key === 'midnight' ? 0.14 : 0.08),
+    sidebarHoverColor: withAlpha(sidebarTextColor, base.key === 'midnight' ? 0.08 : 0.1),
+    navActiveBg: base.primaryColor,
+    navActiveText: primaryTextColor,
+    inputBg: base.surfaceColor,
+    placeholderColor: withAlpha(base.textSecondaryColor, 0.86),
+    focusRingColor: withAlpha(base.primaryColor, 0.22),
+    overlayColor: withAlpha(base.sidebarColor, 0.62),
+  };
 }
 
 export function themeFromPreset(themeKey: ThemePresetKey, overrides?: Partial<BrandingTheme>): BrandingTheme {
-  const preset = THEME_PRESETS[themeKey];
+  const preset = getThemePreset(themeKey);
   return {
     displayName: overrides?.displayName ?? null,
     themeKey,
     primaryColor: preset.primaryColor,
-    secondaryColor: preset.secondaryColor,
-    accentColor: preset.accentColor,
+    secondaryColor: preset.sidebarColor,
+    accentColor: preset.successColor,
     surfaceColor: preset.surfaceColor,
     logoUrl: overrides?.logoUrl ?? null,
   };

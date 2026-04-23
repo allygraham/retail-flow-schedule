@@ -24,30 +24,32 @@
 .lg { font-size: $fs-md; padding: 12px 22px; }
 
 .primary {
-  background: $brand-600; color: $white;
+  background: var(--color-primary, #{$brand-600});
+  color: var(--color-text-on-primary, #{$white});
   box-shadow: $shadow-sm;
-  &:hover:not(:disabled) { background: $brand-700; box-shadow: $shadow-md; transform: translateY(-1px); }
-}
-/* Inside the tenant-themed workspace, primary buttons follow business branding. */
-:global(.tenantTheme) .primary {
-  background: var(--brand-primary, #{$brand-600}); color: var(--brand-primary-fg, $white);
-  &:hover:not(:disabled) { background: var(--brand-primary-hover, #{$brand-700}); }
+  &:hover:not(:disabled) { background: var(--color-primary-hover, #{$brand-700}); box-shadow: $shadow-md; transform: translateY(-1px); }
 }
 .secondary {
-  background: var(--theme-badge-bg, #{$ink-100}); color: var(--theme-badge-text, #{$text});
-  &:hover:not(:disabled) { background: var(--brand-primary-soft, #{$ink-200}); }
+  background: var(--color-surface-muted, #{$ink-100});
+  color: var(--color-text-primary, #{$text});
+  border-color: var(--color-border, #{$border});
+  &:hover:not(:disabled) { background: var(--color-surface, #{$surface}); border-color: var(--color-border-strong, #{$border-strong}); }
 }
 .ghost {
-  background: transparent; color: var(--theme-text, #{$text});
-  &:hover:not(:disabled) { background: var(--brand-primary-soft, #{$ink-100}); }
+  background: transparent;
+  color: var(--color-text-primary, #{$text});
+  &:hover:not(:disabled) { background: var(--color-surface-muted, #{$ink-100}); }
 }
 .outline {
-  background: var(--theme-surface-elevated, #{$surface}); color: var(--theme-text, #{$text}); border-color: var(--theme-border, #{$border-strong});
-  &:hover:not(:disabled) { background: var(--brand-primary-soft, #{$ink-50}); border-color: var(--brand-primary, #{$ink-300}); }
+  background: var(--color-surface, #{$surface});
+  color: var(--color-text-primary, #{$text});
+  border-color: var(--color-border, #{$border-strong});
+  &:hover:not(:disabled) { background: var(--color-surface-muted, #{$ink-50}); border-color: var(--color-border-strong, #{$ink-300}); }
 }
 .danger {
-  background: var(--theme-status-declined-text, #{$danger}); color: $white;
-  &:hover:not(:disabled) { background: var(--theme-status-declined-text, #b91c1c); filter: brightness(0.92); }
+  background: var(--color-danger, #{$danger});
+  color: var(--color-text-on-primary, #{$white});
+  &:hover:not(:disabled) { background: var(--color-danger-text, #b91c1c); filter: brightness(0.96); }
 }
 
 .spin {
