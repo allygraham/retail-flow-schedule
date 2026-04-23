@@ -125,7 +125,12 @@ export default function Leave() {
 
   const hasActiveFilters = activeFilterChips.length > 0;
 
-  const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const pendingCount = requests.filter((request) => {
+    if (request.status !== 'pending') return false;
+    if (!isMgr) return true;
+    if (!user) return false;
+    return role === 'owner' || request.user_id !== user.id;
+  }).length;
   const selectedEmployee = employees.find((employee) => employee.user_id === mgmtForm.user_id);
 
   const setLeaveFilter = <K extends keyof LeaveFilterState>(key: K, value: LeaveFilterState[K]) => {
