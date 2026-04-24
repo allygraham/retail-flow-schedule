@@ -24,7 +24,7 @@ export default function Signup() {
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin + '/dashboard' }
+      options: { data: { full_name: fullName, role: 'owner' }, emailRedirectTo: window.location.origin + '/dashboard' }
     });
     if (error) { setErr(error.message); setLoading(false); return; }
     if (!data.session) {

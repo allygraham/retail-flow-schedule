@@ -64,7 +64,7 @@ export default function AcceptInvite() {
       email: invite.email,
       password,
       options: {
-        data: { full_name: parsed.data.full_name },
+        data: { full_name: parsed.data.full_name, role: 'employee' },
         emailRedirectTo: `${window.location.origin}/accept-invite?token=${token}`,
       },
     });
