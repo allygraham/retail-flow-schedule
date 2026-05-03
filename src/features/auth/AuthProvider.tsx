@@ -36,13 +36,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const biz = (membership as any)?.businesses as Business | null;
     setBusiness(biz ?? null);
     if (biz) {
-      const { data: roleRow } = await supabase
+      const { data: roleRows } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', uid).eq('business_id', biz.id)
-        .order('role', { ascending: true })
-        .limit(1).maybeSingle();
-      setRole((roleRow?.role as AppRole) ?? null);
+        .eq('user_id', uid).eq('business_id', biz.id);
+      const roles = (roleRows ?? []).map((r) => r.role as AppRole);
+      const best: AppRole | null =
+        roles.includes('owner') ? 'owner'
+        : roles.includes('manager') ? 'manager'
+        : roles.includes('employee') ? 'employee'
+        : null;
+      setRole(best);
     } else {
       setRole(null);
     }

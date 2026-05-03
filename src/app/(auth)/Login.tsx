@@ -39,7 +39,7 @@ export default function Login() {
           <Button type="submit" full loading={loading}>Sign in</Button>
         </form>
         <div className={s.foot}>
-          <Link to="/forgot">Forgot password?</Link>
+          <Link to="/forgot-password">Forgot password?</Link>
           <span>New here? <Link to="/signup">Create an account</Link></span>
         </div>
         <div className={s.demo}>
