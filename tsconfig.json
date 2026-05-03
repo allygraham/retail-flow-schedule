@@ -20,5 +20,8 @@
     {
       "path": "./tsconfig.node.json"
     }
-  ]
+  ],
+		"types": [
+			"node"
+		]
 }
