@@ -7,13 +7,14 @@ interface Props {
   tone?: Tone;
   children: ReactNode;
   dot?: boolean;
+  className?: string;
 }
 
 export const Badge = forwardRef<HTMLSpanElement, Props>(function Badge(
-  { tone = 'neutral', children, dot }, ref
+  { tone = 'neutral', children, dot, className }, ref
 ) {
   return (
-    <span ref={ref} className={`${s.badge} ${s[tone]}`}>
+    <span ref={ref} className={`${s.badge} ${s[tone]} ${className ?? ''}`}>
       {dot && <span className={s.dot} />}
       {children}
     </span>

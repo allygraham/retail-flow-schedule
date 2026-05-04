@@ -1,5 +1,20 @@
 import type { BrandingTheme, ThemePresetKey } from './types';
-import { readableForeground, shade, withAlpha } from './contrast';
+import { hexToRgb, readableForeground, relativeLuminance, shade, withAlpha } from './contrast';
+
+/**
+ * Pick a foreground for a colored CTA / nav surface.
+ * Unlike pure WCAG `readableForeground`, this biases toward WHITE for any
+ * mid-to-dark background (luminance < 0.55). That avoids the visually-wrong
+ * "dark text on dark sage" outcome where black technically wins the WCAG
+ * ratio by a hair, but white reads as more intentional and on-brand.
+ */
+function ctaForeground(bgHex: string): string {
+  const rgb = hexToRgb(bgHex);
+  if (!rgb) return '#ffffff';
+  const L = relativeLuminance(rgb);
+  if (L < 0.55) return '#ffffff';
+  return readableForeground(bgHex);
+}
 
 export type ThemePreset = {
   key: ThemePresetKey;
@@ -20,11 +35,28 @@ export type ThemePreset = {
   surfaceMutedColor?: string;
   /** Optional explicit active sidebar item background. Falls back to primaryColor. */
   sidebarActiveColor?: string;
+  /** Optional explicit foreground for primary CTAs. Falls back to ctaForeground(primaryColor). */
+  onPrimaryColor?: string;
+  /** Optional explicit foreground for the active sidebar item. Falls back to ctaForeground(navActiveBg). */
+  onSidebarActiveColor?: string;
+  /** Optional explicit muted/helper text inside the sidebar. */
+  sidebarTextMutedColor?: string;
+  /** Optional explicit divider/border color inside the sidebar. */
+  sidebarBorderColor?: string;
+  /** Optional explicit primary text color inside the sidebar. */
+  sidebarTextColor?: string;
 };
 
-export type ResolvedThemePreset = ThemePreset & {
+export type ResolvedThemePreset = Omit<
+  ThemePreset,
+  'surfaceMutedColor' | 'sidebarActiveColor' | 'onPrimaryColor' | 'onSidebarActiveColor' | 'sidebarTextColor' | 'sidebarTextMutedColor' | 'sidebarBorderColor'
+> & {
   sidebarTextColor: string;
+  sidebarTextMutedColor: string;
+  sidebarBorderColor: string;
   primaryTextColor: string;
+  onPrimaryColor: string;
+  onSidebarActiveColor: string;
   surfaceMutedColor: string;
   surfaceRaisedColor: string;
   borderStrongColor: string;
@@ -144,6 +176,11 @@ export const THEME_PRESETS: Record<ThemePresetKey, ThemePreset> = {
     dangerColor: '#DC2626',
     surfaceMutedColor: '#F4EDE3',
     sidebarActiveColor: '#747C61',
+    onPrimaryColor: '#FFFFFF',
+    onSidebarActiveColor: '#FFFFFF',
+    sidebarTextColor: '#F0E4D7',
+    sidebarTextMutedColor: '#E8E4DF',
+    sidebarBorderColor: 'rgba(240, 228, 215, 0.16)',
   },
 };
 
@@ -154,15 +191,27 @@ export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
     ? THEME_PRESETS[themeKey as ThemePresetKey]
     : THEME_PRESETS.default;
 
-  const sidebarTextColor = readableForeground(base.sidebarColor);
+  const sidebarTextColor = base.sidebarTextColor ?? readableForeground(base.sidebarColor);
   const primaryTextColor = readableForeground(base.primaryColor);
   const neutralBadgeBg = withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.16 : 0.06);
   const neutralBadgeText = base.textSecondaryColor;
 
+  const navActiveBg = base.sidebarActiveColor ?? base.primaryColor;
+  const onPrimaryColor = base.onPrimaryColor ?? ctaForeground(base.primaryColor);
+  const onSidebarActiveColor = base.onSidebarActiveColor ?? ctaForeground(navActiveBg);
+  const sidebarTextMutedColor =
+    base.sidebarTextMutedColor ?? withAlpha(sidebarTextColor, 0.7);
+  const sidebarBorderColor =
+    base.sidebarBorderColor ?? withAlpha(sidebarTextColor, 0.16);
+
   return {
     ...base,
     sidebarTextColor,
-    primaryTextColor,
+    sidebarTextMutedColor,
+    sidebarBorderColor,
+    primaryTextColor: onPrimaryColor,
+    onPrimaryColor,
+    onSidebarActiveColor,
     surfaceMutedColor: base.surfaceMutedColor ?? withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.06 : 0.035),
     surfaceRaisedColor: shade(base.surfaceColor, base.key === 'midnight' ? 0.04 : 0),
     borderStrongColor: shade(base.borderColor, -0.08),
@@ -176,8 +225,8 @@ export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
     dangerText: base.key === 'midnight' ? shade(base.dangerColor, 0.16) : shade(base.dangerColor, -0.28),
     rowHoverColor: withAlpha(base.primaryColor, base.key === 'midnight' ? 0.14 : 0.08),
     sidebarHoverColor: withAlpha(sidebarTextColor, base.key === 'midnight' ? 0.08 : 0.1),
-    navActiveBg: base.sidebarActiveColor ?? base.primaryColor,
-    navActiveText: readableForeground(base.sidebarActiveColor ?? base.primaryColor),
+    navActiveBg,
+    navActiveText: onSidebarActiveColor,
     inputBg: base.surfaceColor,
     placeholderColor: withAlpha(base.textSecondaryColor, 0.86),
     focusRingColor: withAlpha(base.primaryColor, 0.22),

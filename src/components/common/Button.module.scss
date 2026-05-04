@@ -25,9 +25,9 @@
 
 .primary {
   background: var(--color-primary, #{$brand-600});
-  color: var(--color-text-on-primary, #{$white});
+  color: var(--color-on-primary, var(--color-text-on-primary, #{$white}));
   box-shadow: $shadow-sm;
-  &:hover:not(:disabled) { background: var(--color-primary-hover, #{$brand-700}); box-shadow: $shadow-md; transform: translateY(-1px); }
+  &:hover:not(:disabled) { background: var(--color-primary-hover, #{$brand-700}); color: var(--color-on-primary, var(--color-text-on-primary, #{$white})); box-shadow: $shadow-md; transform: translateY(-1px); }
 }
 .secondary {
   background: var(--color-surface-muted, #{$ink-100});
@@ -48,7 +48,7 @@
 }
 .danger {
   background: var(--color-danger, #{$danger});
-  color: var(--color-text-on-primary, #{$white});
+  color: var(--color-on-primary, var(--color-text-on-primary, #{$white}));
   &:hover:not(:disabled) { background: var(--color-danger-text, #b91c1c); filter: brightness(0.96); }
 }
 

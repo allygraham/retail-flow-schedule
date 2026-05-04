@@ -11,11 +11,17 @@
 
   --color-primary: #5B5FEF;
   --color-primary-hover: #4A4ED8;
+  --color-on-primary: #FFFFFF;
   --color-bg: #F8F9FC;
   --color-surface: #FFFFFF;
   --color-surface-muted: #F3F5FA;
   --color-surface-raised: #FFFFFF;
   --color-sidebar: #0F172A;
+  --color-sidebar-text: #FFFFFF;
+  --color-sidebar-text-muted: rgba(255,255,255,0.7);
+  --color-sidebar-active: #5B5FEF;
+  --color-on-sidebar-active: #FFFFFF;
+  --color-sidebar-border: rgba(255,255,255,0.16);
   --color-sidebar-hover: rgba(255,255,255,0.08);
   --color-text-primary: #0B1220;
   --color-text-secondary: #64748B;
