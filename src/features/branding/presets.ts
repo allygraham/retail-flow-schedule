@@ -174,6 +174,10 @@ export const THEME_PRESETS: Record<ThemePresetKey, ThemePreset> = {
     dangerColor: '#DC2626',
     surfaceMutedColor: '#F4EDE3',
     sidebarActiveColor: '#747C61',
+    onPrimaryColor: '#FFFFFF',
+    onSidebarActiveColor: '#FFFFFF',
+    sidebarTextMutedColor: '#E8E4DF',
+    sidebarBorderColor: 'rgba(240, 228, 215, 0.16)',
   },
 };
 
