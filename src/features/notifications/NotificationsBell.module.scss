@@ -7,21 +7,21 @@
   position: relative;
   width: 40px; height: 40px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: transparent; border: none; color: var(--color-text-inverse, $white); cursor: pointer; border-radius: $r-md;
+  background: transparent; border: none; color: var(--color-sidebar-text, $white); cursor: pointer; border-radius: $r-md;
   transition: background $dur $ease, color $dur $ease;
   &:hover { background: var(--color-sidebar-hover, rgba(255,255,255,0.08)); }
   &:focus-visible { @include focus-ring; }
 }
 .btnDesktop {
-  color: color-mix(in srgb, var(--color-text-inverse, #{$ink-200}) 92%, transparent);
-  &:hover { background: var(--color-sidebar-hover, rgba(255,255,255,0.06)); color: var(--color-text-inverse, $white); }
+  color: var(--color-sidebar-text-muted, rgba(255,255,255,0.7));
+  &:hover { background: var(--color-sidebar-hover, rgba(255,255,255,0.06)); color: var(--color-sidebar-text, $white); }
 }
 
 .dot {
   position: absolute; top: 6px; right: 6px;
   min-width: 18px; height: 18px; padding: 0 5px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--color-danger, #ef4444); color: var(--color-text-on-primary, $white);
+  background: var(--color-danger, #ef4444); color: var(--color-on-primary, $white);
   border-radius: $r-pill;
   font-size: 10px; font-weight: $fw-bold; line-height: 1;
   border: 2px solid var(--color-sidebar, $ink-900);
