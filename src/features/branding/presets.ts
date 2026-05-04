@@ -43,6 +43,8 @@ export type ThemePreset = {
   sidebarTextMutedColor?: string;
   /** Optional explicit divider/border color inside the sidebar. */
   sidebarBorderColor?: string;
+  /** Optional explicit primary text color inside the sidebar. */
+  sidebarTextColor?: string;
 };
 
 export type ResolvedThemePreset = Omit<
