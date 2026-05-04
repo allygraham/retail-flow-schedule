@@ -1,5 +1,20 @@
 import type { BrandingTheme, ThemePresetKey } from './types';
-import { readableForeground, shade, withAlpha } from './contrast';
+import { hexToRgb, readableForeground, relativeLuminance, shade, withAlpha } from './contrast';
+
+/**
+ * Pick a foreground for a colored CTA / nav surface.
+ * Unlike pure WCAG `readableForeground`, this biases toward WHITE for any
+ * mid-to-dark background (luminance < 0.55). That avoids the visually-wrong
+ * "dark text on dark sage" outcome where black technically wins the WCAG
+ * ratio by a hair, but white reads as more intentional and on-brand.
+ */
+function ctaForeground(bgHex: string): string {
+  const rgb = hexToRgb(bgHex);
+  if (!rgb) return '#ffffff';
+  const L = relativeLuminance(rgb);
+  if (L < 0.55) return '#ffffff';
+  return readableForeground(bgHex);
+}
 
 export type ThemePreset = {
   key: ThemePresetKey;
