@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
+import 'react-day-picker/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
-import { format, isAfter, isBefore, isSameDay, parseISO, isValid } from 'date-fns';
+import { format, isBefore, isSameDay, parseISO, isValid } from 'date-fns';
 import s from './DatePicker.module.scss';
 
 export type DateValue = Date | null;
