@@ -49,7 +49,7 @@ export type ThemePreset = {
 
 export type ResolvedThemePreset = Omit<
   ThemePreset,
-  'surfaceMutedColor' | 'sidebarActiveColor' | 'onPrimaryColor' | 'onSidebarActiveColor' | 'sidebarTextMutedColor' | 'sidebarBorderColor'
+  'surfaceMutedColor' | 'sidebarActiveColor' | 'onPrimaryColor' | 'onSidebarActiveColor' | 'sidebarTextColor' | 'sidebarTextMutedColor' | 'sidebarBorderColor'
 > & {
   sidebarTextColor: string;
   sidebarTextMutedColor: string;
