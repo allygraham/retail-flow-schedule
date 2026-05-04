@@ -35,11 +35,22 @@ export type ThemePreset = {
   surfaceMutedColor?: string;
   /** Optional explicit active sidebar item background. Falls back to primaryColor. */
   sidebarActiveColor?: string;
+  /** Optional explicit foreground for primary CTAs. Falls back to ctaForeground(primaryColor). */
+  onPrimaryColor?: string;
+  /** Optional explicit foreground for the active sidebar item. Falls back to ctaForeground(navActiveBg). */
+  onSidebarActiveColor?: string;
+  /** Optional explicit muted/helper text inside the sidebar. */
+  sidebarTextMutedColor?: string;
+  /** Optional explicit divider/border color inside the sidebar. */
+  sidebarBorderColor?: string;
 };
 
 export type ResolvedThemePreset = ThemePreset & {
   sidebarTextColor: string;
+  sidebarTextMutedColor: string;
+  sidebarBorderColor: string;
   primaryTextColor: string;
+  onPrimaryColor: string;
   surfaceMutedColor: string;
   surfaceRaisedColor: string;
   borderStrongColor: string;
