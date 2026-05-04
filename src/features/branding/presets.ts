@@ -178,6 +178,7 @@ export const THEME_PRESETS: Record<ThemePresetKey, ThemePreset> = {
     sidebarActiveColor: '#747C61',
     onPrimaryColor: '#FFFFFF',
     onSidebarActiveColor: '#FFFFFF',
+    sidebarTextColor: '#F0E4D7',
     sidebarTextMutedColor: '#E8E4DF',
     sidebarBorderColor: 'rgba(240, 228, 215, 0.16)',
   },
