@@ -139,7 +139,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   const renderBiz = () => (
     <div className={s.biz}>
       <div className={s.bizName}>{workspaceName}</div>
-      <Badge tone="brand" dot>{role ?? '—'}</Badge>
+      <Badge tone="brand" dot className={s.roleBadge}>{role ?? '—'}</Badge>
     </div>
   );
 
