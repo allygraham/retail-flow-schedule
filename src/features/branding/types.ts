@@ -1,4 +1,4 @@
-export type ThemePresetKey = 'default' | 'midnight' | 'forest' | 'sunset' | 'slate';
+export type ThemePresetKey = 'default' | 'midnight' | 'forest' | 'sunset' | 'slate' | 'topdrawer';
 
 export type BrandingTheme = {
   displayName: string | null;

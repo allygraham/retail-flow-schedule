@@ -16,6 +16,10 @@ export type ThemePreset = {
   successColor: string;
   warningColor: string;
   dangerColor: string;
+  /** Optional explicit muted surface (warm off-white, etc). Falls back to derived tint. */
+  surfaceMutedColor?: string;
+  /** Optional explicit active sidebar item background. Falls back to primaryColor. */
+  sidebarActiveColor?: string;
 };
 
 export type ResolvedThemePreset = ThemePreset & {
@@ -123,9 +127,27 @@ export const THEME_PRESETS: Record<ThemePresetKey, ThemePreset> = {
     warningColor: '#D97706',
     dangerColor: '#DC2626',
   },
+  topdrawer: {
+    key: 'topdrawer',
+    name: 'Top Drawer',
+    description: 'Premium retail warmth with sage green accents and muted charcoal nav.',
+    primaryColor: '#747C61',
+    primaryHoverColor: '#687157',
+    bgColor: '#FAF3EE',
+    surfaceColor: '#FFFFFF',
+    sidebarColor: '#4C4E56',
+    textPrimaryColor: '#2F3035',
+    textSecondaryColor: '#66696E',
+    borderColor: '#E8E4DF',
+    successColor: '#16A34A',
+    warningColor: '#D97706',
+    dangerColor: '#DC2626',
+    surfaceMutedColor: '#F4EDE3',
+    sidebarActiveColor: '#747C61',
+  },
 };
 
-export const THEME_ORDER: ThemePresetKey[] = ['default', 'midnight', 'forest', 'sunset', 'slate'];
+export const THEME_ORDER: ThemePresetKey[] = ['default', 'midnight', 'forest', 'sunset', 'slate', 'topdrawer'];
 
 export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
   const base = themeKey && themeKey in THEME_PRESETS
@@ -141,7 +163,7 @@ export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
     ...base,
     sidebarTextColor,
     primaryTextColor,
-    surfaceMutedColor: withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.06 : 0.035),
+    surfaceMutedColor: base.surfaceMutedColor ?? withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.06 : 0.035),
     surfaceRaisedColor: shade(base.surfaceColor, base.key === 'midnight' ? 0.04 : 0),
     borderStrongColor: shade(base.borderColor, -0.08),
     neutralBadgeBg,
@@ -154,8 +176,8 @@ export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
     dangerText: base.key === 'midnight' ? shade(base.dangerColor, 0.16) : shade(base.dangerColor, -0.28),
     rowHoverColor: withAlpha(base.primaryColor, base.key === 'midnight' ? 0.14 : 0.08),
     sidebarHoverColor: withAlpha(sidebarTextColor, base.key === 'midnight' ? 0.08 : 0.1),
-    navActiveBg: base.primaryColor,
-    navActiveText: primaryTextColor,
+    navActiveBg: base.sidebarActiveColor ?? base.primaryColor,
+    navActiveText: readableForeground(base.sidebarActiveColor ?? base.primaryColor),
     inputBg: base.surfaceColor,
     placeholderColor: withAlpha(base.textSecondaryColor, 0.86),
     focusRingColor: withAlpha(base.primaryColor, 0.22),
