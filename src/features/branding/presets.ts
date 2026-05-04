@@ -45,12 +45,16 @@ export type ThemePreset = {
   sidebarBorderColor?: string;
 };
 
-export type ResolvedThemePreset = ThemePreset & {
+export type ResolvedThemePreset = Omit<
+  ThemePreset,
+  'surfaceMutedColor' | 'sidebarActiveColor' | 'onPrimaryColor' | 'onSidebarActiveColor' | 'sidebarTextMutedColor' | 'sidebarBorderColor'
+> & {
   sidebarTextColor: string;
   sidebarTextMutedColor: string;
   sidebarBorderColor: string;
   primaryTextColor: string;
   onPrimaryColor: string;
+  onSidebarActiveColor: string;
   surfaceMutedColor: string;
   surfaceRaisedColor: string;
   borderStrongColor: string;
