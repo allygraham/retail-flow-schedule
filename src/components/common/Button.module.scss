@@ -48,7 +48,7 @@
 }
 .danger {
   background: var(--color-danger, #{$danger});
-  color: var(--color-text-on-primary, #{$white});
+  color: var(--color-on-primary, var(--color-text-on-primary, #{$white}));
   &:hover:not(:disabled) { background: var(--color-danger-text, #b91c1c); filter: brightness(0.96); }
 }
 
