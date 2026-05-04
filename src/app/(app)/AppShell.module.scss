@@ -68,6 +68,14 @@
   border-radius: $r-md;
   margin-bottom: $sp-4;
   border: 1px solid var(--color-sidebar-border, rgba(255,255,255,0.1));
+
+  // Sidebar-aware role badge: ignore the bright brand tokens and lean on
+  // sidebar-text/border so it stays readable on dark navigation surfaces.
+  :global(.badge) {
+    background: var(--color-sidebar-hover, rgba(255,255,255,0.08));
+    color: var(--color-sidebar-text, $white);
+    border-color: var(--color-sidebar-border, rgba(255,255,255,0.16));
+  }
 }
 .bizName { color: var(--color-sidebar-text, $white); font-weight: $fw-semibold; font-size: $fs-sm; margin-bottom: 6px; @include truncate; }
 
