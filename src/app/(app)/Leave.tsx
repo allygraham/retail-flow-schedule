@@ -1025,11 +1025,17 @@ export default function Leave() {
                 <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[detailsRow.leave_type]}</strong></div>
                 <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(detailsRow.start_date, 'd MMM')} → {fmtDate(detailsRow.end_date, 'd MMM yyyy')}</strong></div>
                 <div className={s.detailRow}><span>Duration</span><strong>{duration} day{duration === 1 ? '' : 's'}</strong></div>
-                <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[detailsRow.status]}</strong></div>
-                <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[detailsRow.source]}</strong></div>
-                {isSick && detailsRow.lifecycle_status && (
-                  <div className={s.detailRow}><span>Lifecycle</span><strong>{SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus]}</strong></div>
+                {isSick ? (
+                  <div className={s.detailRow}>
+                    <span>Sickness status</span>
+                    <strong>{detailsRow.lifecycle_status
+                      ? SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus]
+                      : 'Recorded absence'}</strong>
+                  </div>
+                ) : (
+                  <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[detailsRow.status]}</strong></div>
                 )}
+                <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[detailsRow.source]}</strong></div>
                 {isSick && meta.category && (
                   <div className={s.detailRow}><span>Category</span><strong>{SICKNESS_CATEGORY_LABEL[meta.category]}</strong></div>
                 )}
@@ -1048,39 +1054,77 @@ export default function Leave() {
                 </div>
               )}
 
-              {isMgr && (
-                <OperationalImpactCard
+              {isMgr && business && (
+                <CoverageRecoveryCard
+                  businessId={business.id}
                   userId={detailsRow.user_id}
                   startDate={detailsRow.start_date}
                   endDate={detailsRow.end_date}
                 />
               )}
 
-              {isSick && isMgr && (
-                <SspPanel
-                  startDate={detailsRow.start_date}
-                  endDate={detailsRow.end_date}
-                  history={history}
-                  paid={meta.paid_absence}
-                  employeeName={detailsRow.profiles?.full_name ?? undefined}
-                />
+              {isMgr && (
+                <CollapsibleSection
+                  title="Operational impact"
+                  icon={<Activity size={14} />}
+                  tone="subtle"
+                  defaultOpen={false}
+                  meta="Shifts affected · uncovered hours"
+                >
+                  <OperationalImpactCard
+                    userId={detailsRow.user_id}
+                    startDate={detailsRow.start_date}
+                    endDate={detailsRow.end_date}
+                  />
+                </CollapsibleSection>
               )}
 
-              <div className={s.detailBlock}>
-                <span className={s.reasonLabel}>Reason</span>
-                <p>{detailsRow.reason?.trim() || 'No additional details added.'}</p>
-              </div>
-              {detailsRow.manager_note && (
-                <div className={s.detailBlock}>
-                  <span className={s.reasonLabel}>Manager note</span>
-                  <p>{detailsRow.manager_note}</p>
-                </div>
+              {isSick && isMgr && (
+                <CollapsibleSection
+                  title="SSP estimate"
+                  icon={<Coins size={14} />}
+                  tone="subtle"
+                  defaultOpen={false}
+                  meta="Operational guidance"
+                >
+                  <SspPanel
+                    startDate={detailsRow.start_date}
+                    endDate={detailsRow.end_date}
+                    history={history}
+                    paid={meta.paid_absence}
+                    employeeName={detailsRow.profiles?.full_name ?? undefined}
+                  />
+                </CollapsibleSection>
               )}
-              {detailsRow.review_notes && (
-                <div className={s.detailBlock}>
-                  <span className={s.reasonLabel}>Review note</span>
-                  <p>{detailsRow.review_notes}</p>
-                </div>
+
+              {(detailsRow.reason || detailsRow.manager_note || detailsRow.review_notes) && (
+                <CollapsibleSection
+                  title="Notes & history"
+                  icon={<NotebookPen size={14} />}
+                  tone="subtle"
+                  defaultOpen={false}
+                >
+                  <div className={s.form}>
+                    {detailsRow.reason && (
+                      <div className={s.detailBlock}>
+                        <span className={s.reasonLabel}>Reason</span>
+                        <p>{detailsRow.reason}</p>
+                      </div>
+                    )}
+                    {detailsRow.manager_note && (
+                      <div className={s.detailBlock}>
+                        <span className={s.reasonLabel}>Manager note</span>
+                        <p>{detailsRow.manager_note}</p>
+                      </div>
+                    )}
+                    {detailsRow.review_notes && (
+                      <div className={s.detailBlock}>
+                        <span className={s.reasonLabel}>Review note</span>
+                        <p>{detailsRow.review_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleSection>
               )}
             </div>
           );
