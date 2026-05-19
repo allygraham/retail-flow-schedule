@@ -5,6 +5,19 @@ import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_
 import { useLeaveBalance, daysBetween } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import { LeaveBalanceInline } from '@/features/leave/LeaveBalanceInline';
+import {
+  SICKNESS_CATEGORY_OPTIONS,
+  SICKNESS_CATEGORY_LABEL,
+  SICKNESS_LIFECYCLE_OPTIONS,
+  SICKNESS_LIFECYCLE_LABEL,
+  SICKNESS_LIFECYCLE_TONE,
+  parseSicknessMeta,
+  type SicknessLifecycleStatus,
+  type SicknessMeta,
+} from '@/features/leave/sickness';
+import { OperationalImpactCard } from '@/features/leave/OperationalImpactCard';
+import { SspPanel } from '@/features/leave/SspPanel';
+import { AbsenceCalendar } from '@/features/leave/AbsenceCalendar';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -16,10 +29,11 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
+import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope } from 'lucide-react';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
-type Filter = 'pending' | 'reviewed' | 'all';
+type Filter = 'pending' | 'approved' | 'declined' | 'sickness' | 'calendar';
 type FilterChip = { key: keyof LeaveFilterState; label: string };
 type LeaveFilterState = {
   status: '' | LeaveStatus;
@@ -41,9 +55,26 @@ const INITIAL_LEAVE_FILTERS: LeaveFilterState = {
   storeName: '',
 };
 
+function TypeIcon({ type }: { type: LeaveType }) {
+  if (type === 'sick') return <HeartPulse size={14} className={s.typeIcon} aria-hidden />;
+  if (type === 'annual') return <Plane size={14} className={s.typeIcon} aria-hidden />;
+  if (type === 'unpaid') return <Coins size={14} className={s.typeIcon} aria-hidden />;
+  return <CalendarDays size={14} className={s.typeIcon} aria-hidden />;
+}
+
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className={s.toggle}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className={s.toggleTrack}><span className={s.toggleKnob} /></span>
+      <span className={s.toggleLabel}>{label}</span>
+    </label>
+  );
+}
+
 export default function Leave() {
   const { user, role } = useAuth();
-  const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review } = useLeaveRequests();
+  const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
   const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
   const [requestModal, setRequestModal] = useState(false);
@@ -62,14 +93,25 @@ export default function Leave() {
     reason: '',
     manager_note: '',
     status: 'approved',
+    sickness_meta: {
+      category: 'cold_flu',
+      self_certified: true,
+      fit_note_received: false,
+      work_related_injury: false,
+      paid_absence: false,
+      return_to_work_interview_required: false,
+      return_to_work_date: '',
+    } as SicknessMeta,
+    lifecycle_status: 'recorded_absence' as SicknessLifecycleStatus,
   });
   const [formErr, setFormErr] = useState<string | null>(null);
   const [mgmtErr, setMgmtErr] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ row: LeaveRequestRow; action: 'approved' | 'rejected' } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  const [detailsRow, setDetailsRow] = useState<LeaveRequestRow | null>(null);
   const [noteViewer, setNoteViewer] = useState<{ title: string; body: ReactNode } | null>(null);
 
-  const [filter, setFilter] = useState<Filter>('pending');
+  const [filter, setFilter] = useState<Filter>(isMgr ? 'pending' : 'approved');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -82,13 +124,25 @@ export default function Leave() {
     [requests],
   );
 
+  const counts = useMemo(() => {
+    const visible = isMgr
+      ? requests
+      : requests.filter(r => r.user_id === user?.id);
+    return {
+      pending: visible.filter(r => r.status === 'pending' && (!isMgr || !user || role === 'owner' || r.user_id !== user.id)).length,
+      approved: visible.filter(r => r.status === 'approved').length,
+      declined: visible.filter(r => r.status === 'rejected').length,
+      sickness: visible.filter(r => r.leave_type === 'sick').length,
+    };
+  }, [requests, isMgr, user, role]);
+
   const filtered = useMemo(() => {
     let scoped = requests;
 
-    if (isMgr) {
-      if (filter === 'pending') scoped = scoped.filter(r => r.status === 'pending');
-      else if (filter === 'reviewed') scoped = scoped.filter(r => r.status === 'approved' || r.status === 'rejected');
-    }
+    if (filter === 'pending') scoped = scoped.filter(r => r.status === 'pending');
+    else if (filter === 'approved') scoped = scoped.filter(r => r.status === 'approved');
+    else if (filter === 'declined') scoped = scoped.filter(r => r.status === 'rejected');
+    else if (filter === 'sickness') scoped = scoped.filter(r => r.leave_type === 'sick');
 
     return scoped.filter((request) => {
       if (filters.status && request.status !== filters.status) return false;
@@ -125,13 +179,8 @@ export default function Leave() {
 
   const hasActiveFilters = activeFilterChips.length > 0;
 
-  const pendingCount = requests.filter((request) => {
-    if (request.status !== 'pending') return false;
-    if (!isMgr) return true;
-    if (!user) return false;
-    return role === 'owner' || request.user_id !== user.id;
-  }).length;
   const selectedEmployee = employees.find((employee) => employee.user_id === mgmtForm.user_id);
+  const isSicknessForm = mgmtForm.leave_type === 'sick';
 
   const setLeaveFilter = <K extends keyof LeaveFilterState>(key: K, value: LeaveFilterState[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -164,38 +213,24 @@ export default function Leave() {
     return { state: 'empty' as const, request: null };
   }, [isMgr, requests, user]);
 
-  const openLeaveDetails = (request: LeaveRequestRow) => {
-    const duration = daysBetween(request.start_date, request.end_date);
-    setNoteViewer({
-      title: 'Leave details',
-      body: (
-        <div className={s.noteViewer}>
-          <div className={s.detailList}>
-            <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[request.leave_type]}</strong></div>
-            <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(request.start_date, 'd MMM')} → {fmtDate(request.end_date, 'd MMM yyyy')}</strong></div>
-            <div className={s.detailRow}><span>Duration</span><strong>{duration} day{duration === 1 ? '' : 's'}</strong></div>
-            <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[request.status]}</strong></div>
-            <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[request.source]}</strong></div>
-          </div>
-          <div className={s.detailBlock}>
-            <span className={s.reasonLabel}>Reason</span>
-            <p>{request.reason?.trim() || 'No additional details added.'}</p>
-          </div>
-          {request.manager_note && (
-            <div className={s.detailBlock}>
-              <span className={s.reasonLabel}>Manager note</span>
-              <p>{request.manager_note}</p>
-            </div>
-          )}
-          {request.review_notes && (
-            <div className={s.detailBlock}>
-              <span className={s.reasonLabel}>Review note</span>
-              <p>{request.review_notes}</p>
-            </div>
-          )}
-        </div>
-      ),
+  // Linked sickness detection — helper text only.
+  const detectLinkedSickness = (row: LeaveRequestRow): boolean => {
+    if (row.leave_type !== 'sick') return false;
+    const window = 56; // 8 weeks
+    const start = new Date(row.start_date + 'T00:00:00').getTime();
+    return requests.some(other => {
+      if (other.id === row.id) return false;
+      if (other.user_id !== row.user_id) return false;
+      if (other.leave_type !== 'sick') return false;
+      const end = new Date(other.end_date + 'T00:00:00').getTime();
+      if (end >= start) return false;
+      const gap = (start - end) / (1000 * 60 * 60 * 24);
+      return gap <= window;
     });
+  };
+
+  const openLeaveDetails = (request: LeaveRequestRow) => {
+    setDetailsRow(request);
   };
 
   const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, request: LeaveRequestRow) => {
@@ -209,7 +244,6 @@ export default function Leave() {
     setFormErr(null);
     const parsed = leaveSchema.safeParse(form);
     if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
-    // Soft warn if annual leave exceeds remaining balance.
     if (parsed.data.leave_type === 'annual' && balance) {
       const days = daysBetween(parsed.data.start_date, parsed.data.end_date);
       if (days > balance.remaining) {
@@ -240,16 +274,32 @@ export default function Leave() {
       reason: '',
       manager_note: '',
       status: 'approved',
+      sickness_meta: {
+        category: 'cold_flu',
+        self_certified: true,
+        fit_note_received: false,
+        work_related_injury: false,
+        paid_absence: false,
+        return_to_work_interview_required: false,
+        return_to_work_date: '',
+      },
+      lifecycle_status: 'recorded_absence',
     });
     setAddLeaveModal(true);
   };
 
   const submitManagementLeave = async () => {
     setMgmtErr(null);
+    const sickness_meta = mgmtForm.leave_type === 'sick' ? {
+      ...mgmtForm.sickness_meta,
+      return_to_work_date: mgmtForm.sickness_meta?.return_to_work_date || null,
+    } : null;
     const parsed = managementLeaveSchema.safeParse({
       ...mgmtForm,
       reason: mgmtForm.reason || null,
       manager_note: mgmtForm.manager_note || null,
+      sickness_meta,
+      lifecycle_status: mgmtForm.leave_type === 'sick' ? mgmtForm.lifecycle_status : null,
     });
     if (!parsed.success) {
       setMgmtErr(parsed.error.issues[0].message);
@@ -301,17 +351,29 @@ export default function Leave() {
     });
   };
 
+  const updateMgmtMeta = (patch: Partial<SicknessMeta>) => {
+    setMgmtForm((prev: any) => ({ ...prev, sickness_meta: { ...prev.sickness_meta, ...patch } }));
+  };
+
   const openNote = (title: string, body: ReactNode) => setNoteViewer({ title, body });
+
+  const tabs: { key: Filter; label: string; count?: number; show?: boolean }[] = [
+    { key: 'pending', label: 'Pending', count: counts.pending, show: isMgr },
+    { key: 'approved', label: 'Approved', count: counts.approved },
+    { key: 'declined', label: 'Declined', count: counts.declined },
+    { key: 'sickness', label: 'Sickness', count: counts.sickness },
+    { key: 'calendar', label: 'Calendar' },
+  ];
 
   return (
     <div className={s.page}>
       <header className={s.header}>
         <div>
-          <span className={s.eye}>Leave</span>
-          <h1 className={s.h1}>{isMgr ? 'Leave & sickness' : 'My time off'}</h1>
-          {isMgr && pendingCount > 0 && (
+          <span className={s.eye}>Leave & absence</span>
+          <h1 className={s.h1}>{isMgr ? 'Leave & absence' : 'My time off'}</h1>
+          {isMgr && counts.pending > 0 && (
             <p className={s.sub}>
-              <Badge tone="pending" dot>{pendingCount} pending</Badge> awaiting your review
+              <Badge tone="pending" dot>{counts.pending} pending</Badge> awaiting your review
             </p>
           )}
         </div>
@@ -360,218 +422,219 @@ export default function Leave() {
         </Card>
       )}
 
-      {isMgr && (
-        <div className={s.tabs} role="tablist">
-          {(['pending','reviewed','all'] as Filter[]).map(f => (
-            <button
-              key={f}
-              role="tab"
-              aria-selected={filter === f}
-              className={`${s.tab} ${filter === f ? s.tabActive : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f === 'pending' ? `Pending (${pendingCount})` : f === 'reviewed' ? 'Reviewed' : 'All'}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className={s.tabs} role="tablist">
+        {tabs.filter(t => t.show !== false).map(t => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={filter === t.key}
+            className={`${s.tab} ${filter === t.key ? s.tabActive : ''}`}
+            onClick={() => setFilter(t.key)}
+          >
+            {t.label}{typeof t.count === 'number' ? ` (${t.count})` : ''}
+          </button>
+        ))}
+      </div>
 
-      <Card>
-        <div className={s.filterBar}>
-          <div className={s.filterFooter}>
-            <div className={s.filterSummary}>
-              {hasActiveFilters ? (
-                activeFilterChips.map((chip) => (
-                  <button key={chip.label} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
-                    <span>{chip.label}</span>
-                    <span aria-hidden="true">×</span>
-                  </button>
-                ))
-              ) : (
-                <span className={s.filterHint}>No filters applied</span>
-              )}
+      {filter !== 'calendar' && (
+        <Card>
+          <div className={s.filterBar}>
+            <div className={s.filterFooter}>
+              <div className={s.filterSummary}>
+                {hasActiveFilters ? (
+                  activeFilterChips.map((chip) => (
+                    <button key={chip.label} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
+                      <span>{chip.label}</span>
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  ))
+                ) : (
+                  <span className={s.filterHint}>No filters applied</span>
+                )}
+              </div>
+              <div className={s.filterActions}>
+                <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
+                  {filtersOpen ? 'Hide filters' : 'Show filters'}
+                </Button>
+                <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+              </div>
             </div>
-            <div className={s.filterActions}>
-              <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
-                {filtersOpen ? 'Hide filters' : 'Show filters'}
-              </Button>
-              <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
-            </div>
-          </div>
 
-          {filtersOpen && (
-            <div className={s.filterGrid}>
-              <Field label="Status">
-                <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
-                  <option value="">All statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Declined</option>
-                </Select>
-              </Field>
-
-              <Field label="Leave type">
-                <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
-                  <option value="">All leave types</option>
-                  <option value="annual">Annual leave</option>
-                  <option value="sick">Sick leave</option>
-                  <option value="unpaid">Unpaid leave</option>
-                </Select>
-              </Field>
-
-              <Field label="From date">
-                <DatePicker
-                  value={parseISODate(filters.fromDate)}
-                  onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
-                  placeholder="Any start date"
-                />
-              </Field>
-
-              <Field label="To date">
-                <DatePicker
-                  value={parseISODate(filters.toDate)}
-                  onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
-                  placeholder="Any end date"
-                />
-              </Field>
-
-              <Field label="Source">
-                <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
-                  <option value="">All sources</option>
-                  <option value="employee_request">Employee requested</option>
-                  <option value="manager_created">Manager created</option>
-                  <option value="owner_created">Owner created</option>
-                </Select>
-              </Field>
-
-              {isMgr && (
-                <Field label="Employee name">
-                  <Input
-                    value={filters.employeeQuery}
-                    onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
-                    placeholder="Search employee"
-                  />
-                </Field>
-              )}
-
-              {isMgr && (
-                <Field label="Store / location">
-                  <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
-                    <option value="">All stores</option>
-                    {storeOptions.map((storeName) => (
-                      <option key={storeName} value={storeName}>{storeName}</option>
-                    ))}
+            {filtersOpen && (
+              <div className={s.filterGrid}>
+                <Field label="Status">
+                  <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
+                    <option value="">All statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Declined</option>
                   </Select>
                 </Field>
-              )}
+
+                <Field label="Leave type">
+                  <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
+                    <option value="">All leave types</option>
+                    <option value="annual">Annual leave</option>
+                    <option value="sick">Sick leave</option>
+                    <option value="unpaid">Unpaid leave</option>
+                  </Select>
+                </Field>
+
+                <Field label="From date">
+                  <DatePicker
+                    value={parseISODate(filters.fromDate)}
+                    onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
+                    placeholder="Any start date"
+                  />
+                </Field>
+
+                <Field label="To date">
+                  <DatePicker
+                    value={parseISODate(filters.toDate)}
+                    onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
+                    placeholder="Any end date"
+                  />
+                </Field>
+
+                <Field label="Source">
+                  <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
+                    <option value="">All sources</option>
+                    <option value="employee_request">Employee requested</option>
+                    <option value="manager_created">Manager created</option>
+                    <option value="owner_created">Owner created</option>
+                  </Select>
+                </Field>
+
+                {isMgr && (
+                  <Field label="Employee name">
+                    <Input
+                      value={filters.employeeQuery}
+                      onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
+                      placeholder="Search employee"
+                    />
+                  </Field>
+                )}
+
+                {isMgr && (
+                  <Field label="Store / location">
+                    <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
+                      <option value="">All stores</option>
+                      {storeOptions.map((storeName) => (
+                        <option key={storeName} value={storeName}>{storeName}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {filter === 'calendar' ? (
+        <Card padded={false}>
+          <AbsenceCalendar requests={requests} onSelectRequest={(r) => openLeaveDetails(r)} />
+        </Card>
+      ) : (
+        <Card padded={false}>
+          {hasActiveFilters && (
+            <div className={s.activeFiltersRow}>
+              {activeFilterChips.map((chip) => (
+                <button key={`table-${chip.label}`} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
+                  <span>{chip.label}</span>
+                  <span aria-hidden="true">×</span>
+                </button>
+              ))}
             </div>
           )}
-        </div>
-      </Card>
-
-      <Card padded={false}>
-        {hasActiveFilters && (
-          <div className={s.activeFiltersRow}>
-            {activeFilterChips.map((chip) => (
-              <button key={`table-${chip.label}`} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
-                <span>{chip.label}</span>
-                <span aria-hidden="true">×</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {loading ? (
-          <div className={s.loading}>Loading…</div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            title={hasActiveFilters ? 'No leave matches those filters' : isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}
-            description={hasActiveFilters
-              ? 'Try broadening the filters or clear them to see more leave records.'
-              : isMgr && filter === 'pending'
-                ? 'No requests are waiting for review.'
-                : 'Submit a request to get started.'}
-            action={hasActiveFilters ? <Button variant="outline" onClick={clearFilters}>Clear filters</Button> : undefined}
-          />
-        ) : (
-          <table className={s.table}>
-            <thead>
-              <tr>
-                {isMgr && <th>Employee</th>}
-                {isMgr && <th>Store</th>}
-                <th>Source</th>
-                <th>Type</th>
-                <th>Dates</th>
-                <th>Reason</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                {isMgr && <th aria-label="Actions" />}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(r => {
-                const isRowClickable = true;
-                const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
-                return (
-                  <tr
-                    key={r.id}
-                    className={isRowClickable ? s.clickableRow : undefined}
-                    onClick={isRowClickable ? () => openLeaveDetails(r) : undefined}
-                    onKeyDown={isRowClickable ? (event) => onRowKeyDown(event, r) : undefined}
-                    tabIndex={isRowClickable ? 0 : undefined}
-                    aria-label={isRowClickable ? `Open details for ${TYPE_LABEL[r.leave_type]} leave from ${fmtDate(r.start_date, 'd MMM')} to ${fmtDate(r.end_date, 'd MMM yyyy')}` : undefined}
-                  >
-                    {isMgr && (
+          {loading ? (
+            <div className={s.loading}>Loading…</div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title={hasActiveFilters ? 'No leave & absence matches those filters' : isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}
+              description={hasActiveFilters
+                ? 'Try broadening the filters or clear them to see more absence records.'
+                : isMgr && filter === 'pending'
+                  ? 'No requests are waiting for review.'
+                  : filter === 'sickness'
+                    ? 'No sickness has been recorded yet.'
+                    : 'Submit a request to get started.'}
+              action={hasActiveFilters ? <Button variant="outline" onClick={clearFilters}>Clear filters</Button> : undefined}
+            />
+          ) : (
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  {isMgr && <th>Employee</th>}
+                  {isMgr && <th>Store</th>}
+                  <th>Type</th>
+                  <th>Dates</th>
+                  <th>Status</th>
+                  <th>Operational impact</th>
+                  <th>Submitted</th>
+                  {isMgr && <th aria-label="Actions" />}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(r => {
+                  const isRowClickable = true;
+                  const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
+                  const meta = parseSicknessMeta(r.sickness_meta);
+                  const isSick = r.leave_type === 'sick';
+                  const linked = isSick && detectLinkedSickness(r);
+                  const lifecycle = r.lifecycle_status as SicknessLifecycleStatus | null;
+                  return (
+                    <tr
+                      key={r.id}
+                      className={isRowClickable ? s.clickableRow : undefined}
+                      onClick={isRowClickable ? () => openLeaveDetails(r) : undefined}
+                      onKeyDown={isRowClickable ? (event) => onRowKeyDown(event, r) : undefined}
+                      tabIndex={isRowClickable ? 0 : undefined}
+                      aria-label={isRowClickable ? `Open details for ${TYPE_LABEL[r.leave_type]} leave from ${fmtDate(r.start_date, 'd MMM')} to ${fmtDate(r.end_date, 'd MMM yyyy')}` : undefined}
+                    >
+                      {isMgr && (
+                        <td>
+                          <div className={s.who}>
+                            <Avatar name={r.profiles?.full_name ?? undefined} size="sm" />
+                            <span>{r.profiles?.full_name ?? 'Employee'}</span>
+                          </div>
+                        </td>
+                      )}
+                      {isMgr && <td className={s.muted}>{r.primary_store?.name ?? '—'}</td>}
                       <td>
-                        <div className={s.who}>
-                          <Avatar name={r.profiles?.full_name ?? undefined} size="sm" />
-                          <span>{r.profiles?.full_name ?? 'Employee'}</span>
+                        <div className={s.typeCell}>
+                          <Badge tone={TYPE_TONE[r.leave_type]}>
+                            <TypeIcon type={r.leave_type} />
+                            {TYPE_LABEL[r.leave_type]}
+                          </Badge>
+                          {isSick && meta.category && (
+                            <span className={s.muted}>{SICKNESS_CATEGORY_LABEL[meta.category]}</span>
+                          )}
                         </div>
                       </td>
-                    )}
-                    {isMgr && <td className={s.muted}>{r.primary_store?.name ?? '—'}</td>}
-                    <td>
-                      <div className={s.sourceMeta}>
-                        <Badge tone={SOURCE_TONE[r.source]}>{SOURCE_LABEL[r.source]}</Badge>
-                      </div>
-                    </td>
-                    <td>
-                      <Badge tone={TYPE_TONE[r.leave_type]}>{TYPE_LABEL[r.leave_type]}</Badge>
-                    </td>
-                    <td className={s.dates}>
-                      <div className={s.dateRange}>{fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}</div>
-                    </td>
-                    <td className={s.reason} title={r.reason ?? undefined}>{r.reason ?? '—'}</td>
-                    <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
-                    <td>
-                      <div className={s.statusStack}>
-                        <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
-                        <div className={s.sourceMeta}>
-                          {r.source !== 'employee_request' && r.created_by_role && (
-                            <Badge tone={SOURCE_TONE[r.source]}>{SOURCE_LABEL[r.source]}</Badge>
+                      <td className={s.dates}>
+                        <div className={s.dateRange}>{fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}</div>
+                        <div className={s.muted}>{daysBetween(r.start_date, r.end_date)} day{daysBetween(r.start_date, r.end_date) === 1 ? '' : 's'}</div>
+                      </td>
+                      <td>
+                        <div className={s.statusStack}>
+                          <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
+                          {isSick && lifecycle && (
+                            <Badge tone={SICKNESS_LIFECYCLE_TONE[lifecycle]}>{SICKNESS_LIFECYCLE_LABEL[lifecycle]}</Badge>
                           )}
-                          {r.manager_note && (
-                            <button
-                              type="button"
-                              className={s.noteButton}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                openNote('Manager note', r.manager_note ?? '');
-                              }}
-                            >
-                              Manager note
-                            </button>
+                          {isSick && (
+                            <div className={s.indicatorRow}>
+                              {meta.self_certified && <span className={s.indicator}>Self-certified</span>}
+                              {meta.fit_note_received && <span className={s.indicator}>Fit note ✓</span>}
+                              {meta.return_to_work_interview_required && <span className={s.indicator}>RTW interview</span>}
+                              {meta.paid_absence === true && <span className={s.indicator}>Paid</span>}
+                              {meta.paid_absence === false && <span className={s.indicator}>Unpaid</span>}
+                            </div>
                           )}
-                          {r.review_notes && (r.status === 'approved' || r.status === 'rejected') && (
-                            <button
-                              type="button"
-                              className={s.noteButton}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                openNote('Review note', r.review_notes ?? '');
-                              }}
-                            >
-                              Review note
-                            </button>
+                          {linked && (
+                            <span className={s.linkedHint}>
+                              <AlertCircle size={12} /> Linked to a recent sickness period
+                            </span>
                           )}
                           {!isMgr && r.status === 'pending' && (
                             <button
@@ -586,25 +649,48 @@ export default function Leave() {
                             </button>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    {isMgr && (
-                      <td className={s.actions}>
-                        {canReviewPending && (
-                        <>
-                           <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); openReview(r, 'rejected'); }}>Decline</Button>
-                           <Button size="sm" onClick={(event) => { event.stopPropagation(); openReview(r, 'approved'); }}>Approve</Button>
-                        </>
-                      )}
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </Card>
+                      <td>
+                        <div className={s.impactCell}>
+                          <Badge tone={r.source === 'employee_request' ? 'neutral' : SOURCE_TONE[r.source]}>
+                            {SOURCE_LABEL[r.source]}
+                          </Badge>
+                          {r.status === 'approved' && (
+                            <span className={s.muted}>Shifts returned to open coverage</span>
+                          )}
+                          {r.manager_note && (
+                            <button
+                              type="button"
+                              className={s.noteButton}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openNote('Manager note', r.manager_note ?? '');
+                              }}
+                            >
+                              Manager note
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
+                      {isMgr && (
+                        <td className={s.actions}>
+                          {canReviewPending && (
+                            <>
+                              <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); openReview(r, 'rejected'); }}>Decline</Button>
+                              <Button size="sm" onClick={(event) => { event.stopPropagation(); openReview(r, 'approved'); }}>Approve</Button>
+                            </>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
 
       {/* Request modal */}
       <Modal
@@ -651,10 +737,12 @@ export default function Leave() {
         </div>
       </Modal>
 
+      {/* Add leave / record absence modal */}
       <Modal
         open={addLeaveModal}
         onClose={() => setAddLeaveModal(false)}
-        title="Add leave"
+        title="Add leave or absence"
+        size="lg"
         footer={
           <>
             <Button variant="ghost" onClick={() => setAddLeaveModal(false)}>Cancel</Button>
@@ -697,12 +785,76 @@ export default function Leave() {
               placeholder="Pick a date range"
             />
           </Field>
-          {selectedEmployee && (
-            <div className={s.hintBox}>
-              {selectedEmployee.full_name} will be marked unavailable immediately and any existing shifts in this range will be returned to open coverage.
+
+          {isSicknessForm && (
+            <div className={s.sicknessGroup}>
+              <div className={s.sicknessHead}>
+                <Stethoscope size={14} />
+                <span>Sickness details</span>
+              </div>
+              <div className={s.row2}>
+                <Field label="Sickness category">
+                  <Select
+                    value={mgmtForm.sickness_meta?.category ?? 'cold_flu'}
+                    onChange={e => updateMgmtMeta({ category: e.target.value as any })}
+                  >
+                    {SICKNESS_CATEGORY_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Lifecycle status">
+                  <Select
+                    value={mgmtForm.lifecycle_status}
+                    onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value })}
+                  >
+                    {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+              <Field label="Return-to-work date" hint="Optional — when the employee is expected back">
+                <DatePicker
+                  value={parseISODate(mgmtForm.sickness_meta?.return_to_work_date ?? '')}
+                  onChange={(d) => updateMgmtMeta({ return_to_work_date: toISODate(d) ?? '' })}
+                  placeholder="Pick a return date"
+                />
+              </Field>
+              <div className={s.toggleGrid}>
+                <Toggle checked={!!mgmtForm.sickness_meta?.self_certified} onChange={(v) => updateMgmtMeta({ self_certified: v })} label="Self-certified" />
+                <Toggle checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={(v) => updateMgmtMeta({ fit_note_received: v })} label="Fit note received" />
+                <Toggle checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={(v) => updateMgmtMeta({ work_related_injury: v })} label="Work-related injury" />
+                <Toggle checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={(v) => updateMgmtMeta({ paid_absence: v })} label="Paid absence" />
+                <Toggle checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={(v) => updateMgmtMeta({ return_to_work_interview_required: v })} label="Return-to-work interview required" />
+              </div>
+              {mgmtForm.user_id && (() => {
+                const window = 56;
+                const start = new Date(mgmtForm.start_date + 'T00:00:00').getTime();
+                const hasLinked = requests.some(other => {
+                  if (other.user_id !== mgmtForm.user_id) return false;
+                  if (other.leave_type !== 'sick') return false;
+                  const end = new Date(other.end_date + 'T00:00:00').getTime();
+                  if (end >= start) return false;
+                  const gap = (start - end) / (1000 * 60 * 60 * 24);
+                  return gap <= window;
+                });
+                return hasLinked ? (
+                  <p className={s.hintText}><AlertCircle size={12} /> This may link to a recent sickness period (within the last 8 weeks).</p>
+                ) : null;
+              })()}
             </div>
           )}
-          <Field label="Reason" hint="Optional context visible in leave history">
+
+          {selectedEmployee && (
+            <OperationalImpactCard
+              userId={mgmtForm.user_id}
+              startDate={mgmtForm.start_date}
+              endDate={mgmtForm.end_date}
+            />
+          )}
+
+          <Field label="Reason" hint="Optional context visible in absence history">
             <TextArea
               value={mgmtForm.reason}
               onChange={e => setMgmtForm({ ...mgmtForm, reason: e.target.value })}
@@ -788,6 +940,111 @@ export default function Leave() {
             </Field>
           </div>
         )}
+      </Modal>
+
+      {/* Details viewer */}
+      <Modal
+        open={!!detailsRow}
+        onClose={() => setDetailsRow(null)}
+        title="Absence details"
+        size="lg"
+        footer={
+          <>
+            {isMgr && detailsRow?.leave_type === 'sick' && (
+              <Select
+                value={(detailsRow.lifecycle_status as string) ?? 'recorded_absence'}
+                onChange={async (e) => {
+                  if (!detailsRow) return;
+                  try {
+                    await updateSickness(detailsRow.id, { lifecycle_status: e.target.value as any });
+                    setDetailsRow({ ...detailsRow, lifecycle_status: e.target.value as any });
+                    toast.success('Sickness status updated');
+                  } catch (err: any) { toast.error(err.message ?? 'Could not update'); }
+                }}
+              >
+                {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            )}
+            <Button onClick={() => setDetailsRow(null)}>Close</Button>
+          </>
+        }
+      >
+        {detailsRow && (() => {
+          const duration = daysBetween(detailsRow.start_date, detailsRow.end_date);
+          const meta = parseSicknessMeta(detailsRow.sickness_meta);
+          const isSick = detailsRow.leave_type === 'sick';
+          const history = requests
+            .filter(r => r.user_id === detailsRow.user_id)
+            .map(r => ({ start_date: r.start_date, end_date: r.end_date, leave_type: r.leave_type }));
+          return (
+            <div className={s.noteViewer}>
+              <div className={s.detailList}>
+                <div className={s.detailRow}><span>Employee</span><strong>{detailsRow.profiles?.full_name ?? 'Employee'}</strong></div>
+                <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[detailsRow.leave_type]}</strong></div>
+                <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(detailsRow.start_date, 'd MMM')} → {fmtDate(detailsRow.end_date, 'd MMM yyyy')}</strong></div>
+                <div className={s.detailRow}><span>Duration</span><strong>{duration} day{duration === 1 ? '' : 's'}</strong></div>
+                <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[detailsRow.status]}</strong></div>
+                <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[detailsRow.source]}</strong></div>
+                {isSick && detailsRow.lifecycle_status && (
+                  <div className={s.detailRow}><span>Lifecycle</span><strong>{SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus]}</strong></div>
+                )}
+                {isSick && meta.category && (
+                  <div className={s.detailRow}><span>Category</span><strong>{SICKNESS_CATEGORY_LABEL[meta.category]}</strong></div>
+                )}
+                {isSick && meta.return_to_work_date && (
+                  <div className={s.detailRow}><span>Return to work</span><strong>{fmtDate(meta.return_to_work_date, 'd MMM yyyy')}</strong></div>
+                )}
+              </div>
+
+              {isSick && (
+                <div className={s.indicatorRow}>
+                  {meta.self_certified && <span className={s.indicator}>Self-certified</span>}
+                  {meta.fit_note_received && <span className={s.indicator}>Fit note received</span>}
+                  {meta.work_related_injury && <span className={s.indicator}>Work-related injury</span>}
+                  {meta.return_to_work_interview_required && <span className={s.indicator}>RTW interview required</span>}
+                  {meta.paid_absence !== undefined && <span className={s.indicator}>{meta.paid_absence ? 'Paid' : 'Unpaid'}</span>}
+                </div>
+              )}
+
+              {isMgr && (
+                <OperationalImpactCard
+                  userId={detailsRow.user_id}
+                  startDate={detailsRow.start_date}
+                  endDate={detailsRow.end_date}
+                />
+              )}
+
+              {isSick && isMgr && (
+                <SspPanel
+                  startDate={detailsRow.start_date}
+                  endDate={detailsRow.end_date}
+                  history={history}
+                  paid={meta.paid_absence}
+                  employeeName={detailsRow.profiles?.full_name ?? undefined}
+                />
+              )}
+
+              <div className={s.detailBlock}>
+                <span className={s.reasonLabel}>Reason</span>
+                <p>{detailsRow.reason?.trim() || 'No additional details added.'}</p>
+              </div>
+              {detailsRow.manager_note && (
+                <div className={s.detailBlock}>
+                  <span className={s.reasonLabel}>Manager note</span>
+                  <p>{detailsRow.manager_note}</p>
+                </div>
+              )}
+              {detailsRow.review_notes && (
+                <div className={s.detailBlock}>
+                  <span className={s.reasonLabel}>Review note</span>
+                  <p>{detailsRow.review_notes}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
 
       <Modal
