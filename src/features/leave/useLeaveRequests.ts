@@ -197,9 +197,21 @@ export function useLeaveRequests() {
       .lte('shift_date', input.end_date);
     if (shiftError) throw shiftError;
 
+    const totalUncoveredMinutes = (conflictingShifts ?? []).reduce((acc: number, _s: any) => acc + 0, 0);
+    void totalUncoveredMinutes; // reserved for future enrichment
+
     await load();
     return { conflictingShiftCount: conflictingShifts?.length ?? 0 };
   }, [business, user, role, isMgr, load]);
+
+  const updateSickness = useCallback(async (id: string, patch: { sickness_meta?: SicknessMeta | null; lifecycle_status?: SicknessLifecycleStatus | null; }) => {
+    const { error } = await supabase
+      .from('leave_requests')
+      .update(patch as any)
+      .eq('id', id);
+    if (error) throw error;
+    await load();
+  }, [load]);
 
   const cancelOwn = useCallback(async (id: string) => {
     const { error } = await supabase
