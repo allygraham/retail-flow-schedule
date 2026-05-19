@@ -680,11 +680,13 @@ export default function Leave() {
                       <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
                       {isMgr && (
                         <td className={s.actions}>
-                          {canReviewPending && (
-                            <>
+                          {canReviewPending ? (
+                            <div className={s.actionsInner}>
                               <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); openReview(r, 'rejected'); }}>Decline</Button>
                               <Button size="sm" onClick={(event) => { event.stopPropagation(); openReview(r, 'approved'); }}>Approve</Button>
-                            </>
+                            </div>
+                          ) : (
+                            <span className={s.actionsEmpty} aria-hidden>—</span>
                           )}
                         </td>
                       )}
