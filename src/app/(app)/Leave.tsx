@@ -656,7 +656,108 @@ export default function Leave() {
                     : 'Submit a request to get started.'}
               action={hasActiveFilters ? <Button variant="outline" onClick={clearFilters}>Clear filters</Button> : undefined}
             />
-          ) : (() => {
+          ) : isCompact ? (() => {
+            return (
+              <div className={t.cardList}>
+                {filtered.map(r => {
+                  const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
+                  const meta = parseSicknessMeta(r.sickness_meta);
+                  const isSick = r.leave_type === 'sick';
+                  const linked = isSick && detectLinkedSickness(r);
+                  const lifecycle = r.lifecycle_status as SicknessLifecycleStatus | null;
+                  const days = daysBetween(r.start_date, r.end_date);
+                  const dateLabel = `${fmtDate(r.start_date, 'd MMM')} → ${fmtDate(r.end_date, 'd MMM yyyy')}`;
+                  const metaParts = [
+                    `${days} day${days === 1 ? '' : 's'}`,
+                    isMgr ? (r.primary_store?.name ?? null) : null,
+                    isSick && meta.category ? SICKNESS_CATEGORY_LABEL[meta.category] : null,
+                  ].filter(Boolean) as string[];
+                  const hasMenu = isMgr || (!isMgr && r.status === 'pending');
+
+                  return (
+                    <div
+                      key={r.id}
+                      className={t.memberCard}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openLeaveDetails(r)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLeaveDetails(r); } }}
+                      aria-label={`Open details for ${TYPE_LABEL[r.leave_type]} leave ${dateLabel}`}
+                    >
+                      {isMgr ? (
+                        <Avatar name={r.profiles?.full_name ?? undefined} size="sm" />
+                      ) : (
+                        <TypeIcon type={r.leave_type} />
+                      )}
+                      <div className={t.memberMain}>
+                        <span className={t.memberName}>
+                          {isMgr ? (r.profiles?.full_name ?? 'Employee') : TYPE_LABEL[r.leave_type]}
+                        </span>
+                        <span className={t.memberMeta}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{dateLabel}</span>
+                          {metaParts.map((part, i) => (
+                            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <span className={t.memberDot} />
+                              {part}
+                            </span>
+                          ))}
+                        </span>
+                        <div className={t.memberBadges}>
+                          <Badge tone={TYPE_TONE[r.leave_type]}>
+                            <TypeIcon type={r.leave_type} />
+                            {TYPE_LABEL[r.leave_type]}
+                          </Badge>
+                          {isSick ? (
+                            <Badge tone={lifecycle ? SICKNESS_LIFECYCLE_TONE[lifecycle] : 'info'} dot>
+                              {lifecycle ? SICKNESS_LIFECYCLE_LABEL[lifecycle] : 'Recorded absence'}
+                            </Badge>
+                          ) : (
+                            <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
+                          )}
+                          {linked && (
+                            <span className={s.linkedHint}>
+                              <AlertCircle size={12} /> Linked
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {hasMenu && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className={t.menuTrigger}
+                                aria-label="Open actions"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className={t.menuContent}>
+                              {canReviewPending && (
+                                <>
+                                  <DropdownMenuItem onSelect={() => openReview(r, 'approved')}>Approve</DropdownMenuItem>
+                                  <DropdownMenuItem className={t.menuDanger} onSelect={() => openReview(r, 'rejected')}>Decline</DropdownMenuItem>
+                                </>
+                              )}
+                              {!isMgr && r.status === 'pending' && (
+                                <DropdownMenuItem className={t.menuDanger} onSelect={() => cancel(r.id)}>Withdraw request</DropdownMenuItem>
+                              )}
+                              {r.manager_note && (
+                                <DropdownMenuItem onSelect={() => openNote('Manager note', r.manager_note ?? '')}>View manager note</DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onSelect={() => openLeaveDetails(r)}>View details</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })() : (() => {
             const hasAnyActions = isMgr && filtered.some(r => r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id)));
             return (
             <div className={s.tableWrap}><table className={s.table}>
@@ -806,6 +907,7 @@ export default function Leave() {
             </table></div>
             );
           })()}
+
         </Card>
       )}
 
