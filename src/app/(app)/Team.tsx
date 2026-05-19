@@ -714,7 +714,7 @@ export default function Team() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </Card>
 
