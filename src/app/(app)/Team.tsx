@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, SlidersHorizontal, X, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Card } from '@/components/common/Card';
@@ -16,6 +16,18 @@ import { inviteEmployeeSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 import t from './Team.module.scss';
+
+function useIsCompact() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px)');
+    const update = () => setCompact(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+  return compact;
+}
 
 type AccountStatus = 'active' | 'invited' | 'expired' | 'revoked' | 'disabled';
 
