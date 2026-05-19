@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useMemo, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
@@ -31,10 +31,23 @@ import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
-import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen, MoreHorizontal } from 'lucide-react';
+import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen, MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
+import t from './Team.module.scss';
+
+function useIsCompact() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px)');
+    const update = () => setCompact(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+  return compact;
+}
 
 type Filter = 'pending' | 'approved' | 'declined' | 'sickness' | 'calendar';
 type FilterChip = { key: keyof LeaveFilterState; label: string };
@@ -117,6 +130,8 @@ export default function Leave() {
   const [filter, setFilter] = useState<Filter>(isMgr ? 'pending' : 'approved');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const isCompact = useIsCompact();
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const storeOptions = useMemo(
     () => Array.from(new Set(
@@ -439,100 +454,177 @@ export default function Leave() {
         ))}
       </div>
 
-      {filter !== 'calendar' && (
-        <Card>
-          <div className={s.filterBar}>
-            <div className={s.filterFooter}>
-              <div className={s.filterSummary}>
-                {hasActiveFilters ? (
-                  activeFilterChips.map((chip) => (
-                    <button key={chip.label} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
-                      <span>{chip.label}</span>
-                      <span aria-hidden="true">×</span>
-                    </button>
-                  ))
-                ) : (
-                  <span className={s.filterHint}>No filters applied</span>
-                )}
-              </div>
-              <div className={s.filterActions}>
-                <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
-                  {filtersOpen ? 'Hide filters' : 'Show filters'}
-                </Button>
-                <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
-              </div>
-            </div>
+      {filter !== 'calendar' && (() => {
+        const filterFields = (
+          <>
+            <Field label="Status">
+              <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Declined</option>
+              </Select>
+            </Field>
 
-            {filtersOpen && (
-              <div className={s.filterGrid}>
-                <Field label="Status">
-                  <Select value={filters.status} onChange={(e) => setLeaveFilter('status', e.target.value as LeaveFilterState['status'])}>
-                    <option value="">All statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Declined</option>
-                  </Select>
-                </Field>
+            <Field label="Leave type">
+              <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
+                <option value="">All leave types</option>
+                <option value="annual">Annual leave</option>
+                <option value="sick">Sick leave</option>
+                <option value="unpaid">Unpaid leave</option>
+              </Select>
+            </Field>
 
-                <Field label="Leave type">
-                  <Select value={filters.leaveType} onChange={(e) => setLeaveFilter('leaveType', e.target.value as LeaveFilterState['leaveType'])}>
-                    <option value="">All leave types</option>
-                    <option value="annual">Annual leave</option>
-                    <option value="sick">Sick leave</option>
-                    <option value="unpaid">Unpaid leave</option>
-                  </Select>
-                </Field>
+            <Field label="From date">
+              <DatePicker
+                value={parseISODate(filters.fromDate)}
+                onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
+                placeholder="Any start date"
+              />
+            </Field>
 
-                <Field label="From date">
-                  <DatePicker
-                    value={parseISODate(filters.fromDate)}
-                    onChange={(date) => setLeaveFilter('fromDate', toISODate(date) || '')}
-                    placeholder="Any start date"
-                  />
-                </Field>
+            <Field label="To date">
+              <DatePicker
+                value={parseISODate(filters.toDate)}
+                onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
+                placeholder="Any end date"
+              />
+            </Field>
 
-                <Field label="To date">
-                  <DatePicker
-                    value={parseISODate(filters.toDate)}
-                    onChange={(date) => setLeaveFilter('toDate', toISODate(date) || '')}
-                    placeholder="Any end date"
-                  />
-                </Field>
+            <Field label="Source">
+              <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
+                <option value="">All sources</option>
+                <option value="employee_request">Employee requested</option>
+                <option value="manager_created">Manager created</option>
+                <option value="owner_created">Owner created</option>
+              </Select>
+            </Field>
 
-                <Field label="Source">
-                  <Select value={filters.source} onChange={(e) => setLeaveFilter('source', e.target.value as LeaveFilterState['source'])}>
-                    <option value="">All sources</option>
-                    <option value="employee_request">Employee requested</option>
-                    <option value="manager_created">Manager created</option>
-                    <option value="owner_created">Owner created</option>
-                  </Select>
-                </Field>
+            {isMgr && (
+              <Field label="Employee name">
+                <Input
+                  value={filters.employeeQuery}
+                  onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
+                  placeholder="Search employee"
+                />
+              </Field>
+            )}
 
-                {isMgr && (
-                  <Field label="Employee name">
+            {isMgr && (
+              <Field label="Store / location">
+                <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
+                  <option value="">All stores</option>
+                  {storeOptions.map((storeName) => (
+                    <option key={storeName} value={storeName}>{storeName}</option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </>
+        );
+
+        const activeNonSearchCount = activeFilterChips.filter(c => c.key !== 'employeeQuery').length;
+
+        return (
+          <Card>
+            {isCompact ? (
+              <div className={s.filterBar}>
+                <div className={t.mobileFilterBar}>
+                  {isMgr ? (
                     <Input
+                      className={t.searchInline}
+                      placeholder="Search employee…"
                       value={filters.employeeQuery}
                       onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
-                      placeholder="Search employee"
                     />
-                  </Field>
+                  ) : (
+                    <span className={t.searchInline} />
+                  )}
+                  <button
+                    type="button"
+                    className={t.filterBtn}
+                    onClick={() => setFilterSheetOpen(true)}
+                    aria-label="Open filters"
+                  >
+                    <SlidersHorizontal size={15} />
+                    Filters
+                    {activeNonSearchCount > 0 && (
+                      <span className={t.filterBtnCount}>{activeNonSearchCount}</span>
+                    )}
+                  </button>
+                </div>
+                {hasActiveFilters && (
+                  <div className={t.chipsRow}>
+                    {activeFilterChips.map((chip) => (
+                      <span key={chip.label} className={t.chip}>
+                        {chip.label}
+                        <button
+                          type="button"
+                          className={t.chipX}
+                          onClick={() => clearFilterChip(chip.key)}
+                          aria-label={`Remove ${chip.label}`}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                    <button type="button" className={t.clearAll} onClick={clearFilters}>
+                      Clear all
+                    </button>
+                  </div>
                 )}
+              </div>
+            ) : (
+              <div className={s.filterBar}>
+                <div className={s.filterFooter}>
+                  <div className={s.filterSummary}>
+                    {hasActiveFilters ? (
+                      activeFilterChips.map((chip) => (
+                        <button key={chip.label} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
+                          <span>{chip.label}</span>
+                          <span aria-hidden="true">×</span>
+                        </button>
+                      ))
+                    ) : (
+                      <span className={s.filterHint}>No filters applied</span>
+                    )}
+                  </div>
+                  <div className={s.filterActions}>
+                    <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
+                      {filtersOpen ? 'Hide filters' : 'Show filters'}
+                    </Button>
+                    <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+                  </div>
+                </div>
 
-                {isMgr && (
-                  <Field label="Store / location">
-                    <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
-                      <option value="">All stores</option>
-                      {storeOptions.map((storeName) => (
-                        <option key={storeName} value={storeName}>{storeName}</option>
-                      ))}
-                    </Select>
-                  </Field>
+                {filtersOpen && (
+                  <div className={s.filterGrid}>
+                    {filterFields}
+                  </div>
                 )}
               </div>
             )}
-          </div>
-        </Card>
-      )}
+
+            <Modal
+              open={filterSheetOpen}
+              onClose={() => setFilterSheetOpen(false)}
+              title="Filters"
+              bottomSheet
+              footer={
+                <>
+                  <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Reset</Button>
+                  <Button onClick={() => setFilterSheetOpen(false)}>Apply</Button>
+                </>
+              }
+            >
+              <div className={t.sheetForm}>
+                {filterFields}
+              </div>
+            </Modal>
+          </Card>
+        );
+      })()}
+
 
       {filter === 'calendar' ? (
         <Card padded={false}>
