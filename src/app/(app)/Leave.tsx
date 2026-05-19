@@ -808,7 +808,6 @@ export default function Leave() {
             <CollapsibleSection
               title="Sickness details"
               icon={<Stethoscope size={14} />}
-              defaultOpen
               meta={SICKNESS_CATEGORY_LABEL[(mgmtForm.sickness_meta?.category ?? 'cold_flu') as keyof typeof SICKNESS_CATEGORY_LABEL]}
             >
               <div className={s.form}>
