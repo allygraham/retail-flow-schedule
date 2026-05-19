@@ -16,6 +16,17 @@
 .form { display: flex; flex-direction: column; gap: $sp-4; align-items: flex-start;
   > button { margin-top: $sp-2; }
 }
+.formToggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: $sp-3 $sp-4;
+  background: var(--color-surface-muted, $brand-50);
+  border: 1px solid $border; border-radius: $r-sm;
+  font-family: inherit; font-weight: $fw-semibold; font-size: $fs-sm;
+  color: inherit; cursor: pointer;
+  &:hover { background: $brand-50; }
+  svg { transition: transform 0.2s ease; }
+  .chevOpen { transform: rotate(180deg); }
+}
 .requestForm { display: flex; flex-direction: column; gap: $sp-4; }
 .requestError { background: hsl(0 84% 92%); color: hsl(0 63% 35%); padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
 .empty { color: $text-muted; padding: $sp-5; text-align: center; }

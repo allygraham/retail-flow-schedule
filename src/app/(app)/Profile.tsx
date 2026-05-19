@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests } from '@/features/leave/useLeaveRequests';
@@ -27,6 +28,16 @@ export default function Profile() {
   const [shifts, setShifts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [requestModal, setRequestModal] = useState(false);
+  const [collapsible, setCollapsible] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 899px)');
+    const apply = () => setCollapsible(mql.matches);
+    apply();
+    mql.addEventListener('change', apply);
+    return () => mql.removeEventListener('change', apply);
+  }, []);
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestForm, setRequestForm] = useState({
@@ -101,11 +112,24 @@ export default function Profile() {
               <div className={s.role}><Badge tone="brand" dot>{role ?? '—'}</Badge> at {business?.name}</div>
             </div>
           </div>
-          <div className={s.form}>
-            <Field label="Full name"><Input value={name} onChange={e => setName(e.target.value)} /></Field>
-            <Field label="Phone"><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Optional" /></Field>
-            <Button onClick={save} loading={saving}>Save changes</Button>
-          </div>
+          {collapsible && (
+            <button
+              type="button"
+              className={s.formToggle}
+              aria-expanded={formOpen}
+              onClick={() => setFormOpen(o => !o)}
+            >
+              <span>Edit details</span>
+              <ChevronDown size={16} className={formOpen ? s.chevOpen : ''} />
+            </button>
+          )}
+          {(!collapsible || formOpen) && (
+            <div className={s.form}>
+              <Field label="Full name"><Input value={name} onChange={e => setName(e.target.value)} /></Field>
+              <Field label="Phone"><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Optional" /></Field>
+              <Button onClick={save} loading={saving}>Save changes</Button>
+            </div>
+          )}
         </Card>
         <div className={s.col}>
           <LeaveBalanceCard
