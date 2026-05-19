@@ -567,7 +567,7 @@ export default function Leave() {
           ) : (() => {
             const hasAnyActions = isMgr && filtered.some(r => r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id)));
             return (
-            <table className={s.table}>
+            <div className={s.tableWrap}><table className={s.table}>
               <thead>
                 <tr>
                   {isMgr && <th>Employee</th>}
@@ -711,7 +711,7 @@ export default function Leave() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
             );
           })()}
         </Card>

@@ -582,7 +582,7 @@ export default function Team() {
               : 'Try clearing your filters or searching for a different term.'}
           />
         ) : (
-          <table className={s.table}>
+          <div className={s.tableWrap}><table className={s.table}>
             <thead>
               <tr>
                 <th>Name</th>
@@ -714,7 +714,7 @@ export default function Team() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </Card>
 

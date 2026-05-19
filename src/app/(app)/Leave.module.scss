@@ -72,9 +72,16 @@
 
 .loading { padding: $sp-6; text-align: center; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; }
 
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 calc(-1 * #{$sp-2});
+  padding: 0 $sp-2;
+}
 .table {
-  width: 100%; border-collapse: separate; border-spacing: 0; font-size: $fs-sm;
-  th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid var(--color-border, $border); vertical-align: middle; }
+  width: 100%; min-width: 720px; border-collapse: separate; border-spacing: 0; font-size: $fs-sm;
+  th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid var(--color-border, $border); vertical-align: middle; white-space: nowrap; }
   th {
     font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold;
     background: var(--color-surface-muted, $ink-50);
@@ -82,6 +89,11 @@
   tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--color-surface-muted, #{$ink-50}) 78%, transparent); }
   tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: var(--color-row-hover, rgba($brand-50, 0.5)); }
+}
+@media (max-width: 720px) {
+  .table {
+    th, td { padding: $sp-2 $sp-3; }
+  }
 }
 .clickableRow {
   cursor: pointer;
