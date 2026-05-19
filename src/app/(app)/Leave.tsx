@@ -130,6 +130,8 @@ export default function Leave() {
   const [filter, setFilter] = useState<Filter>(isMgr ? 'pending' : 'approved');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const isCompact = useIsCompact();
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const storeOptions = useMemo(
     () => Array.from(new Set(
