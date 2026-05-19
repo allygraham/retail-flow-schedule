@@ -15,7 +15,7 @@ interface Props {
 export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', subtitle, compact, action }: Props) {
   const sub = subtitle ?? (balance ? `${balance.year} entitlement` : undefined);
   return (
-    <Card title={title} subtitle={sub} action={action}>
+    <Card title={title} subtitle={sub}>
       {loading || !balance ? (
         <div className={s.loading}>Loading…</div>
       ) : (
@@ -30,6 +30,7 @@ export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', sub
              <span><i className={s.dotTaken} /> {balance.taken} taken</span>
              {balance.pending > 0 && <span><i className={s.dotPending} /> {balance.pending} pending</span>}
           </div>
+          {action && <div className={s.actionRow}>{action}</div>}
         </div>
       )}
     </Card>
