@@ -620,22 +620,25 @@ export default function Leave() {
                       </td>
                       <td>
                         <div className={s.statusStack}>
-                          <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
-                          {isSick && lifecycle && (
-                            <Badge tone={SICKNESS_LIFECYCLE_TONE[lifecycle]}>{SICKNESS_LIFECYCLE_LABEL[lifecycle]}</Badge>
+                          {isSick ? (
+                            <Badge tone={lifecycle ? SICKNESS_LIFECYCLE_TONE[lifecycle] : 'info'} dot>
+                              {lifecycle ? SICKNESS_LIFECYCLE_LABEL[lifecycle] : 'Recorded absence'}
+                            </Badge>
+                          ) : (
+                            <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
                           )}
                           {isSick && (
                             <div className={s.indicatorRow}>
-                              {meta.self_certified && <span className={s.indicator}>Self-certified</span>}
-                              {meta.fit_note_received && <span className={s.indicator}>Fit note ✓</span>}
-                              {meta.return_to_work_interview_required && <span className={s.indicator}>RTW interview</span>}
+                              {meta.self_certified && <span className={s.indicator}>Self-cert</span>}
+                              {meta.fit_note_received && <span className={s.indicator}>Fit note</span>}
+                              {meta.return_to_work_interview_required && <span className={s.indicator}>RTW</span>}
                               {meta.paid_absence === true && <span className={s.indicator}>Paid</span>}
                               {meta.paid_absence === false && <span className={s.indicator}>Unpaid</span>}
                             </div>
                           )}
                           {linked && (
                             <span className={s.linkedHint}>
-                              <AlertCircle size={12} /> Linked to a recent sickness period
+                              <AlertCircle size={12} /> Linked to recent sickness
                             </span>
                           )}
                           {!isMgr && r.status === 'pending' && (
