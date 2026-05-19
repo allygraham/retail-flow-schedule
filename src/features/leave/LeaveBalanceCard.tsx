@@ -29,7 +29,6 @@ export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', sub
           <div className={s.legend}>
              <span><i className={s.dotTaken} /> {balance.taken} taken</span>
              {balance.pending > 0 && <span><i className={s.dotPending} /> {balance.pending} pending</span>}
-            <span className={s.legendMuted}>​</span>
           </div>
         </div>
       )}
