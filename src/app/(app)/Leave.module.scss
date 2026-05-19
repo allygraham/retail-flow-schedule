@@ -37,14 +37,21 @@
 }
 
 .tabs {
-  display: inline-flex;
+  display: flex;
   gap: 2px;
   background: var(--color-surface-muted, #{$ink-100});
   padding: 4px;
   border-radius: $r-md;
   align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 .tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
   background: transparent;
   border: none;
   cursor: pointer;
