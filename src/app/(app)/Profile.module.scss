@@ -47,9 +47,8 @@
     > button { margin-top: 0; align-self: stretch; }
   }
 
-  /* Tighten Card chrome via global selectors on mobile */
-  :global(.card-head) { padding: $sp-3 $sp-4; }
-  :global(.card-body) { padding: $sp-4; }
+
+
 
   .row { padding: $sp-3 $sp-4; gap: $sp-3; }
   .date { width: 40px; padding: 3px; }
