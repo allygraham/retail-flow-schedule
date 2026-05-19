@@ -12,7 +12,7 @@
 .col { display: flex; flex-direction: column; gap: $sp-4; }
 .who { display: flex; align-items: center; gap: $sp-3; margin-bottom: $sp-5; }
 .name { font-family: $font-display; font-weight: $fw-bold; font-size: $fs-xl; }
-.role { color: $text-muted; font-size: $fs-sm; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.role { color: $text-muted; font-size: $fs-sm; display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .form { display: flex; flex-direction: column; gap: $sp-4; align-items: flex-start;
   > button { margin-top: $sp-2; }
 }
@@ -25,5 +25,33 @@
 .dDay { font-size: 10px; font-weight: $fw-bold; color: $brand-700; text-transform: uppercase; letter-spacing: 0.05em; }
 .dNum { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-lg; color: $brand-700; line-height: 1; }
 .rowMain { flex: 1; min-width: 0; }
-.rowName { font-weight: $fw-semibold; font-size: $fs-sm; }
+.rowName { font-weight: $fw-semibold; font-size: $fs-sm; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .rowMeta { font-size: $fs-xs; color: $text-muted; @include truncate; }
+
+/* --- Mobile/tablet refinement --- */
+@media (max-width: 899px) {
+  .page { gap: $sp-3; }
+  .grid { gap: $sp-3; }
+  .col { gap: $sp-3; }
+
+  .who {
+    gap: $sp-3;
+    margin-bottom: $sp-3;
+    padding-bottom: $sp-3;
+    border-bottom: 1px solid var(--color-border, $border);
+  }
+  .name { font-size: $fs-lg; }
+  .role { font-size: $fs-xs; margin-top: 2px; }
+
+  .form { gap: $sp-3;
+    > button { margin-top: 0; align-self: stretch; }
+  }
+
+  /* Tighten Card chrome via global selectors on mobile */
+  :global(.card-head) { padding: $sp-3 $sp-4; }
+  :global(.card-body) { padding: $sp-4; }
+
+  .row { padding: $sp-3 $sp-4; gap: $sp-3; }
+  .date { width: 40px; padding: 3px; }
+  .dNum { font-size: $fs-md; }
+}
