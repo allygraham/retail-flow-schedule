@@ -31,7 +31,8 @@ import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
-import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen } from 'lucide-react';
+import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
@@ -681,9 +682,23 @@ export default function Leave() {
                       {isMgr && (
                         <td className={s.actions}>
                           {canReviewPending ? (
-                            <div className={s.actionsInner}>
-                              <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); openReview(r, 'rejected'); }}>Decline</Button>
-                              <Button size="sm" onClick={(event) => { event.stopPropagation(); openReview(r, 'approved'); }}>Approve</Button>
+                            <div className={s.actionsInner} onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className={s.menuTrigger}
+                                    aria-label="Open actions"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreHorizontal size={16} />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className={s.menuContent}>
+                                  <DropdownMenuItem onSelect={() => openReview(r, 'approved')}>Approve</DropdownMenuItem>
+                                  <DropdownMenuItem className={s.menuDanger} onSelect={() => openReview(r, 'rejected')}>Decline</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           ) : (
                             <span className={s.actionsEmpty} aria-hidden>—</span>
