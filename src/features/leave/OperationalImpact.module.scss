@@ -1,0 +1,24 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.card {
+  padding: $sp-3 $sp-4;
+  border-radius: $r-md;
+  background: var(--color-surface-muted, $ink-50);
+  border: 1px solid var(--color-border, $border);
+  @include col; gap: $sp-2;
+}
+.eyebrow {
+  font-size: $fs-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary, $text-muted);
+  font-weight: $fw-semibold;
+}
+.list {
+  margin: 0; padding-left: $sp-4;
+  color: var(--color-text-primary, $text);
+  font-size: $fs-sm;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.line { font-size: $fs-sm; color: var(--color-text-secondary, $text-muted); }
