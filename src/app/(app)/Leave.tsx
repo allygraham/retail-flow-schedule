@@ -564,7 +564,9 @@ export default function Leave() {
                     : 'Submit a request to get started.'}
               action={hasActiveFilters ? <Button variant="outline" onClick={clearFilters}>Clear filters</Button> : undefined}
             />
-          ) : (
+          ) : (() => {
+            const hasAnyActions = isMgr && filtered.some(r => r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id)));
+            return (
             <table className={s.table}>
               <thead>
                 <tr>
@@ -575,7 +577,7 @@ export default function Leave() {
                   <th>Status</th>
                   <th>Operational impact</th>
                   <th>Submitted</th>
-                  {isMgr && <th aria-label="Actions" />}
+                  {hasAnyActions && <th aria-label="Actions" />}
                 </tr>
               </thead>
               <tbody>
