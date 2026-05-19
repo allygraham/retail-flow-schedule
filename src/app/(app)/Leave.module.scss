@@ -14,8 +14,10 @@
   height: 60px;
 }
 
-@media (min-width: 920px) {
-  height: auto;
+@media (min-width: 992px) {
+  .header {
+    height: auto;
+  }
 }
 .eye {
   @include eyebrow;
