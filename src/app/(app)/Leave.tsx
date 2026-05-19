@@ -75,7 +75,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 }
 
 export default function Leave() {
-  const { user, role } = useAuth();
+  const { user, role, business } = useAuth();
   const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
   const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
