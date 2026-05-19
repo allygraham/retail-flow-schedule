@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { LeaveRequest, LeaveStatus } from '@/types/domain';
+import type { SicknessMeta, SicknessLifecycleStatus } from './sickness';
 
 export interface LeaveRequestRow extends LeaveRequest {
   profiles?: { full_name: string | null } | null;
   primary_store?: { name: string | null } | null;
+  sickness_meta?: SicknessMeta | null;
+  lifecycle_status?: SicknessLifecycleStatus | null;
 }
 
 interface ReviewInput {
@@ -22,6 +25,8 @@ interface ManagementLeaveInput {
   reason?: string | null;
   manager_note?: string | null;
   status?: 'approved';
+  sickness_meta?: SicknessMeta | null;
+  lifecycle_status?: SicknessLifecycleStatus | string | null;
 }
 
 /**
@@ -178,6 +183,8 @@ export function useLeaveRequests() {
       reviewed_by: user.id,
       reviewed_at: approvedAt,
       review_notes: input.manager_note ?? null,
+      sickness_meta: input.leave_type === 'sick' ? (input.sickness_meta ?? null) : null,
+      lifecycle_status: input.leave_type === 'sick' ? (input.lifecycle_status ?? 'recorded_absence') : null,
     } as any);
     if (error) throw error;
 
@@ -190,9 +197,21 @@ export function useLeaveRequests() {
       .lte('shift_date', input.end_date);
     if (shiftError) throw shiftError;
 
+    const totalUncoveredMinutes = (conflictingShifts ?? []).reduce((acc: number, _s: any) => acc + 0, 0);
+    void totalUncoveredMinutes; // reserved for future enrichment
+
     await load();
     return { conflictingShiftCount: conflictingShifts?.length ?? 0 };
   }, [business, user, role, isMgr, load]);
+
+  const updateSickness = useCallback(async (id: string, patch: { sickness_meta?: SicknessMeta | null; lifecycle_status?: SicknessLifecycleStatus | null; }) => {
+    const { error } = await supabase
+      .from('leave_requests')
+      .update(patch as any)
+      .eq('id', id);
+    if (error) throw error;
+    await load();
+  }, [load]);
 
   const cancelOwn = useCallback(async (id: string) => {
     const { error } = await supabase
@@ -232,5 +251,5 @@ export function useLeaveRequests() {
 
   const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests]);
 
-  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review };
+  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review, updateSickness };
 }

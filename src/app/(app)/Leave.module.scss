@@ -210,3 +210,53 @@
     strong { text-align: left; }
   }
 }
+
+.typeCell { display: inline-flex; align-items: center; gap: $sp-2; flex-wrap: wrap; }
+.typeIcon { vertical-align: -2px; margin-right: 4px; }
+.indicatorRow { display: flex; gap: 4px; flex-wrap: wrap; }
+.indicator {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: $r-sm;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
+  color: var(--color-text-secondary, $text-muted);
+  font-weight: $fw-semibold;
+}
+.impactCell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
+.linkedHint { display: inline-flex; align-items: center; gap: 4px; font-size: $fs-xs; color: var(--color-warning-text, #92400e); }
+.hintText { display: inline-flex; align-items: center; gap: 4px; font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); margin: 0; }
+
+.sicknessGroup {
+  @include col; gap: $sp-3;
+  padding: $sp-3;
+  border-radius: $r-md;
+  background: var(--color-surface-muted, $ink-50);
+  border: 1px solid var(--color-border, $border);
+}
+.sicknessHead {
+  display: inline-flex; align-items: center; gap: $sp-2;
+  font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em;
+  font-weight: $fw-semibold; color: var(--color-text-secondary, $text-muted);
+}
+.toggleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: $sp-2; }
+.toggle {
+  display: inline-flex; align-items: center; gap: $sp-2;
+  font-size: $fs-sm; color: var(--color-text-primary, $text); cursor: pointer;
+  input { position: absolute; opacity: 0; pointer-events: none; }
+  input:checked + .toggleTrack { background: var(--color-primary, $brand-500); border-color: var(--color-primary, $brand-500); }
+  input:checked + .toggleTrack .toggleKnob { transform: translateX(16px); }
+}
+.toggleTrack {
+  position: relative; width: 36px; height: 20px; border-radius: 999px;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
+  transition: background $dur-fast $ease, border-color $dur-fast $ease;
+}
+.toggleKnob {
+  position: absolute; top: 1px; left: 1px;
+  width: 16px; height: 16px; border-radius: 999px;
+  background: var(--color-surface, #fff);
+  box-shadow: $shadow-sm;
+  transition: transform $dur-fast $ease;
+}
+.toggleLabel { user-select: none; }

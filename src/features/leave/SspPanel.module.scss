@@ -1,0 +1,27 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.panel {
+  padding: $sp-4;
+  border-radius: $r-md;
+  background: var(--color-surface-muted, $ink-50);
+  border: 1px dashed var(--color-border, $border);
+  @include col; gap: $sp-3;
+}
+.head { display: flex; align-items: center; justify-content: space-between; gap: $sp-2; flex-wrap: wrap; }
+.eyebrow {
+  font-size: $fs-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary, $text-muted);
+  font-weight: $fw-semibold;
+}
+.note { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: $sp-3; margin: 0;
+  dt { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold; }
+  dd { margin: 4px 0 0; font-size: $fs-md; color: var(--color-text-primary, $text); font-weight: $fw-semibold; }
+}
+.summary { margin: 0; font-size: $fs-sm; color: var(--color-text-secondary, $text-soft); }
+.actions { display: flex; gap: $sp-2; flex-wrap: wrap; }
