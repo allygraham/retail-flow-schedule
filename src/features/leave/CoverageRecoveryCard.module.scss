@@ -1,0 +1,71 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.card {
+  padding: $sp-3 $sp-4;
+  border-radius: $r-md;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
+  @include col; gap: $sp-3;
+}
+
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: $sp-3; flex-wrap: wrap;
+}
+.headerActions { display: flex; gap: $sp-2; flex-wrap: wrap; }
+.eyebrow {
+  font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold;
+}
+.heading {
+  margin-top: 4px;
+  font-size: $fs-md; font-weight: $fw-semibold; color: var(--color-text-primary, $text);
+}
+.line { font-size: $fs-sm; color: var(--color-text-secondary, $text-muted); }
+
+.shiftList { list-style: none; margin: 0; padding: 0; @include col; gap: $sp-2; }
+
+.shift {
+  border: 1px solid var(--color-border, $border);
+  border-radius: $r-sm;
+  background: var(--color-surface-muted, $ink-50);
+}
+.shiftHead {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: $sp-3;
+  padding: $sp-2 $sp-3;
+  background: transparent; border: none; cursor: pointer; text-align: left;
+  font-size: $fs-sm; color: var(--color-text-primary, $text);
+
+  &:hover { background: color-mix(in srgb, var(--color-surface, #{$surface}) 60%, transparent); }
+}
+.shiftMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.muted { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; }
+.tag {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: $r-sm;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
+  color: var(--color-text-secondary, $text-muted);
+  font-weight: $fw-semibold;
+}
+.cta {
+  font-size: $fs-xs;
+  color: var(--color-primary, $brand-600);
+  font-weight: $fw-semibold;
+  white-space: nowrap;
+}
+
+.suggestions {
+  padding: 0 $sp-3 $sp-3;
+}
+.candidates { list-style: none; margin: 0; padding: 0; @include col; gap: $sp-2; }
+.candidate {
+  display: flex; align-items: center; gap: $sp-2;
+  padding: $sp-2 $sp-3;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
+  border-radius: $r-sm;
+}
+.candidateBody { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.candName { font-size: $fs-sm; font-weight: $fw-semibold; color: var(--color-text-primary, $text); }

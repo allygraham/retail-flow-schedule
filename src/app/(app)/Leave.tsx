@@ -18,6 +18,7 @@ import {
 import { OperationalImpactCard } from '@/features/leave/OperationalImpactCard';
 import { SspPanel } from '@/features/leave/SspPanel';
 import { AbsenceCalendar } from '@/features/leave/AbsenceCalendar';
+import { CoverageRecoveryCard } from '@/features/leave/CoverageRecoveryCard';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -26,10 +27,11 @@ import { Modal } from '@/components/common/Modal';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
+import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
-import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope } from 'lucide-react';
+import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
@@ -73,7 +75,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 }
 
 export default function Leave() {
-  const { user, role } = useAuth();
+  const { user, role, business } = useAuth();
   const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
   const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
@@ -618,22 +620,25 @@ export default function Leave() {
                       </td>
                       <td>
                         <div className={s.statusStack}>
-                          <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
-                          {isSick && lifecycle && (
-                            <Badge tone={SICKNESS_LIFECYCLE_TONE[lifecycle]}>{SICKNESS_LIFECYCLE_LABEL[lifecycle]}</Badge>
+                          {isSick ? (
+                            <Badge tone={lifecycle ? SICKNESS_LIFECYCLE_TONE[lifecycle] : 'info'} dot>
+                              {lifecycle ? SICKNESS_LIFECYCLE_LABEL[lifecycle] : 'Recorded absence'}
+                            </Badge>
+                          ) : (
+                            <Badge tone={STATUS_TONE[r.status]} dot>{STATUS_LABEL[r.status]}</Badge>
                           )}
                           {isSick && (
                             <div className={s.indicatorRow}>
-                              {meta.self_certified && <span className={s.indicator}>Self-certified</span>}
-                              {meta.fit_note_received && <span className={s.indicator}>Fit note ✓</span>}
-                              {meta.return_to_work_interview_required && <span className={s.indicator}>RTW interview</span>}
+                              {meta.self_certified && <span className={s.indicator}>Self-cert</span>}
+                              {meta.fit_note_received && <span className={s.indicator}>Fit note</span>}
+                              {meta.return_to_work_interview_required && <span className={s.indicator}>RTW</span>}
                               {meta.paid_absence === true && <span className={s.indicator}>Paid</span>}
                               {meta.paid_absence === false && <span className={s.indicator}>Unpaid</span>}
                             </div>
                           )}
                           {linked && (
                             <span className={s.linkedHint}>
-                              <AlertCircle size={12} /> Linked to a recent sickness period
+                              <AlertCircle size={12} /> Linked to recent sickness
                             </span>
                           )}
                           {!isMgr && r.status === 'pending' && (
@@ -769,9 +774,22 @@ export default function Leave() {
                 <option value="unpaid">Unpaid leave</option>
               </Select>
             </Field>
-            <Field label="Status">
-              <Input value="Approved / recorded" disabled readOnly />
-            </Field>
+            {isSicknessForm ? (
+              <Field label="Sickness status">
+                <Select
+                  value={mgmtForm.lifecycle_status}
+                  onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value })}
+                >
+                  {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </Select>
+              </Field>
+            ) : (
+              <Field label="Status">
+                <Input value="Approved / recorded" disabled readOnly />
+              </Field>
+            )}
           </div>
           <Field label="Dates">
             <DatePicker
@@ -787,98 +805,120 @@ export default function Leave() {
           </Field>
 
           {isSicknessForm && (
-            <div className={s.sicknessGroup}>
-              <div className={s.sicknessHead}>
-                <Stethoscope size={14} />
-                <span>Sickness details</span>
+            <CollapsibleSection
+              title="Sickness details"
+              icon={<Stethoscope size={14} />}
+              defaultOpen
+              meta={SICKNESS_CATEGORY_LABEL[(mgmtForm.sickness_meta?.category ?? 'cold_flu') as keyof typeof SICKNESS_CATEGORY_LABEL]}
+            >
+              <div className={s.form}>
+                <div className={s.row2}>
+                  <Field label="Category">
+                    <Select
+                      value={mgmtForm.sickness_meta?.category ?? 'cold_flu'}
+                      onChange={e => updateMgmtMeta({ category: e.target.value as any })}
+                    >
+                      {SICKNESS_CATEGORY_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Return-to-work date" hint="Optional">
+                    <DatePicker
+                      value={parseISODate(mgmtForm.sickness_meta?.return_to_work_date ?? '')}
+                      onChange={(d) => updateMgmtMeta({ return_to_work_date: toISODate(d) ?? '' })}
+                      placeholder="Expected back"
+                    />
+                  </Field>
+                </div>
+
+                <div className={s.toggleGroup}>
+                  <div className={s.toggleGroupLabel}><FileText size={12} /> Documentation</div>
+                  <div className={s.toggleGrid}>
+                    <Toggle checked={!!mgmtForm.sickness_meta?.self_certified} onChange={(v) => updateMgmtMeta({ self_certified: v })} label="Self-certified" />
+                    <Toggle checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={(v) => updateMgmtMeta({ fit_note_received: v })} label="Fit note received" />
+                  </div>
+                </div>
+                <div className={s.toggleGroup}>
+                  <div className={s.toggleGroupLabel}><Briefcase size={12} /> Employment</div>
+                  <div className={s.toggleGrid}>
+                    <Toggle checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={(v) => updateMgmtMeta({ paid_absence: v })} label="Paid absence" />
+                    <Toggle checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={(v) => updateMgmtMeta({ work_related_injury: v })} label="Work-related injury" />
+                  </div>
+                </div>
+                <div className={s.toggleGroup}>
+                  <div className={s.toggleGroupLabel}><Repeat2 size={12} /> Follow-up</div>
+                  <div className={s.toggleGrid}>
+                    <Toggle checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={(v) => updateMgmtMeta({ return_to_work_interview_required: v })} label="Return-to-work interview required" />
+                  </div>
+                </div>
+
+                {mgmtForm.user_id && (() => {
+                  const window = 56;
+                  const start = new Date(mgmtForm.start_date + 'T00:00:00').getTime();
+                  const hasLinked = requests.some(other => {
+                    if (other.user_id !== mgmtForm.user_id) return false;
+                    if (other.leave_type !== 'sick') return false;
+                    const end = new Date(other.end_date + 'T00:00:00').getTime();
+                    if (end >= start) return false;
+                    const gap = (start - end) / (1000 * 60 * 60 * 24);
+                    return gap <= window;
+                  });
+                  return hasLinked ? (
+                    <p className={s.hintText}><AlertCircle size={12} /> May link to a recent sickness period (last 8 weeks).</p>
+                  ) : null;
+                })()}
               </div>
-              <div className={s.row2}>
-                <Field label="Sickness category">
-                  <Select
-                    value={mgmtForm.sickness_meta?.category ?? 'cold_flu'}
-                    onChange={e => updateMgmtMeta({ category: e.target.value as any })}
-                  >
-                    {SICKNESS_CATEGORY_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Lifecycle status">
-                  <Select
-                    value={mgmtForm.lifecycle_status}
-                    onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value })}
-                  >
-                    {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-              <Field label="Return-to-work date" hint="Optional — when the employee is expected back">
-                <DatePicker
-                  value={parseISODate(mgmtForm.sickness_meta?.return_to_work_date ?? '')}
-                  onChange={(d) => updateMgmtMeta({ return_to_work_date: toISODate(d) ?? '' })}
-                  placeholder="Pick a return date"
-                />
-              </Field>
-              <div className={s.toggleGrid}>
-                <Toggle checked={!!mgmtForm.sickness_meta?.self_certified} onChange={(v) => updateMgmtMeta({ self_certified: v })} label="Self-certified" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={(v) => updateMgmtMeta({ fit_note_received: v })} label="Fit note received" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={(v) => updateMgmtMeta({ work_related_injury: v })} label="Work-related injury" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={(v) => updateMgmtMeta({ paid_absence: v })} label="Paid absence" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={(v) => updateMgmtMeta({ return_to_work_interview_required: v })} label="Return-to-work interview required" />
-              </div>
-              {mgmtForm.user_id && (() => {
-                const window = 56;
-                const start = new Date(mgmtForm.start_date + 'T00:00:00').getTime();
-                const hasLinked = requests.some(other => {
-                  if (other.user_id !== mgmtForm.user_id) return false;
-                  if (other.leave_type !== 'sick') return false;
-                  const end = new Date(other.end_date + 'T00:00:00').getTime();
-                  if (end >= start) return false;
-                  const gap = (start - end) / (1000 * 60 * 60 * 24);
-                  return gap <= window;
-                });
-                return hasLinked ? (
-                  <p className={s.hintText}><AlertCircle size={12} /> This may link to a recent sickness period (within the last 8 weeks).</p>
-                ) : null;
-              })()}
-            </div>
+            </CollapsibleSection>
           )}
 
           {selectedEmployee && (
-            <OperationalImpactCard
-              userId={mgmtForm.user_id}
-              startDate={mgmtForm.start_date}
-              endDate={mgmtForm.end_date}
-            />
+            <CollapsibleSection
+              title="Operational impact"
+              icon={<Activity size={14} />}
+              tone="subtle"
+              meta="Affected shifts & open cover"
+            >
+              <OperationalImpactCard
+                userId={mgmtForm.user_id}
+                startDate={mgmtForm.start_date}
+                endDate={mgmtForm.end_date}
+              />
+            </CollapsibleSection>
           )}
 
-          <Field label="Reason" hint="Optional context visible in absence history">
-            <TextArea
-              value={mgmtForm.reason}
-              onChange={e => setMgmtForm({ ...mgmtForm, reason: e.target.value })}
-              placeholder="Sickness reported by phone, approved unpaid leave, annual leave added by management…"
-              rows={3}
-            />
-          </Field>
-          <Field label="Manager note" hint="Optional internal context for the record">
-            <TextArea
-              value={mgmtForm.manager_note}
-              onChange={e => setMgmtForm({ ...mgmtForm, manager_note: e.target.value })}
-              placeholder="Optional note about handover, cover needed, or how this was confirmed"
-              rows={3}
-            />
-          </Field>
+          <CollapsibleSection
+            title="Internal notes"
+            icon={<NotebookPen size={14} />}
+            tone="subtle"
+            meta="Reason · manager note"
+          >
+            <div className={s.form}>
+              <Field label="Reason" hint="Visible in absence history">
+                <TextArea
+                  value={mgmtForm.reason}
+                  onChange={e => setMgmtForm({ ...mgmtForm, reason: e.target.value })}
+                  placeholder="Sickness reported by phone, approved unpaid leave…"
+                  rows={2}
+                />
+              </Field>
+              <Field label="Manager note" hint="Internal context only">
+                <TextArea
+                  value={mgmtForm.manager_note}
+                  onChange={e => setMgmtForm({ ...mgmtForm, manager_note: e.target.value })}
+                  placeholder="Handover, cover needed, how this was confirmed…"
+                  rows={2}
+                />
+              </Field>
+            </div>
+          </CollapsibleSection>
+
           {mgmtForm.leave_type === 'annual' && mgmtForm.user_id && (
             <LeaveBalanceInline
               userId={mgmtForm.user_id}
               pendingDays={daysBetween(mgmtForm.start_date, mgmtForm.end_date)}
             />
           )}
-          <div className={s.warnBox}>
-            Management-created leave skips the employee approval queue and is saved directly as approved.
-          </div>
           {mgmtErr && <div className={s.err}>{mgmtErr}</div>}
         </div>
       </Modal>
@@ -985,11 +1025,17 @@ export default function Leave() {
                 <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[detailsRow.leave_type]}</strong></div>
                 <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(detailsRow.start_date, 'd MMM')} → {fmtDate(detailsRow.end_date, 'd MMM yyyy')}</strong></div>
                 <div className={s.detailRow}><span>Duration</span><strong>{duration} day{duration === 1 ? '' : 's'}</strong></div>
-                <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[detailsRow.status]}</strong></div>
-                <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[detailsRow.source]}</strong></div>
-                {isSick && detailsRow.lifecycle_status && (
-                  <div className={s.detailRow}><span>Lifecycle</span><strong>{SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus]}</strong></div>
+                {isSick ? (
+                  <div className={s.detailRow}>
+                    <span>Sickness status</span>
+                    <strong>{detailsRow.lifecycle_status
+                      ? SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus]
+                      : 'Recorded absence'}</strong>
+                  </div>
+                ) : (
+                  <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[detailsRow.status]}</strong></div>
                 )}
+                <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[detailsRow.source]}</strong></div>
                 {isSick && meta.category && (
                   <div className={s.detailRow}><span>Category</span><strong>{SICKNESS_CATEGORY_LABEL[meta.category]}</strong></div>
                 )}
@@ -1008,39 +1054,77 @@ export default function Leave() {
                 </div>
               )}
 
-              {isMgr && (
-                <OperationalImpactCard
+              {isMgr && business && (
+                <CoverageRecoveryCard
+                  businessId={business.id}
                   userId={detailsRow.user_id}
                   startDate={detailsRow.start_date}
                   endDate={detailsRow.end_date}
                 />
               )}
 
-              {isSick && isMgr && (
-                <SspPanel
-                  startDate={detailsRow.start_date}
-                  endDate={detailsRow.end_date}
-                  history={history}
-                  paid={meta.paid_absence}
-                  employeeName={detailsRow.profiles?.full_name ?? undefined}
-                />
+              {isMgr && (
+                <CollapsibleSection
+                  title="Operational impact"
+                  icon={<Activity size={14} />}
+                  tone="subtle"
+                  defaultOpen={false}
+                  meta="Shifts affected · uncovered hours"
+                >
+                  <OperationalImpactCard
+                    userId={detailsRow.user_id}
+                    startDate={detailsRow.start_date}
+                    endDate={detailsRow.end_date}
+                  />
+                </CollapsibleSection>
               )}
 
-              <div className={s.detailBlock}>
-                <span className={s.reasonLabel}>Reason</span>
-                <p>{detailsRow.reason?.trim() || 'No additional details added.'}</p>
-              </div>
-              {detailsRow.manager_note && (
-                <div className={s.detailBlock}>
-                  <span className={s.reasonLabel}>Manager note</span>
-                  <p>{detailsRow.manager_note}</p>
-                </div>
+              {isSick && isMgr && (
+                <CollapsibleSection
+                  title="SSP estimate"
+                  icon={<Coins size={14} />}
+                  tone="subtle"
+                  defaultOpen={false}
+                  meta="Operational guidance"
+                >
+                  <SspPanel
+                    startDate={detailsRow.start_date}
+                    endDate={detailsRow.end_date}
+                    history={history}
+                    paid={meta.paid_absence}
+                    employeeName={detailsRow.profiles?.full_name ?? undefined}
+                  />
+                </CollapsibleSection>
               )}
-              {detailsRow.review_notes && (
-                <div className={s.detailBlock}>
-                  <span className={s.reasonLabel}>Review note</span>
-                  <p>{detailsRow.review_notes}</p>
-                </div>
+
+              {(detailsRow.reason || detailsRow.manager_note || detailsRow.review_notes) && (
+                <CollapsibleSection
+                  title="Notes & history"
+                  icon={<NotebookPen size={14} />}
+                  tone="subtle"
+                  defaultOpen={false}
+                >
+                  <div className={s.form}>
+                    {detailsRow.reason && (
+                      <div className={s.detailBlock}>
+                        <span className={s.reasonLabel}>Reason</span>
+                        <p>{detailsRow.reason}</p>
+                      </div>
+                    )}
+                    {detailsRow.manager_note && (
+                      <div className={s.detailBlock}>
+                        <span className={s.reasonLabel}>Manager note</span>
+                        <p>{detailsRow.manager_note}</p>
+                      </div>
+                    )}
+                    {detailsRow.review_notes && (
+                      <div className={s.detailBlock}>
+                        <span className={s.reasonLabel}>Review note</span>
+                        <p>{detailsRow.review_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleSection>
               )}
             </div>
           );

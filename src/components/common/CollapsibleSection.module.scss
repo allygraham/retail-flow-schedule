@@ -1,0 +1,72 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.section {
+  border-radius: $r-md;
+  background: var(--color-surface, $surface);
+  border: 1px solid var(--color-border, $border);
+  overflow: hidden;
+  transition: border-color $dur-fast $ease, box-shadow $dur-fast $ease;
+}
+
+.subtle {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $r-sm;
+
+  .head { padding: 6px 4px; }
+  .body { padding: 0 4px $sp-2; }
+}
+
+.open { box-shadow: 0 1px 0 var(--color-border, $border); }
+
+.head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $sp-2;
+  padding: $sp-3 $sp-3;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text-primary, $text);
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+
+  &:hover { background: color-mix(in srgb, var(--color-surface-muted, #{$ink-50}) 60%, transparent); }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, $brand-500);
+    outline-offset: -2px;
+  }
+}
+
+.chev {
+  transition: transform $dur-fast $ease;
+  color: var(--color-text-secondary, $text-muted);
+  flex-shrink: 0;
+}
+.open .chev { transform: rotate(0deg); }
+.section:not(.open) .chev { transform: rotate(-90deg); }
+
+.icon {
+  display: inline-flex; color: var(--color-text-secondary, $text-muted);
+}
+
+.title { flex: 1; }
+
+.meta {
+  color: var(--color-text-secondary, $text-muted);
+  font-weight: $fw-medium;
+  font-size: $fs-xs;
+}
+
+.body {
+  padding: 0 $sp-3 $sp-3;
+  animation: reveal $dur-fast $ease;
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}

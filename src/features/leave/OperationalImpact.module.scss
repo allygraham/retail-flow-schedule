@@ -2,23 +2,23 @@
 @use '@/styles/mixins' as *;
 
 .card {
-  padding: $sp-3 $sp-4;
-  border-radius: $r-md;
-  background: var(--color-surface-muted, $ink-50);
-  border: 1px solid var(--color-border, $border);
-  @include col; gap: $sp-2;
+  padding: $sp-2 $sp-3;
+  border-radius: $r-sm;
+  background: transparent;
+  border: 1px dashed var(--color-border, $border);
+  @include col; gap: 6px;
 }
 .eyebrow {
-  font-size: $fs-xs;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--color-text-secondary, $text-muted);
   font-weight: $fw-semibold;
 }
 .list {
   margin: 0; padding-left: $sp-4;
-  color: var(--color-text-primary, $text);
-  font-size: $fs-sm;
-  display: flex; flex-direction: column; gap: 4px;
+  color: var(--color-text-secondary, $text-soft);
+  font-size: $fs-xs;
+  display: flex; flex-direction: column; gap: 2px;
 }
-.line { font-size: $fs-sm; color: var(--color-text-secondary, $text-muted); }
+.line { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }

@@ -238,7 +238,14 @@
   font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em;
   font-weight: $fw-semibold; color: var(--color-text-secondary, $text-muted);
 }
-.toggleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: $sp-2; }
+.toggleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: $sp-2 $sp-3; }
+.toggleGroup { @include col; gap: 6px; padding: $sp-2 0; }
+.toggleGroup + .toggleGroup { border-top: 1px dashed var(--color-border, $border); }
+.toggleGroupLabel {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold;
+}
 .toggle {
   display: inline-flex; align-items: center; gap: $sp-2;
   font-size: $fs-sm; color: var(--color-text-primary, $text); cursor: pointer;
