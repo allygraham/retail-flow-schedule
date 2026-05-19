@@ -681,7 +681,7 @@ export default function Leave() {
                         </div>
                       </td>
                       <td className={s.muted}>{fmtDate(r.created_at, 'd MMM')}</td>
-                      {isMgr && (
+                      {hasAnyActions && (
                         <td className={s.actions}>
                           {canReviewPending ? (
                             <div className={s.actionsInner} onClick={(e) => e.stopPropagation()}>
@@ -712,7 +712,8 @@ export default function Leave() {
                 })}
               </tbody>
             </table>
-          )}
+            );
+          })()}
         </Card>
       )}
 
