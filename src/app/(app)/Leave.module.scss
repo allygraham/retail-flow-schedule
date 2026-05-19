@@ -256,10 +256,12 @@
 }
 
 @media (max-width: 720px) {
-  .filterGrid { grid-template-columns: 1fr; }
-  .filterFooter { align-items: stretch; }
-  .filterActions { width: 100%; justify-content: space-between; }
-  .activeFiltersRow { padding: $sp-3 $sp-3 0; }
+  .filterBar { gap: $sp-2; }
+  .filterGrid { grid-template-columns: 1fr; gap: $sp-2; padding-top: 0; }
+  .filterFooter { align-items: stretch; gap: $sp-2; }
+  .filterSummary { flex: 1 1 100%; min-height: 0; gap: $sp-1; }
+  .filterActions { width: 100%; justify-content: space-between; gap: $sp-2; }
+  .activeFiltersRow { padding: $sp-2 $sp-3 0; }
   .actions { min-width: 0; }
   .upcomingSummary { align-items: flex-start; }
   .rowMeta { width: 100%; justify-content: flex-start; }
