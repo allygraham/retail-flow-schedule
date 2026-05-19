@@ -9,9 +9,10 @@ interface Props {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  bottomSheet?: boolean;
 }
 
-export function Modal({ open, onClose, title, children, footer, size = 'md' }: Props) {
+export function Modal({ open, onClose, title, children, footer, size = 'md', bottomSheet = false }: Props) {
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -22,10 +23,15 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: P
 
   if (!open) return null;
   return createPortal(
-    <div className={s.backdrop} onClick={onClose}>
-      <div className={`${s.dialog} ${s[size]}`} onClick={e => e.stopPropagation()} role="dialog">
+    <div className={`${s.backdrop} ${bottomSheet ? s.backdropSheet : ''}`} onClick={onClose}>
+      <div
+        className={`${s.dialog} ${s[size]} ${bottomSheet ? s.sheet : ''}`}
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+      >
         {title && (
           <header className={s.head}>
+            {bottomSheet && <div className={s.grabber} aria-hidden />}
             <div className={s.title}>{title}</div>
             <button className={s.close} onClick={onClose} aria-label="Close">×</button>
           </header>

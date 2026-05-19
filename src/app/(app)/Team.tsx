@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Card } from '@/components/common/Card';
@@ -16,6 +16,18 @@ import { inviteEmployeeSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 import t from './Team.module.scss';
+
+function useIsCompact() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px)');
+    const update = () => setCompact(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+  return compact;
+}
 
 type AccountStatus = 'active' | 'invited' | 'expired' | 'revoked' | 'disabled';
 
@@ -113,16 +125,29 @@ export default function Team() {
   });
 
   // filters
+  const isCompact = useIsCompact();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const activeFilterChips = useMemo(() => {
-    const chips: string[] = [];
-    if (q.trim()) chips.push(`Search: ${q.trim()}`);
-    if (fRole !== 'all') chips.push(`Role: ${fRole}`);
-    if (fStore !== 'all') chips.push(`Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`);
-    if (fStatus !== 'all') chips.push(`Status: ${STATUS_LABEL[fStatus]}`);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  type ActiveChip = { key: string; label: string; onRemove: () => void };
+  const activeChips: ActiveChip[] = useMemo(() => {
+    const chips: ActiveChip[] = [];
+    if (q.trim()) chips.push({ key: 'q', label: `“${q.trim()}”`, onRemove: () => setQ('') });
+    if (fRole !== 'all') chips.push({ key: 'role', label: `Role: ${fRole}`, onRemove: () => setFRole('all') });
+    if (fStore !== 'all') chips.push({
+      key: 'store',
+      label: `Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`,
+      onRemove: () => setFStore('all'),
+    });
+    if (fStatus !== 'all') chips.push({
+      key: 'status',
+      label: STATUS_LABEL[fStatus],
+      onRemove: () => setFStatus('all'),
+    });
     return chips;
   }, [fRole, fStatus, fStore, q, stores]);
-  const hasActiveFilters = activeFilterChips.length > 0;
+  const activeFilterChips = activeChips.map(c => c.label);
+  const hasActiveFilters = activeChips.length > 0;
+  const activeNonSearchCount = activeChips.filter(c => c.key !== 'q').length;
   const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
 
   const load = async () => {
@@ -511,64 +536,111 @@ export default function Team() {
       </header>
 
       <Card>
-        <div className={s.filterBar}>
-          <div className={s.filterFooter}>
-            <div className={s.filterSummary}>
-              {hasActiveFilters ? (
-                activeFilterChips.map((chip) => (
-                  <span key={chip} className={s.filterChip}>{chip}</span>
-                ))
-              ) : (
-                <span className={s.filterHint}>No filters applied</span>
-              )}
+        {isCompact ? (
+          <div className={s.filterBar}>
+            <div className={t.mobileFilterBar}>
+              <Input
+                className={t.searchInline}
+                placeholder="Search team…"
+                value={q}
+                onChange={e => setQ(e.target.value)}
+              />
+              <button
+                type="button"
+                className={t.filterBtn}
+                onClick={() => setFilterSheetOpen(true)}
+                aria-label="Open filters"
+              >
+                <SlidersHorizontal size={15} />
+                Filters
+                {activeNonSearchCount > 0 && (
+                  <span className={t.filterBtnCount}>{activeNonSearchCount}</span>
+                )}
+              </button>
             </div>
-            <div className={s.filterActions}>
-              <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
-                {filtersOpen ? 'Hide filters' : 'Show filters'}
-              </Button>
-              <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
-            </div>
+            {hasActiveFilters && (
+              <div className={t.chipsRow}>
+                {activeChips.map((chip) => (
+                  <span key={chip.key} className={t.chip}>
+                    {chip.label}
+                    <button
+                      type="button"
+                      className={t.chipX}
+                      onClick={chip.onRemove}
+                      aria-label={`Remove ${chip.label}`}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                <button type="button" className={t.clearAll} onClick={clearFilters}>
+                  Clear all
+                </button>
+              </div>
+            )}
           </div>
-
-          {filtersOpen && (
-            <div className={s.filterGrid}>
-              <Field label="Search">
-                <Input
-                  placeholder="Search name, email, role…"
-                  value={q}
-                  onChange={e => setQ(e.target.value)}
-                />
-              </Field>
-
-              <Field label="Role">
-                <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
-                  <option value="all">All roles</option>
-                  <option value="owner">Owner</option>
-                  <option value="manager">Manager</option>
-                  <option value="employee">Employee</option>
-                </Select>
-              </Field>
-
-              <Field label="Store">
-                <Select value={fStore} onChange={e => setFStore(e.target.value)}>
-                  <option value="all">All stores</option>
-                  {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-                </Select>
-              </Field>
-
-              <Field label="Account status">
-                <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
-                  <option value="all">All statuses</option>
-                  <option value="active">Active</option>
-                  <option value="invited">Invited</option>
-                  <option value="disabled">Disabled</option>
-                  <option value="expired">Expired</option>
-                  <option value="revoked">Revoked</option>
-                </Select>
-              </Field>
+        ) : (
+          <div className={s.filterBar}>
+            <div className={s.filterFooter}>
+              <div className={s.filterSummary}>
+                {hasActiveFilters ? (
+                  activeFilterChips.map((chip) => (
+                    <span key={chip} className={s.filterChip}>{chip}</span>
+                  ))
+                ) : (
+                  <span className={s.filterHint}>No filters applied</span>
+                )}
+              </div>
+              <div className={s.filterActions}>
+                <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
+                  {filtersOpen ? 'Hide filters' : 'Show filters'}
+                </Button>
+                {hasActiveFilters && (
+                  <Button variant="ghost" onClick={clearFilters}>Clear filters</Button>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+
+            {filtersOpen && (
+              <div className={s.filterGrid}>
+                <Field label="Search">
+                  <Input
+                    placeholder="Search name, email, role…"
+                    value={q}
+                    onChange={e => setQ(e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Role">
+                  <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
+                    <option value="all">All roles</option>
+                    <option value="owner">Owner</option>
+                    <option value="manager">Manager</option>
+                    <option value="employee">Employee</option>
+                  </Select>
+                </Field>
+
+                <Field label="Store">
+                  <Select value={fStore} onChange={e => setFStore(e.target.value)}>
+                    <option value="all">All stores</option>
+                    {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                  </Select>
+                </Field>
+
+                <Field label="Account status">
+                  <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
+                    <option value="all">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="invited">Invited</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="expired">Expired</option>
+                    <option value="revoked">Revoked</option>
+                  </Select>
+                </Field>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       <Card padded={false}>
@@ -581,6 +653,84 @@ export default function Team() {
               ? 'Invite your first employee to get started.'
               : 'Try clearing your filters or searching for a different term.'}
           />
+        ) : isCompact ? (
+          <div className={t.cardList}>
+            {filtered.map(m => {
+              const canCopyInvite = m.kind === 'invite' && m.account_status !== 'revoked';
+              const canRenewInvite = m.kind === 'invite' && m.account_status === 'expired';
+              const canRevokeInvite = m.kind === 'invite' && m.account_status !== 'revoked';
+              const canEditRow = canEdit(m);
+              const canAddLeave = m.kind === 'member' && canManageStaff;
+              const canDeactivateRow = canDeactivate(m) && m.account_status === 'active';
+              const canReactivateRow = canDeactivate(m) && m.account_status === 'disabled';
+              const metaParts = [
+                m.store_name && m.store_name !== '—' ? m.store_name : null,
+                m.job_name && m.job_name !== '—' ? m.job_name : null,
+                m.contracted_hours ? `${m.contracted_hours}h/wk` : null,
+              ].filter(Boolean) as string[];
+
+              return (
+                <div
+                  key={m.key}
+                  className={`${t.memberCard} ${m.account_status === 'disabled' ? t.rowDisabled : ''}`}
+                >
+                  <Avatar name={m.full_name} size="sm" />
+                  <div className={t.memberMain}>
+                    <span className={t.memberName}>{m.full_name}</span>
+                    {metaParts.length > 0 && (
+                      <span className={t.memberMeta}>
+                        {metaParts.map((part, i) => (
+                          <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            {i > 0 && <span className={t.memberDot} />}
+                            {part}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    <div className={t.memberBadges}>
+                      <Badge tone={m.role === 'owner' ? 'brand' : m.role === 'manager' ? 'info' : 'neutral'} dot>
+                        {m.role}
+                      </Badge>
+                      <Badge tone={STATUS_TONE[m.account_status]} dot>
+                        {STATUS_LABEL[m.account_status]}
+                      </Badge>
+                    </div>
+                  </div>
+                  {canManageStaff && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className={t.menuTrigger} aria-label={`Open actions for ${m.full_name}`}>
+                          <MoreHorizontal size={16} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className={t.menuContent}>
+                        {m.kind === 'invite' && (
+                          <>
+                            <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>Copy link</DropdownMenuItem>
+                            <DropdownMenuItem disabled={!canRenewInvite} onSelect={() => resendInvite(m.invitation_id!)}>Renew invite</DropdownMenuItem>
+                            <DropdownMenuItem className={canRevokeInvite ? t.menuDanger : undefined} disabled={!canRevokeInvite} onSelect={() => revokeInvite(m.invitation_id!)}>Revoke invite</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        <DropdownMenuItem disabled={!canEditRow} onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
+                        <DropdownMenuItem disabled={!canAddLeave} onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
+                        {(canDeactivate(m) || m.account_status === 'active' || m.account_status === 'disabled') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            {m.account_status === 'active' ? (
+                              <DropdownMenuItem className={canDeactivateRow ? t.menuDanger : undefined} disabled={!canDeactivateRow} onSelect={() => setConfirmRow(m)}>Deactivate</DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem disabled={!canReactivateRow} onSelect={() => setMembershipActive(m, true)}>Reactivate</DropdownMenuItem>
+                            )}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className={s.tableWrap}><table className={s.table}>
             <thead>
@@ -717,6 +867,55 @@ export default function Team() {
           </table></div>
         )}
       </Card>
+
+      {/* Mobile/tablet filter sheet */}
+      <Modal
+        open={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        title="Filters"
+        bottomSheet
+        footer={
+          <>
+            <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Reset</Button>
+            <Button onClick={() => setFilterSheetOpen(false)}>Apply</Button>
+          </>
+        }
+      >
+        <div className={t.sheetForm}>
+          <Field label="Search">
+            <Input
+              placeholder="Search name, email, role…"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+            />
+          </Field>
+          <Field label="Role">
+            <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
+              <option value="all">All roles</option>
+              <option value="owner">Owner</option>
+              <option value="manager">Manager</option>
+              <option value="employee">Employee</option>
+            </Select>
+          </Field>
+          <Field label="Store">
+            <Select value={fStore} onChange={e => setFStore(e.target.value)}>
+              <option value="all">All stores</option>
+              {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Account status">
+            <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="invited">Invited</option>
+              <option value="disabled">Disabled</option>
+              <option value="expired">Expired</option>
+              <option value="revoked">Revoked</option>
+            </Select>
+          </Field>
+        </div>
+      </Modal>
+
 
       {/* Invite modal */}
       <Modal

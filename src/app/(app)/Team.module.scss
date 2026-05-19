@@ -22,8 +22,156 @@
 }
 .tableWrap > table { min-width: 720px; }
 
+/* --- Compact (mobile/tablet) filter toolbar --- */
+.mobileFilterBar {
+  display: flex;
+  align-items: center;
+  gap: $sp-2;
+}
+.searchInline { flex: 1 1 auto; min-width: 0; }
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 $sp-3;
+  border-radius: $r-md;
+  border: 1px solid var(--color-border, $border);
+  background: var(--color-surface, $surface);
+  color: var(--color-text-primary, $text);
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background $dur-fast $ease, border-color $dur-fast $ease;
+  &:hover { background: var(--color-surface-muted, $ink-50); }
+}
+.filterBtnCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: $r-pill;
+  background: $brand-600;
+  color: $white;
+  font-size: 11px;
+  font-weight: $fw-bold;
+}
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $sp-2;
+  margin-top: $sp-3;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 $sp-3;
+  border-radius: $r-pill;
+  background: var(--color-surface-muted, $ink-50);
+  border: 1px solid var(--color-border, $border);
+  color: var(--color-text-primary, $text);
+  font-size: $fs-xs;
+  font-weight: $fw-medium;
+}
+.chipX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, $text-muted);
+  border-radius: $r-pill;
+  cursor: pointer;
+  &:hover { background: var(--color-surface, $surface); color: var(--color-text-primary, $text); }
+}
+.clearAll {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: $brand-700;
+  font-size: $fs-xs;
+  font-weight: $fw-semibold;
+  cursor: pointer;
+  padding: 4px 6px;
+  &:hover { text-decoration: underline; }
+}
+
+/* --- Sheet inner form layout --- */
+.sheetForm {
+  display: flex;
+  flex-direction: column;
+  gap: $sp-4;
+}
+
+/* --- Mobile/tablet employee card list --- */
+.cardList {
+  display: flex;
+  flex-direction: column;
+}
+.memberCard {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: $sp-3;
+  padding: $sp-3 $sp-4;
+  border-bottom: 1px solid var(--color-border, $border);
+  &:last-child { border-bottom: none; }
+}
+.memberMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.memberName {
+  font-weight: $fw-semibold;
+  color: var(--color-text-primary, $text);
+  font-size: $fs-base;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.memberMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--color-text-secondary, $text-muted);
+  font-size: $fs-xs;
+}
+.memberDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-border-strong, $border-strong);
+  display: inline-block;
+}
+.memberBadges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+/* --- Compact responsive overrides --- */
+@media (max-width: 1023px) {
+  .compactHeader {
+    align-items: flex-start;
+    gap: $sp-3;
+  }
+}
 
 .emailCell { color: $text-soft; font-size: $fs-sm; }
+
 
 .editable { cursor: pointer; border-bottom: 1px dashed transparent; transition: all $dur-fast $ease;
   &:hover { border-bottom-color: $brand-500; color: $brand-700; }
