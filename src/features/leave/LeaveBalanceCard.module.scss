@@ -3,6 +3,7 @@
 
 .wrap { display: flex; flex-direction: column; gap: $sp-4; }
 .compact { gap: $sp-3; }
+.actionRow { display: flex; justify-content: flex-start; margin-top: $sp-2; }
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: $sp-3; }
 .stat {
