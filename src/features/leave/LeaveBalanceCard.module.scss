@@ -1,8 +1,8 @@
 @use '@/styles/tokens' as *;
 @use '@/styles/mixins' as *;
 
-.wrap { display: flex; flex-direction: column; gap: $sp-4; padding: $sp-4 $sp-5 $sp-5; }
-.compact { padding: $sp-3 $sp-4 $sp-4; gap: $sp-3; }
+.wrap { display: flex; flex-direction: column; gap: $sp-4; }
+.compact { gap: $sp-3; }
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: $sp-3; }
 .stat {
@@ -35,7 +35,7 @@
 .legendMuted { margin-left: auto; color: var(--color-text-secondary, #{$text-soft}); }
 
 @media (max-width: 720px) {
-  .wrap { padding: $sp-3 $sp-4 $sp-4; gap: $sp-3; }
+  .wrap { gap: $sp-3; }
   .stats { grid-template-columns: repeat(2, 1fr); gap: $sp-2; }
   .stat { padding: $sp-2 $sp-3; }
   .statValue { font-size: $fs-lg; }
