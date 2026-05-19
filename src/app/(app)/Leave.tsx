@@ -372,7 +372,7 @@ export default function Leave() {
     <div className={s.page}>
       <header className={s.header}>
         <div>
-          <span className={s.eye}>Leave & absence</span>
+          <span className={s.eye}>Workforce</span>
           <h1 className={s.h1}>{isMgr ? 'Leave & absence' : 'My time off'}</h1>
           {isMgr && counts.pending > 0 && (
             <p className={s.sub}>
