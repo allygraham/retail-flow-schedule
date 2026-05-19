@@ -183,6 +183,8 @@ export function useLeaveRequests() {
       reviewed_by: user.id,
       reviewed_at: approvedAt,
       review_notes: input.manager_note ?? null,
+      sickness_meta: input.leave_type === 'sick' ? (input.sickness_meta ?? null) : null,
+      lifecycle_status: input.leave_type === 'sick' ? (input.lifecycle_status ?? 'recorded_absence') : null,
     } as any);
     if (error) throw error;
 
