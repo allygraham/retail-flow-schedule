@@ -125,16 +125,29 @@ export default function Team() {
   });
 
   // filters
+  const isCompact = useIsCompact();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const activeFilterChips = useMemo(() => {
-    const chips: string[] = [];
-    if (q.trim()) chips.push(`Search: ${q.trim()}`);
-    if (fRole !== 'all') chips.push(`Role: ${fRole}`);
-    if (fStore !== 'all') chips.push(`Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`);
-    if (fStatus !== 'all') chips.push(`Status: ${STATUS_LABEL[fStatus]}`);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  type ActiveChip = { key: string; label: string; onRemove: () => void };
+  const activeChips: ActiveChip[] = useMemo(() => {
+    const chips: ActiveChip[] = [];
+    if (q.trim()) chips.push({ key: 'q', label: `“${q.trim()}”`, onRemove: () => setQ('') });
+    if (fRole !== 'all') chips.push({ key: 'role', label: `Role: ${fRole}`, onRemove: () => setFRole('all') });
+    if (fStore !== 'all') chips.push({
+      key: 'store',
+      label: `Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`,
+      onRemove: () => setFStore('all'),
+    });
+    if (fStatus !== 'all') chips.push({
+      key: 'status',
+      label: STATUS_LABEL[fStatus],
+      onRemove: () => setFStatus('all'),
+    });
     return chips;
   }, [fRole, fStatus, fStore, q, stores]);
-  const hasActiveFilters = activeFilterChips.length > 0;
+  const activeFilterChips = activeChips.map(c => c.label);
+  const hasActiveFilters = activeChips.length > 0;
+  const activeNonSearchCount = activeChips.filter(c => c.key !== 'q').length;
   const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
 
   const load = async () => {
