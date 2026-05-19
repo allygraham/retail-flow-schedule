@@ -51,6 +51,8 @@ export const managementLeaveSchema = z.object({
   reason: z.string().max(500).optional().nullable(),
   manager_note: z.string().max(500).optional().nullable(),
   status: z.literal('approved'),
+  sickness_meta: z.any().optional().nullable(),
+  lifecycle_status: z.string().optional().nullable(),
 }).refine(v => v.end_date >= v.start_date, { message: 'End date must be after start', path: ['end_date'] });
 export type ManagementLeaveInput = z.infer<typeof managementLeaveSchema>;
 
