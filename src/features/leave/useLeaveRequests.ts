@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { LeaveRequest, LeaveStatus } from '@/types/domain';
+import type { SicknessMeta, SicknessLifecycleStatus } from './sickness';
 
 export interface LeaveRequestRow extends LeaveRequest {
   profiles?: { full_name: string | null } | null;
   primary_store?: { name: string | null } | null;
+  sickness_meta?: SicknessMeta | null;
+  lifecycle_status?: SicknessLifecycleStatus | null;
 }
 
 interface ReviewInput {
@@ -22,6 +25,8 @@ interface ManagementLeaveInput {
   reason?: string | null;
   manager_note?: string | null;
   status?: 'approved';
+  sickness_meta?: SicknessMeta | null;
+  lifecycle_status?: SicknessLifecycleStatus | null;
 }
 
 /**
