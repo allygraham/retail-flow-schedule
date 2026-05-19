@@ -72,6 +72,13 @@
 
 .loading { padding: $sp-6; text-align: center; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; }
 
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 calc(-1 * #{$sp-2});
+  padding: 0 $sp-2;
+}
 .table {
   width: 100%; border-collapse: separate; border-spacing: 0; font-size: $fs-sm;
   th, td { text-align: left; padding: $sp-3 $sp-5; border-bottom: 1px solid var(--color-border, $border); vertical-align: middle; }
