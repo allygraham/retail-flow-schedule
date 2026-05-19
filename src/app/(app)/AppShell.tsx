@@ -19,7 +19,7 @@ const ICON_SIZE = 18;
 const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof LayoutDashboard }> = [
   { key: 'dashboard', to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'rota', to: '/rota', label: 'Rota', icon: Calendar },
-  { key: 'leave', to: '/leave', label: 'Leave', icon: CalendarDays },
+  { key: 'leave', to: '/leave', label: 'Leave & absence', icon: CalendarDays },
   { key: 'team', to: '/team', label: 'Team', icon: Users },
   { key: 'stores', to: '/stores', label: 'Stores', icon: MapPin },
   { key: 'profile', to: '/profile', label: 'My profile', icon: User },
