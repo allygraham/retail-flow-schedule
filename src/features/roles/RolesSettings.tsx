@@ -109,14 +109,17 @@ export function RolesSettings() {
 
   return (
     <Card title="Job roles" subtitle="Define the job roles you can assign to employees (e.g. Cashier, Supervisor).">
-      <form onSubmit={onCreate} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, alignItems: 'end', marginBottom: 16 }}>
+      <form
+        onSubmit={onCreate}
+        className="mb-4 grid gap-3 items-end grid-cols-1 sm:[grid-template-columns:1fr_auto_auto]"
+      >
         <Field label="New role name">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Visual Merchandiser" maxLength={60} />
         </Field>
         <Field label="Colour">
           <ColorSwatches value={color} onChange={setColor} />
         </Field>
-        <Button type="submit" variant="primary" disabled={busy || !name.trim()}>
+        <Button type="submit" variant="primary" disabled={busy || !name.trim()} className="w-full sm:w-auto justify-center">
           <Plus size={16} /> Add role
         </Button>
       </form>
@@ -184,7 +187,7 @@ export function RolesSettings() {
 
 function ColorSwatches({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {PRESET_COLORS.map((c) => (
         <button
           key={c}
