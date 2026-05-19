@@ -251,5 +251,5 @@ export function useLeaveRequests() {
 
   const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests]);
 
-  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review };
+  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review, updateSickness };
 }
