@@ -18,6 +18,7 @@ import {
 import { OperationalImpactCard } from '@/features/leave/OperationalImpactCard';
 import { SspPanel } from '@/features/leave/SspPanel';
 import { AbsenceCalendar } from '@/features/leave/AbsenceCalendar';
+import { CoverageRecoveryCard } from '@/features/leave/CoverageRecoveryCard';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -26,10 +27,11 @@ import { Modal } from '@/components/common/Modal';
 import { Field, Input, Select, TextArea } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
+import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
-import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope } from 'lucide-react';
+import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
 
