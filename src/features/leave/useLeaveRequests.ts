@@ -26,7 +26,7 @@ interface ManagementLeaveInput {
   manager_note?: string | null;
   status?: 'approved';
   sickness_meta?: SicknessMeta | null;
-  lifecycle_status?: SicknessLifecycleStatus | null;
+  lifecycle_status?: SicknessLifecycleStatus | string | null;
 }
 
 /**
