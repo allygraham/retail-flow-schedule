@@ -115,7 +115,7 @@ export default function Profile() {
           {collapsible && (
             <button
               type="button"
-              className={s.formToggle}
+              className={`${s.formToggle} border-neutral-100 bg-neutral-50`}
               aria-expanded={formOpen}
               onClick={() => setFormOpen(o => !o)}
             >
