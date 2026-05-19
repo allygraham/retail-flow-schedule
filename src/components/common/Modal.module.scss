@@ -40,3 +40,39 @@
 
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop  { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* Bottom-sheet variant: full-width drawer pinned to bottom on small viewports */
+@media (max-width: 899px) {
+  .backdropSheet {
+    padding: 0;
+    align-items: end;
+    place-items: end stretch;
+  }
+  .sheet {
+    max-width: 100% !important;
+    width: 100%;
+    border-radius: $r-xl $r-xl 0 0;
+    max-height: 88vh;
+    animation: slideUp $dur $ease;
+    .head {
+      padding: $sp-3 $sp-5 $sp-4;
+      position: relative;
+    }
+    .grabber {
+      position: absolute;
+      top: 8px; left: 50%;
+      transform: translateX(-50%);
+      width: 36px; height: 4px;
+      border-radius: $r-pill;
+      background: var(--color-border-strong, $border-strong);
+    }
+    .body { padding: $sp-4 $sp-5; }
+    .foot {
+      position: sticky;
+      bottom: 0;
+      background: var(--color-surface, $surface);
+      padding-bottom: max($sp-4, env(safe-area-inset-bottom));
+    }
+  }
+}
