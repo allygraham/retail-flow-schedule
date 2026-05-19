@@ -111,7 +111,7 @@ export default function Profile() {
           <LeaveBalanceCard
             balance={balance}
             loading={balanceLoading}
-            action={<Button size="sm" onClick={openRequestModal}>Request time off</Button>}
+            action={<Button onClick={openRequestModal}>Request time off</Button>}
           />
         <Card title="Upcoming shifts" subtitle="Next 10 published">
           {shifts.length === 0 ? (
