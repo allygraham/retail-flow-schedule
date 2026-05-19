@@ -774,9 +774,22 @@ export default function Leave() {
                 <option value="unpaid">Unpaid leave</option>
               </Select>
             </Field>
-            <Field label="Status">
-              <Input value="Approved / recorded" disabled readOnly />
-            </Field>
+            {isSicknessForm ? (
+              <Field label="Sickness status">
+                <Select
+                  value={mgmtForm.lifecycle_status}
+                  onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value })}
+                >
+                  {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </Select>
+              </Field>
+            ) : (
+              <Field label="Status">
+                <Input value="Approved / recorded" disabled readOnly />
+              </Field>
+            )}
           </div>
           <Field label="Dates">
             <DatePicker
@@ -792,98 +805,120 @@ export default function Leave() {
           </Field>
 
           {isSicknessForm && (
-            <div className={s.sicknessGroup}>
-              <div className={s.sicknessHead}>
-                <Stethoscope size={14} />
-                <span>Sickness details</span>
+            <CollapsibleSection
+              title="Sickness details"
+              icon={<Stethoscope size={14} />}
+              defaultOpen
+              meta={SICKNESS_CATEGORY_LABEL[(mgmtForm.sickness_meta?.category ?? 'cold_flu') as keyof typeof SICKNESS_CATEGORY_LABEL]}
+            >
+              <div className={s.form}>
+                <div className={s.row2}>
+                  <Field label="Category">
+                    <Select
+                      value={mgmtForm.sickness_meta?.category ?? 'cold_flu'}
+                      onChange={e => updateMgmtMeta({ category: e.target.value as any })}
+                    >
+                      {SICKNESS_CATEGORY_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Return-to-work date" hint="Optional">
+                    <DatePicker
+                      value={parseISODate(mgmtForm.sickness_meta?.return_to_work_date ?? '')}
+                      onChange={(d) => updateMgmtMeta({ return_to_work_date: toISODate(d) ?? '' })}
+                      placeholder="Expected back"
+                    />
+                  </Field>
+                </div>
+
+                <div className={s.toggleGroup}>
+                  <div className={s.toggleGroupLabel}><FileText size={12} /> Documentation</div>
+                  <div className={s.toggleGrid}>
+                    <Toggle checked={!!mgmtForm.sickness_meta?.self_certified} onChange={(v) => updateMgmtMeta({ self_certified: v })} label="Self-certified" />
+                    <Toggle checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={(v) => updateMgmtMeta({ fit_note_received: v })} label="Fit note received" />
+                  </div>
+                </div>
+                <div className={s.toggleGroup}>
+                  <div className={s.toggleGroupLabel}><Briefcase size={12} /> Employment</div>
+                  <div className={s.toggleGrid}>
+                    <Toggle checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={(v) => updateMgmtMeta({ paid_absence: v })} label="Paid absence" />
+                    <Toggle checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={(v) => updateMgmtMeta({ work_related_injury: v })} label="Work-related injury" />
+                  </div>
+                </div>
+                <div className={s.toggleGroup}>
+                  <div className={s.toggleGroupLabel}><Repeat2 size={12} /> Follow-up</div>
+                  <div className={s.toggleGrid}>
+                    <Toggle checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={(v) => updateMgmtMeta({ return_to_work_interview_required: v })} label="Return-to-work interview required" />
+                  </div>
+                </div>
+
+                {mgmtForm.user_id && (() => {
+                  const window = 56;
+                  const start = new Date(mgmtForm.start_date + 'T00:00:00').getTime();
+                  const hasLinked = requests.some(other => {
+                    if (other.user_id !== mgmtForm.user_id) return false;
+                    if (other.leave_type !== 'sick') return false;
+                    const end = new Date(other.end_date + 'T00:00:00').getTime();
+                    if (end >= start) return false;
+                    const gap = (start - end) / (1000 * 60 * 60 * 24);
+                    return gap <= window;
+                  });
+                  return hasLinked ? (
+                    <p className={s.hintText}><AlertCircle size={12} /> May link to a recent sickness period (last 8 weeks).</p>
+                  ) : null;
+                })()}
               </div>
-              <div className={s.row2}>
-                <Field label="Sickness category">
-                  <Select
-                    value={mgmtForm.sickness_meta?.category ?? 'cold_flu'}
-                    onChange={e => updateMgmtMeta({ category: e.target.value as any })}
-                  >
-                    {SICKNESS_CATEGORY_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Lifecycle status">
-                  <Select
-                    value={mgmtForm.lifecycle_status}
-                    onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value })}
-                  >
-                    {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-              <Field label="Return-to-work date" hint="Optional — when the employee is expected back">
-                <DatePicker
-                  value={parseISODate(mgmtForm.sickness_meta?.return_to_work_date ?? '')}
-                  onChange={(d) => updateMgmtMeta({ return_to_work_date: toISODate(d) ?? '' })}
-                  placeholder="Pick a return date"
-                />
-              </Field>
-              <div className={s.toggleGrid}>
-                <Toggle checked={!!mgmtForm.sickness_meta?.self_certified} onChange={(v) => updateMgmtMeta({ self_certified: v })} label="Self-certified" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={(v) => updateMgmtMeta({ fit_note_received: v })} label="Fit note received" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={(v) => updateMgmtMeta({ work_related_injury: v })} label="Work-related injury" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={(v) => updateMgmtMeta({ paid_absence: v })} label="Paid absence" />
-                <Toggle checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={(v) => updateMgmtMeta({ return_to_work_interview_required: v })} label="Return-to-work interview required" />
-              </div>
-              {mgmtForm.user_id && (() => {
-                const window = 56;
-                const start = new Date(mgmtForm.start_date + 'T00:00:00').getTime();
-                const hasLinked = requests.some(other => {
-                  if (other.user_id !== mgmtForm.user_id) return false;
-                  if (other.leave_type !== 'sick') return false;
-                  const end = new Date(other.end_date + 'T00:00:00').getTime();
-                  if (end >= start) return false;
-                  const gap = (start - end) / (1000 * 60 * 60 * 24);
-                  return gap <= window;
-                });
-                return hasLinked ? (
-                  <p className={s.hintText}><AlertCircle size={12} /> This may link to a recent sickness period (within the last 8 weeks).</p>
-                ) : null;
-              })()}
-            </div>
+            </CollapsibleSection>
           )}
 
           {selectedEmployee && (
-            <OperationalImpactCard
-              userId={mgmtForm.user_id}
-              startDate={mgmtForm.start_date}
-              endDate={mgmtForm.end_date}
-            />
+            <CollapsibleSection
+              title="Operational impact"
+              icon={<Activity size={14} />}
+              tone="subtle"
+              meta="Affected shifts & open cover"
+            >
+              <OperationalImpactCard
+                userId={mgmtForm.user_id}
+                startDate={mgmtForm.start_date}
+                endDate={mgmtForm.end_date}
+              />
+            </CollapsibleSection>
           )}
 
-          <Field label="Reason" hint="Optional context visible in absence history">
-            <TextArea
-              value={mgmtForm.reason}
-              onChange={e => setMgmtForm({ ...mgmtForm, reason: e.target.value })}
-              placeholder="Sickness reported by phone, approved unpaid leave, annual leave added by management…"
-              rows={3}
-            />
-          </Field>
-          <Field label="Manager note" hint="Optional internal context for the record">
-            <TextArea
-              value={mgmtForm.manager_note}
-              onChange={e => setMgmtForm({ ...mgmtForm, manager_note: e.target.value })}
-              placeholder="Optional note about handover, cover needed, or how this was confirmed"
-              rows={3}
-            />
-          </Field>
+          <CollapsibleSection
+            title="Internal notes"
+            icon={<NotebookPen size={14} />}
+            tone="subtle"
+            meta="Reason · manager note"
+          >
+            <div className={s.form}>
+              <Field label="Reason" hint="Visible in absence history">
+                <TextArea
+                  value={mgmtForm.reason}
+                  onChange={e => setMgmtForm({ ...mgmtForm, reason: e.target.value })}
+                  placeholder="Sickness reported by phone, approved unpaid leave…"
+                  rows={2}
+                />
+              </Field>
+              <Field label="Manager note" hint="Internal context only">
+                <TextArea
+                  value={mgmtForm.manager_note}
+                  onChange={e => setMgmtForm({ ...mgmtForm, manager_note: e.target.value })}
+                  placeholder="Handover, cover needed, how this was confirmed…"
+                  rows={2}
+                />
+              </Field>
+            </div>
+          </CollapsibleSection>
+
           {mgmtForm.leave_type === 'annual' && mgmtForm.user_id && (
             <LeaveBalanceInline
               userId={mgmtForm.user_id}
               pendingDays={daysBetween(mgmtForm.start_date, mgmtForm.end_date)}
             />
           )}
-          <div className={s.warnBox}>
-            Management-created leave skips the employee approval queue and is saved directly as approved.
-          </div>
           {mgmtErr && <div className={s.err}>{mgmtErr}</div>}
         </div>
       </Modal>
