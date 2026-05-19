@@ -11,14 +11,8 @@
   justify-content: space-between;
   gap: $sp-4;
   flex-wrap: wrap;
-  height: 60px;
 }
 
-@media (min-width: 992px) {
-  .header {
-    height: auto;
-  }
-}
 .eye {
   @include eyebrow;
 }
