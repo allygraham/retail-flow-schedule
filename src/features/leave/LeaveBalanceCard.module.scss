@@ -35,8 +35,13 @@
 .legendMuted { margin-left: auto; color: var(--color-text-secondary, #{$text-soft}); }
 
 @media (max-width: 720px) {
-  .stats { grid-template-columns: 1fr; }
+  .wrap { padding: $sp-3 $sp-4 $sp-4; gap: $sp-3; }
+  .stats { grid-template-columns: repeat(2, 1fr); gap: $sp-2; }
+  .stat { padding: $sp-2 $sp-3; }
+  .statValue { font-size: $fs-lg; }
+  .stat.muted { display: none; }
   .legendMuted { margin-left: 0; width: 100%; }
 }
+
 
 .loading { padding: $sp-5; text-align: center; color: var(--color-text-secondary, #{$text-muted}); font-size: $fs-sm; }
