@@ -711,7 +711,7 @@ export default function Leave() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
             );
           })()}
         </Card>
