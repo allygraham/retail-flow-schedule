@@ -4,6 +4,7 @@
 .shell {
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-rows: 60px 1fr;
   min-height: 100vh;
   background: var(--color-bg, #{$bg});
   color: var(--color-text-primary, #{$text});
