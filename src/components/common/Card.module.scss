@@ -12,3 +12,9 @@
 .action { display: flex; gap: $sp-2; }
 .body { padding: $sp-5; }
 .bodyFlush { padding: 0; }
+
+@media (max-width: 720px) {
+  .head { padding: $sp-3 $sp-4; gap: $sp-3; }
+  .body { padding: $sp-4; }
+}
+
