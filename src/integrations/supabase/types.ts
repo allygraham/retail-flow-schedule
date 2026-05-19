@@ -432,11 +432,13 @@ export type Database = {
           end_date: string
           id: string
           leave_type: Database["public"]["Enums"]["leave_type"]
+          lifecycle_status: string | null
           manager_note: string | null
           reason: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          sickness_meta: Json | null
           source: string
           start_date: string
           status: Database["public"]["Enums"]["leave_status"]
@@ -453,11 +455,13 @@ export type Database = {
           end_date: string
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"]
+          lifecycle_status?: string | null
           manager_note?: string | null
           reason?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sickness_meta?: Json | null
           source?: string
           start_date: string
           status?: Database["public"]["Enums"]["leave_status"]
@@ -474,11 +478,13 @@ export type Database = {
           end_date?: string
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"]
+          lifecycle_status?: string | null
           manager_note?: string | null
           reason?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sickness_meta?: Json | null
           source?: string
           start_date?: string
           status?: Database["public"]["Enums"]["leave_status"]
