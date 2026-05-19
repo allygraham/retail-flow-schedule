@@ -3,9 +3,7 @@
 
 .wrap { display: flex; flex-direction: column; gap: $sp-4; }
 .compact { gap: $sp-3; }
-.actionRow { display: flex; flex-direction: column; margin-top: $sp-2;
-  > button { align-self: stretch; width: 100%; }
-}
+.actionRow { display: flex; flex-direction: column; align-items: flex-start; margin-top: $sp-2; }
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: $sp-3; }
 .stat {
@@ -36,6 +34,10 @@
 .dotTaken { background: var(--color-primary, #{$brand-600}); }
 .dotPending { background: var(--color-warning, #{$brand-300}); }
 .legendMuted { margin-left: auto; color: var(--color-text-secondary, #{$text-soft}); }
+
+@media (max-width: 899px) {
+  .actionRow > button { align-self: stretch; }
+}
 
 @media (max-width: 720px) {
   .wrap { gap: $sp-3; }
