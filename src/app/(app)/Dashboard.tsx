@@ -125,7 +125,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         <div>
           <span className={s.eye}>My dashboard</span>
           <h1 className={s.h1}>{greeting}</h1>
-          <p className={s.sub}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {businessName}</p>
+          <p className={`${s.sub} text-justify`}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {businessName}</p>
         </div>
         <div className={s.quickActions}>
           <Button variant="primary" leading={<Plane size={16} />} onClick={() => nav('/leave')}>Request time off</Button>
