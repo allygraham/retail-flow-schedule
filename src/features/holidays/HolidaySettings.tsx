@@ -100,7 +100,7 @@ export function HolidaySettings() {
       <div className={s.row}>
         <div>
           <div className={s.label}>Enable public holidays</div>
-          <div className={s.help}>Display holidays as informational context. Does not block scheduling.</div>
+          <div className={`${s.help} text-justify`}>Display holidays as informational context. Does not block scheduling.</div>
         </div>
         <input
           type="checkbox"
@@ -157,7 +157,7 @@ export function HolidaySettings() {
         <div className={s.sectionHead}>
           <div>
             <div className={s.label}>Company holidays</div>
-            <div className={s.help}>
+            <div className={`${s.help} text-justify`}>
               Add business-specific closure days (e.g. shutdowns). Marked dates can block scheduling.
             </div>
           </div>
