@@ -19,7 +19,7 @@ export default function Landing() {
       <section className={s.hero}>
         <span className={s.eyebrow}>Retail workforce scheduling</span>
         <h1 className={s.h1}>Rotas that <em>run themselves.</em></h1>
-        <p className={s.lead}>
+        <p className={`${s.lead} text-justify`}>
           Lavoro is the scheduling platform built for multi-store retail. Build the week in minutes,
           spot coverage gaps before they cost you, and give every employee a clear view of their shifts.
         </p>
