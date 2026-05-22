@@ -556,14 +556,14 @@ export default function Rota() {
       {/* Publish confirmation modal */}
       <Modal open={publishModal.open} onClose={() => setPublishModal({ open: false, count: 0 })} title="Publish schedule" size="sm">
         <div style={{ lineHeight: 1.6 }}>
-          <p>
+          <p className="text-justify">
             You are about to publish <strong>{publishModal.count} draft shift{publishModal.count === 1 ? '' : 's'}</strong>.
           </p>
           <ul style={{ margin: '12px 0', paddingLeft: 20 }}>
             <li>Week: <strong>{fmtDate(weekStart, 'd MMM yyyy')}</strong></li>
             <li>Store: <strong>{storeFilter === 'all' ? 'All stores' : storeById[storeFilter]?.name ?? 'Selected store'}</strong></li>
           </ul>
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
+          <p className="text-justify" style={{ color: 'var(--muted)', fontSize: 14 }}>
             Published shifts will be visible to employees.
           </p>
         </div>
