@@ -53,8 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (user) await loadTenancy(user.id);
-  }, [user, loadTenancy]);
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) await loadTenancy(currentSession.user.id);
+  }, [loadTenancy]);
 
   useEffect(() => {
     // Listener FIRST

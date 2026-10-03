@@ -1,5 +1,6 @@
-import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { FormEvent, useEffect, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
@@ -9,48 +10,78 @@ import s from './Auth.module.scss';
 
 export default function Signup() {
   const nav = useNavigate();
+  const { user, business, loading: authLoading, refresh } = useAuth();
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
+
+  useEffect(() => {
+    if (user?.user_metadata.business_name) setBusinessName(user.user_metadata.business_name);
+  }, [user?.id]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErr(null);
+    if (authLoading) return;
+    if (user) {
+      if (!businessName.trim()) { setErr('Enter your business name.'); return; }
+      setLoading(true);
+      try {
+        const { error } = await supabase.rpc('bootstrap_business', { _name: businessName.trim(), _slug: businessName.trim() });
+        if (error) { setErr(error.message); return; }
+        await refresh();
+        nav('/dashboard', { replace: true });
+      } catch {
+        setErr('Could not create your workspace. Please try again.');
+      } finally { setLoading(false); }
+      return;
+    }
     const parsed = signupSchema.safeParse({ fullName, businessName, email, password });
     if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: fullName, role: 'owner' }, emailRedirectTo: window.location.origin + '/dashboard' }
+      options: { data: { full_name: fullName, role: 'owner', business_name: businessName }, emailRedirectTo: window.location.origin + '/dashboard' }
     });
     if (error) { setErr(error.message); setLoading(false); return; }
     if (!data.session) {
-      // sign in (in case email confirmation off)
-      await supabase.auth.signInWithPassword({ email, password });
+      setConfirmationPending(true);
+      setPassword('');
+      setLoading(false);
+      return;
     }
     const { error: bErr } = await supabase.rpc('bootstrap_business', { _name: businessName, _slug: businessName });
     setLoading(false);
     if (bErr) { setErr(bErr.message); return; }
+    await refresh();
     nav('/dashboard', { replace: true });
   };
+
+  if (authLoading) return <div className={s.page}>Loading…</div>;
+  if (user && business) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className={s.page}>
       <div className={s.card}>
         <Logo />
-        <h1 className={s.title}>Create your workspace</h1>
-        <p className={s.sub}>Start scheduling in under a minute.</p>
+        <h1 className={s.title}>{confirmationPending && !user ? 'Check your email' : user ? 'Finish creating your workspace' : 'Create your workspace'}</h1>
+        {confirmationPending && !user ? (
+          <p className={s.sub} role="status">Check {email} for a confirmation link. Confirm your email, then sign in to finish creating your workspace.</p>
+        ) : <>
+        <p className={s.sub}>{user ? 'Enter your business name to complete setup.' : 'Start scheduling in under a minute.'}</p>
         <form onSubmit={onSubmit} className={s.form}>
-          <Field label="Your name"><Input value={fullName} onChange={e => setFullName(e.target.value)} required /></Field>
+          {!user && <Field label="Your name"><Input value={fullName} onChange={e => setFullName(e.target.value)} required /></Field>}
           <Field label="Business name"><Input value={businessName} onChange={e => setBusinessName(e.target.value)} required /></Field>
-          <Field label="Work email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>
-          <Field label="Password" hint="At least 8 characters"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>
+          {!user && <Field label="Work email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>}
+          {!user && <Field label="Password" hint="At least 8 characters"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>}
           {err && <div className={s.err}>{err}</div>}
           <Button type="submit" full loading={loading}>Create workspace</Button>
         </form>
+        </>}
         <div className={s.foot}>
           <span>Already have an account? <Link to="/login">Sign in</Link></span>
         </div>
