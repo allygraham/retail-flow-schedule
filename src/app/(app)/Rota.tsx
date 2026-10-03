@@ -17,6 +17,7 @@ import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
+import { AiRotaModal } from '@/features/rota/AiRotaModal';
 
 export default function Rota() {
   const { business, user, hasPermission } = useAuth();
@@ -32,6 +33,7 @@ export default function Rota() {
   const [publishModal, setPublishModal] = useState<{open: boolean; count: number}>({open: false, count: 0});
   const [form, setForm] = useState<any>({});
   const [err, setErr] = useState<string | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<any | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const holidays = useHolidays();
@@ -364,6 +366,7 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
         <div className={s.controls}>
+          {isMgr && <Button variant="outline" onClick={() => setAiOpen(true)} disabled={stores.length === 0}>Suggest rota</Button>}
           {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
@@ -572,6 +575,15 @@ export default function Rota() {
           <Button onClick={confirmPublish}>Publish {publishModal.count} shift{publishModal.count === 1 ? '' : 's'}</Button>
         </div>
       </Modal>
+
+      {isMgr && business && (
+        <AiRotaModal
+          open={aiOpen} onClose={() => setAiOpen(false)} onAdded={load}
+          businessId={business.id} userId={user?.id} weekStart={weekStart} days={days}
+          defaultStoreId={storeFilter !== 'all' ? storeFilter : null}
+          stores={stores} roles={roles} people={people} leave={leave} shifts={shifts}
+        />
+      )}
     </div>
   );
 }
