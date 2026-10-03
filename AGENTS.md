@@ -1,0 +1,1 @@
+- AI rota suggestions run in the `suggest-rota` edge function (manager-checked, streams from AI Gateway Responses API); the client only previews and inserts results as draft shifts — keeps the API key server-side and humans in the loop.
