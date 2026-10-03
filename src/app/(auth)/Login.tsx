@@ -9,8 +9,8 @@ import s from './Auth.module.scss';
 
 export default function Login() {
   const nav = useNavigate();
-  const [email, setEmail] = useState('owner@lavoro.demo');
-  const [password, setPassword] = useState('LavoroDemo123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -41,12 +41,6 @@ export default function Login() {
         <div className={s.foot}>
           <Link to="/forgot-password">Forgot password?</Link>
           <span>New here? <Link to="/signup">Create an account</Link></span>
-        </div>
-        <div className={s.demo}>
-          <strong>Demo accounts</strong> (password <code>LavoroDemo123!</code>):<br/>
-          <button type="button" onClick={() => { setEmail('owner@lavoro.demo'); }}>owner@lavoro.demo</button>
-          <button type="button" onClick={() => { setEmail('manager@lavoro.demo'); }}>manager@lavoro.demo</button>
-          <button type="button" onClick={() => { setEmail('employee@lavoro.demo'); }}>employee@lavoro.demo</button>
         </div>
       </div>
     </div>
