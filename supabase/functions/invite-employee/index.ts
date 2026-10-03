@@ -61,12 +61,21 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+    // The service client bypasses RLS: check active membership explicitly.
+    const { data: membership, error: membershipError } = await admin
+      .from('memberships').select('id')
+      .eq('business_id', body.business_id).eq('user_id', caller.id)
+      .eq('is_active', true).maybeSingle();
+    if (membershipError) return json({ error: 'Could not verify membership' }, 500);
+    if (!membership) return json({ error: 'Active business membership is required' }, 403);
+
     // Caller must be manager/owner in this business.
-    const { data: callerRoles } = await admin
+    const { data: callerRoles, error: rolesError } = await admin
       .from('user_roles')
       .select('role')
       .eq('business_id', body.business_id)
       .eq('user_id', caller.id);
+    if (rolesError) return json({ error: 'Could not verify permissions' }, 500);
     const callerRole = (callerRoles ?? []).map((r) => r.role);
     const isOwner = callerRole.includes('owner');
     const canManageStaff = isOwner || callerRole.includes('manager');

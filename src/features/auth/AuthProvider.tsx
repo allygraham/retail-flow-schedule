@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, Business } from '@/types/domain';
@@ -13,7 +13,7 @@ interface TenancyState {
   role: AppRole | null;
   hasPermission: (permission: AppPermission) => boolean;
   signOut: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (businessId?: string) => Promise<void>;
 }
 
 const Ctx = createContext<TenancyState | undefined>(undefined);
@@ -27,11 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const can = useCallback((permission: AppPermission) => hasPermission(role, permission), [role]);
 
+  const preferredBusiness = useRef<string | undefined>();
+  const tenancyRequest = useRef(0);
   const loadTenancy = useCallback(async (uid: string) => {
+    const request = ++tenancyRequest.current;
     const [{ data: profile }, { data: membership }] = await Promise.all([
       supabase.from('profiles').select('full_name').eq('id', uid).maybeSingle(),
-      supabase.from('memberships').select('business_id, businesses(*)').eq('user_id', uid).eq('is_active', true).order('created_at', { ascending: true }).limit(1).maybeSingle(),
+      (() => {
+        let query = supabase.from('memberships').select('business_id, businesses(*)').eq('user_id', uid).eq('is_active', true);
+        if (preferredBusiness.current) query = query.eq('business_id', preferredBusiness.current);
+        return query.order('created_at', { ascending: true }).limit(1).maybeSingle();
+      })(),
     ]);
+    if (request !== tenancyRequest.current) return;
     setFullName(profile?.full_name ?? null);
     const biz = (membership as any)?.businesses as Business | null;
     setBusiness(biz ?? null);
@@ -40,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('user_roles')
         .select('role')
         .eq('user_id', uid).eq('business_id', biz.id);
+      if (request !== tenancyRequest.current) return;
       const roles = (roleRows ?? []).map((r) => r.role as AppRole);
       const best: AppRole | null =
         roles.includes('owner') ? 'owner'
@@ -52,7 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (businessId?: string) => {
+    if (businessId) preferredBusiness.current = businessId;
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (currentSession?.user) await loadTenancy(currentSession.user.id);
   }, [loadTenancy]);
@@ -66,6 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // defer tenancy load
         setTimeout(() => { loadTenancy(s.user.id).finally(() => setLoading(false)); }, 0);
       } else {
+        tenancyRequest.current++;
+        preferredBusiness.current = undefined;
         setBusiness(null); setRole(null); setFullName(null);
         setLoading(false);
       }

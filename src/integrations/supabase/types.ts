@@ -863,6 +863,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_leave_requests: {
+        Args: { _business_id: string }
+        Returns: Database["public"]["Tables"]["leave_requests"]["Row"][]
+      }
+      get_rota_people: {
+        Args: { _business_id: string }
+        Returns: { id: string; user_id: string; primary_role_id: string | null; primary_store_id: string | null; full_name: string | null; store_ids: string[] }[]
+      }
       accept_invitation: { Args: { _token: string }; Returns: string }
       bootstrap_business: {
         Args: { _name: string; _slug: string }

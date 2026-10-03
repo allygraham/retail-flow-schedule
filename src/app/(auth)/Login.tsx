@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
@@ -9,6 +9,9 @@ import s from './Auth.module.scss';
 
 export default function Login() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const next = params.get('next');
+  const destination = next?.startsWith('/accept-invite?') ? next : '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -23,7 +26,7 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { setErr(error.message); return; }
-    nav('/dashboard', { replace: true });
+    nav(destination, { replace: true });
   };
 
   return (

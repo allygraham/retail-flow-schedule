@@ -67,9 +67,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
           .lte('shift_date', weekEnd)
           .order('shift_date').order('start_time'),
         supabase
-          .from('leave_requests')
-          .select('*')
-          .eq('business_id', businessId)
+          .rpc('get_leave_requests', { _business_id: businessId })
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(20),
@@ -349,9 +347,9 @@ function ManagerDashboard() {
       const today = isoDate(new Date());
       const [shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles] = await Promise.all([
         supabase.from('shifts').select('*').eq('business_id', business.id).eq('shift_date', today).eq('is_published', true).neq('status', 'cancelled').order('start_time'),
-        supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'approved').eq('leave_type', 'annual').lte('start_date', today).gte('end_date', today),
-        supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'approved').eq('leave_type', 'sick').lte('start_date', today).gte('end_date', today),
-        supabase.from('leave_requests').select('*').eq('business_id', business.id).eq('status', 'pending').order('created_at', { ascending: false }),
+        supabase.rpc('get_leave_requests', { _business_id: business.id }).eq('status', 'approved').eq('leave_type', 'annual').lte('start_date', today).gte('end_date', today),
+        supabase.rpc('get_leave_requests', { _business_id: business.id }).eq('status', 'approved').eq('leave_type', 'sick').lte('start_date', today).gte('end_date', today),
+        supabase.rpc('get_leave_requests', { _business_id: business.id }).eq('status', 'pending').order('created_at', { ascending: false }),
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
       ]);

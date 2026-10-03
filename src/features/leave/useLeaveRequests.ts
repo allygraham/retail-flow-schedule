@@ -48,9 +48,7 @@ export function useLeaveRequests() {
     setLoading(true);
     setError(null);
     let q = supabase
-      .from('leave_requests')
-      .select('*')
-      .eq('business_id', business.id)
+      .rpc('get_leave_requests', { _business_id: business.id })
       .order('created_at', { ascending: false });
     if (!isMgr) q = q.eq('user_id', user.id);
     const { data, error } = await q;

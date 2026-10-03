@@ -43,33 +43,18 @@ export default function Rota() {
 
   const load = async () => {
     if (!business) return;
-    const [st, rl, epRaw, sh, lv, mb] = await Promise.all([
+    const [st, rl, epRaw, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
-      supabase.from('employee_profiles').select('id, user_id, primary_role_id, primary_store_id').eq('business_id', business.id),
+      supabase.rpc('get_rota_people', { _business_id: business.id }),
       (isMgr
         ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')
         : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')),
-      supabase.from('leave_requests').select('*').eq('business_id', business.id).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
-      supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true),
+      supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
     ]);
-    const activeUserIds = new Set((mb.data ?? []).map((m:any) => m.user_id));
-    const ep = { data: (epRaw.data ?? []).filter((e:any) => activeUserIds.has(e.user_id)) };
-    const userIds = ep.data.map((e:any) => e.user_id);
-    const profileIds = ep.data.map((e:any) => e.id);
-    const [pf, es] = await Promise.all([
-      userIds.length
-        ? supabase.from('profiles').select('id, full_name').in('id', userIds)
-        : Promise.resolve({ data: [] as any[] }),
-      profileIds.length
-        ? supabase.from('employee_stores').select('employee_profile_id, store_id').in('employee_profile_id', profileIds)
-        : Promise.resolve({ data: [] as any[] }),
-    ]);
-    const nameById: Record<string,string> = Object.fromEntries((pf.data ?? []).map((p:any) => [p.id, p.full_name ?? 'Employee']));
-    const storesByProfile: Record<string, Set<string>> = {};
-    for (const row of (es.data ?? []) as any[]) {
-      (storesByProfile[row.employee_profile_id] ??= new Set()).add(row.store_id);
-    }
+    const ep = { data: epRaw.data ?? [] };
+    const nameById = Object.fromEntries(ep.data.map(e => [e.user_id, e.full_name ?? 'Employee']));
+    const storesByProfile = Object.fromEntries(ep.data.map(e => [e.id, new Set(e.store_ids)]));
     setStores(st.data ?? []); setRoles(rl.data ?? []);
     setPeople((ep.data ?? []).map((e:any) => {
       const ids = new Set<string>(storesByProfile[e.id] ?? []);
