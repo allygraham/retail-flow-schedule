@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { BrandingProvider } from "@/features/branding/BrandingProvider";
+import { PageMetadata } from "@/features/branding/PageMetadata";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import AppShell from "@/app/(app)/AppShell";
 import Landing from "@/app/(marketing)/Landing";
@@ -34,6 +35,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <BrandingProvider>
+          <PageMetadata />
           <Routes>
             {/* Public marketing */}
             <Route path="/" element={<Landing />} />
