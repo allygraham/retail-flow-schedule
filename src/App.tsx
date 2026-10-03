@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -33,6 +34,12 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <Analytics beforeSend={(event) => {
+          const url = new URL(event.url);
+          url.search = '';
+          url.hash = '';
+          return { ...event, url: url.toString() };
+        }} />
         <AuthProvider>
           <BrandingProvider>
           <PageMetadata />
