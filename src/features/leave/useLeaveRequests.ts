@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { recordEmployeeLeave, reviewEmployeeLeave } from './leaveMutations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { LeaveRequest, LeaveStatus } from '@/types/domain';
@@ -140,68 +141,9 @@ export function useLeaveRequests() {
   const addForEmployee = useCallback(async (input: ManagementLeaveInput) => {
     if (!business || !user || !role || !isMgr) throw new Error('Not authorised');
 
-    const { data: overlaps, error: overlapError } = await supabase
-      .from('leave_requests')
-      .select('id')
-      .eq('business_id', business.id)
-      .eq('user_id', input.user_id)
-      .in('status', ['pending', 'approved'])
-      .lte('start_date', input.end_date)
-      .gte('end_date', input.start_date)
-      .limit(1);
-
-    if (overlapError) throw overlapError;
-    if ((overlaps ?? []).length > 0) {
-      throw new Error('This employee already has leave covering part of those dates');
-    }
-
-    const { data: conflictingShifts, error: shiftLookupError } = await supabase
-      .from('shifts')
-      .select('id')
-      .eq('business_id', business.id)
-      .eq('assigned_user_id', input.user_id)
-      .gte('shift_date', input.start_date)
-      .lte('shift_date', input.end_date);
-    if (shiftLookupError) throw shiftLookupError;
-
-    const approvedAt = new Date().toISOString();
-    const source = role === 'owner' ? 'owner_created' : 'manager_created';
-    const { error } = await supabase.from('leave_requests').insert({
-      business_id: business.id,
-      user_id: input.user_id,
-      leave_type: input.leave_type,
-      start_date: input.start_date,
-      end_date: input.end_date,
-      reason: input.reason ?? null,
-      manager_note: input.manager_note ?? null,
-      source,
-      status: 'approved',
-      created_by_user_id: user.id,
-      created_by_role: role,
-      approved_by: user.id,
-      approved_at: approvedAt,
-      reviewed_by: user.id,
-      reviewed_at: approvedAt,
-      review_notes: input.manager_note ?? null,
-      sickness_meta: input.leave_type === 'sick' ? (input.sickness_meta ?? null) : null,
-      lifecycle_status: input.leave_type === 'sick' ? (input.lifecycle_status ?? 'recorded_absence') : null,
-    } as any);
-    if (error) throw error;
-
-    const { error: shiftError } = await supabase
-      .from('shifts')
-      .update({ assigned_user_id: null, status: 'unassigned' })
-      .eq('business_id', business.id)
-      .eq('assigned_user_id', input.user_id)
-      .gte('shift_date', input.start_date)
-      .lte('shift_date', input.end_date);
-    if (shiftError) throw shiftError;
-
-    const totalUncoveredMinutes = (conflictingShifts ?? []).reduce((acc: number, _s: any) => acc + 0, 0);
-    void totalUncoveredMinutes; // reserved for future enrichment
-
+    const result = await recordEmployeeLeave(business.id, input);
     await load();
-    return { conflictingShiftCount: conflictingShifts?.length ?? 0 };
+    return { conflictingShiftCount: result.released_shift_count };
   }, [business, user, role, isMgr, load]);
 
   const updateSickness = useCallback(async (id: string, patch: { sickness_meta?: SicknessMeta | null; lifecycle_status?: SicknessLifecycleStatus | null; }) => {
@@ -223,31 +165,10 @@ export function useLeaveRequests() {
   }, [load]);
 
   const review = useCallback(async ({ id, status, review_notes }: ReviewInput) => {
-    if (!user) throw new Error('Not authenticated');
-    const target = requests.find(r => r.id === id);
-    const { error } = await supabase
-      .from('leave_requests')
-      .update({
-        status,
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        review_notes: review_notes ?? null,
-      })
-      .eq('id', id);
-    if (error) throw error;
-
-    // On approval: unassign any of the employee's shifts inside the leave range.
-    if (status === 'approved' && target) {
-      await supabase
-        .from('shifts')
-        .update({ assigned_user_id: null, status: 'unassigned' })
-        .eq('business_id', target.business_id)
-        .eq('assigned_user_id', target.user_id)
-        .gte('shift_date', target.start_date)
-        .lte('shift_date', target.end_date);
-    }
+    if (!business || !user || !isMgr) throw new Error('Not authorised');
+    await reviewEmployeeLeave(business.id, { id, status, review_notes });
     await load();
-  }, [user, requests, load]);
+  }, [business, user, isMgr, load]);
 
   const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests]);
 

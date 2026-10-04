@@ -866,6 +866,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      record_employee_leave: {
+        Args: { _business_id: string; _user_id: string; _leave_type: Database["public"]["Enums"]["leave_type"]; _start_date: string; _end_date: string; _reason?: string | null; _manager_note?: string | null; _sickness_meta?: Json | null; _lifecycle_status?: string | null }
+        Returns: { leave_id: string; released_shift_count: number }[]
+      }
+      review_employee_leave: {
+        Args: { _business_id: string; _leave_id: string; _status: Database["public"]["Enums"]["leave_status"]; _review_notes?: string | null }
+        Returns: { leave_id: string; released_shift_count: number }[]
+      }
+
       move_rota_shift: {
         Args: { _business_id: string; _shift_id: string; _assigned_user_id: string | null; _shift_date: string; _expected_updated_at: string; _swap_shift_id?: string; _swap_expected_updated_at?: string }
         Returns: undefined
