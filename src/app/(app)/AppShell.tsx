@@ -1,3 +1,4 @@
+import { PageBoundary } from "@/components/common/PageBoundary";
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -203,7 +204,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         {renderUser()}
       </aside>
 
-      <main className={s.main}>{children ?? <Outlet />}</main>
+      <main className={s.main}>{children ?? <PageBoundary><Outlet /></PageBoundary>}</main>
     </div>
   );
 }

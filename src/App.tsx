@@ -1,3 +1,5 @@
+import { lazy } from "react";
+import { PageBoundary } from "@/components/common/PageBoundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -8,23 +10,23 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
 import { BrandingProvider } from "@/features/branding/BrandingProvider";
 import { PageMetadata } from "@/features/branding/PageMetadata";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
-import AppShell from "@/app/(app)/AppShell";
-import Landing from "@/app/(marketing)/Landing";
-import Features from "@/app/(marketing)/Features";
-import Pricing from "@/app/(marketing)/Pricing";
-import Login from "@/app/(auth)/Login";
-import Signup from "@/app/(auth)/Signup";
-import ForgotPassword from "@/app/(auth)/ForgotPassword";
-import ResetPassword from "@/app/(auth)/ResetPassword";
-import AcceptInvite from "@/app/(auth)/AcceptInvite";
-import Dashboard from "@/app/(app)/Dashboard";
-import Rota from "@/app/(app)/Rota";
-import Leave from "@/app/(app)/Leave";
-import Team from "@/app/(app)/Team";
-import Stores from "@/app/(app)/Stores";
-import Profile from "@/app/(app)/Profile";
-import Settings from "@/app/(app)/Settings";
-import NotFound from "./pages/NotFound.tsx";
+const AppShell = lazy(() => import("@/app/(app)/AppShell"));
+const Landing = lazy(() => import("@/app/(marketing)/Landing"));
+const Features = lazy(() => import("@/app/(marketing)/Features"));
+const Pricing = lazy(() => import("@/app/(marketing)/Pricing"));
+const Login = lazy(() => import("@/app/(auth)/Login"));
+const Signup = lazy(() => import("@/app/(auth)/Signup"));
+const ForgotPassword = lazy(() => import("@/app/(auth)/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/app/(auth)/ResetPassword"));
+const AcceptInvite = lazy(() => import("@/app/(auth)/AcceptInvite"));
+const Dashboard = lazy(() => import("@/app/(app)/Dashboard"));
+const Rota = lazy(() => import("@/app/(app)/Rota"));
+const Leave = lazy(() => import("@/app/(app)/Leave"));
+const Team = lazy(() => import("@/app/(app)/Team"));
+const Stores = lazy(() => import("@/app/(app)/Stores"));
+const Profile = lazy(() => import("@/app/(app)/Profile"));
+const Settings = lazy(() => import("@/app/(app)/Settings"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,7 @@ const App = () => (
         <AuthProvider>
           <BrandingProvider>
           <PageMetadata />
+          <PageBoundary>
           <Routes>
             {/* Public marketing */}
             <Route path="/" element={<Landing />} />
@@ -103,6 +106,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </PageBoundary>
           </BrandingProvider>
         </AuthProvider>
       </BrowserRouter>
