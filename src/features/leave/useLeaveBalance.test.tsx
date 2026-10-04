@@ -70,4 +70,11 @@ describe('annual leave balance integration', () => {
     expect(result.current.patternMissing).toBe(true); expect(result.current.balance).toBeNull();
   });
 
+  it('preserves an overused entitlement as a negative balance', async () => {
+    mocks.profile.data.annual_leave_entitlement = 2;
+    const { result } = renderHook(() => useLeaveBalance());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.balance?.remaining).toBe(-1);
+  });
+
 });

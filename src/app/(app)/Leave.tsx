@@ -92,7 +92,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 export default function Leave() {
   const { user, role, business } = useAuth();
-  const { workingDaysByUser, requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
+  const { workingDaysByUser, requests, loading, error: leaveError, load: reloadRequests, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
   const { balance, workingDays, patternMissing, error: balanceError, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
   const [requestModal, setRequestModal] = useState(false);
@@ -128,6 +128,10 @@ export default function Leave() {
   const [reviewNote, setReviewNote] = useState('');
   const [detailsRow, setDetailsRow] = useState<LeaveRequestRow | null>(null);
   const [noteViewer, setNoteViewer] = useState<{ title: string; body: ReactNode } | null>(null);
+  useEffect(() => {
+    if (leaveError) { setDetailsRow(null); setReviewing(null); setNoteViewer(null); setRequestModal(false); setAddLeaveModal(false); }
+  }, [leaveError]);
+
 
   const [filter, setFilter] = useState<Filter>(isMgr ? 'pending' : 'approved');
   const [filters, setFilters] = useState<LeaveFilterState>(INITIAL_LEAVE_FILTERS);
@@ -391,6 +395,11 @@ export default function Leave() {
     { key: 'sickness', label: 'Sickness', count: counts.sickness },
     { key: 'calendar', label: 'Calendar' },
   ];
+
+  if (leaveError) return <div role="alert">
+    <h1>Unable to load leave requests</h1><p>{leaveError}</p>
+    <Button onClick={() => { void reloadRequests(); }}>Try again</Button>
+  </div>;
 
   return (
     <div className={s.page}>

@@ -408,47 +408,13 @@ export default function Team() {
     }
 
     try {
-      if (roleChanged) {
-        const { error: roleErr } = await supabase
-          .from('user_roles')
-          .update({ role: editForm.role })
-          .eq('business_id', business.id)
-          .eq('user_id', editRow.user_id);
-        if (roleErr) throw roleErr;
-      }
-
-      // Upsert employee_profile fields
-      const { data: existing } = await supabase
-        .from('employee_profiles')
-        .select('id')
-        .eq('business_id', business.id)
-        .eq('user_id', editRow.user_id)
-        .maybeSingle();
-
-      if (existing) {
-        const { error: epErr } = await supabase
-          .from('employee_profiles')
-          .update({
-            primary_store_id: editForm.primary_store_id,
-            primary_role_id: editForm.primary_role_id || null,
-            contracted_hours: hours,
-            working_days: editForm.working_days,
-          })
-          .eq('id', existing.id);
-        if (epErr) throw epErr;
-      } else {
-        const { error: epErr } = await supabase
-          .from('employee_profiles')
-          .insert({
-            business_id: business.id,
-            user_id: editRow.user_id,
-            primary_store_id: editForm.primary_store_id,
-            primary_role_id: editForm.primary_role_id || null,
-            contracted_hours: hours,
-            working_days: editForm.working_days,
-          });
-        if (epErr) throw epErr;
-      }
+      const { error } = await supabase.rpc('update_team_member', {
+        _business_id: business.id, _user_id: editRow.user_id,
+        _primary_store_id: editForm.primary_store_id, _primary_role_id: editForm.primary_role_id || null,
+        _contracted_hours: hours, _working_days: editForm.working_days,
+        _role: roleChanged ? editForm.role : null,
+      });
+      if (error) throw error;
 
       toast.success('Employee updated');
       setEditRow(null);

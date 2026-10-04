@@ -20,4 +20,11 @@ describe('annual leave approval preview', () => {
     render(<LeaveBalanceInline userId="employee" startDate="2026-10-05" endDate="2026-10-11" />);
     expect(screen.getByRole('status')).toHaveTextContent('normal working days');
   });
+  it('shows an existing deficit and includes it in the next approval warning', () => {
+    mocks.value.balance.remaining = -2;
+    render(<LeaveBalanceInline userId="employee" startDate="2026-10-05" endDate="2026-10-11" />);
+    expect(screen.getByText(/days over entitlement/)).toBeInTheDocument();
+    expect(screen.getByText('Exceeds balance by 5 days')).toBeInTheDocument();
+  });
+
 });

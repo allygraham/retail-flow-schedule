@@ -869,6 +869,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      publish_rota_shifts: {
+        Args: { _business_id: string; _shift_ids: string[]; _week_start: string }
+        Returns: { published_count: number; notified_count: number }[]
+      }
+      update_team_member: {
+        Args: { _business_id: string; _user_id: string; _primary_store_id: string; _primary_role_id: string | null; _contracted_hours: number | null; _working_days: number[]; _role?: Database["public"]["Enums"]["app_role"] | null }
+        Returns: string
+      }
       cancel_leave_request: {
         Args: { _business_id: string; _leave_id: string }
         Returns: string

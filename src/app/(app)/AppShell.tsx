@@ -131,7 +131,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       <Avatar name={fullName} />
       <div className={s.userInfo}>
         <div className={s.userName}>{fullName ?? 'You'}</div>
-        <button onClick={async () => { await signOut(); nav('/login', { replace: true }); }} className={s.signout}>Sign out</button>
+        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch { toast.error('Could not sign out. Please try again.'); } }} className={s.signout}>Sign out</button>
       </div>
     </div>
   );

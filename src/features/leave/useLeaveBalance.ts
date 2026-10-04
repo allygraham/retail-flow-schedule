@@ -76,7 +76,7 @@ export function useLeaveBalance(userId?: string | null) {
         entitlement,
         taken,
         pending,
-        remaining: Math.max(0, entitlement - taken),
+        remaining: entitlement - taken,
         year,
       });
     } catch {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { recordEmployeeLeave, reviewEmployeeLeave } from './leaveMutations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -45,65 +45,81 @@ export function useLeaveRequests() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const sequence = useRef(0);
   const load = useCallback(async () => {
-    if (!business || !user) return;
+    const request = ++sequence.current;
+    setRequests([]); setEmployees([]); setWorkingDaysByUser({});
+    if (!business || !user) { setError(null); setLoading(false); return; }
     setLoading(true);
     setError(null);
-    let q = supabase
-      .rpc('get_leave_requests', { _business_id: business.id })
-      .order('created_at', { ascending: false });
-    if (!isMgr) q = q.eq('user_id', user.id);
-    const { data, error } = await q;
-    if (error) { setError(error.message); setLoading(false); return; }
+    try {
+      let q = supabase
+        .rpc('get_leave_requests', { _business_id: business.id })
+        .order('created_at', { ascending: false });
+      if (!isMgr) q = q.eq('user_id', user.id);
+      const { data, error } = await q;
+      if (request !== sequence.current) return;
+      if (error) throw error;
 
-    let rows: LeaveRequestRow[] = (data ?? []).map((r: any) => ({ ...r }));
-    const requestUserIds = Array.from(new Set(rows.map(r => r.user_id)));
-    const [{ data: emp }, { data: profs }, { data: members }] = await Promise.all([
-      isMgr
-        ? supabase
-            .from('employee_profiles')
-            .select('user_id, working_days, store_locations:primary_store_id(name)')
-            .eq('business_id', business.id)
-        : Promise.resolve({ data: [] as any[] }),
-      requestUserIds.length
-        ? supabase.from('profiles').select('id, full_name').in('id', requestUserIds)
-        : Promise.resolve({ data: [] as any[] }),
-      isMgr
-        ? supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true)
-        : Promise.resolve({ data: [] as any[] }),
-    ]);
+      let rows: LeaveRequestRow[] = (data ?? []).map((r: any) => ({ ...r }));
+      const requestUserIds = Array.from(new Set(rows.map(r => r.user_id)));
+      const [empResult, profsResult, membersResult] = await Promise.all([
+        isMgr
+          ? supabase
+              .from('employee_profiles')
+              .select('user_id, working_days, store_locations:primary_store_id(name)')
+              .eq('business_id', business.id)
+          : Promise.resolve({ data: [] as any[] }),
+        requestUserIds.length
+          ? supabase.from('profiles').select('id, full_name').in('id', requestUserIds)
+          : Promise.resolve({ data: [] as any[] }),
+        isMgr
+          ? supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
 
-    setWorkingDaysByUser(Object.fromEntries((emp ?? []).map(e => [e.user_id, e.working_days ?? null])));
-    const nameById: Record<string, string | null> = Object.fromEntries(
-      (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
-    );
-    const storeByUser: Record<string, { name: string | null } | null> = {};
-    for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
-    rows = rows.map(r => ({
-      ...r,
-      profiles: { full_name: nameById[r.user_id] ?? null },
-      primary_store: storeByUser[r.user_id] ?? null,
-    }));
-    if (isMgr) {
-      const memberIds = Array.from(new Set((members ?? []).map((m: any) => m.user_id)));
-      const missingIds = memberIds.filter(id => !(id in nameById));
-      const { data: missingProfiles } = missingIds.length
-        ? await supabase.from('profiles').select('id, full_name').in('id', missingIds)
-        : { data: [] as any[] };
-      for (const p of missingProfiles ?? []) nameById[p.id] = p.full_name ?? null;
-      setEmployees(memberIds.map((id) => ({
-        user_id: id,
-        full_name: nameById[id] ?? 'Employee',
-        primary_store_name: storeByUser[id]?.name ?? null,
-      })).sort((a, b) => a.full_name.localeCompare(b.full_name)));
-    } else {
-      setEmployees([]);
-    }
-    setRequests(rows);
-    setLoading(false);
+      if (request !== sequence.current) return;
+      for (const result of [empResult, profsResult, membersResult]) if ('error' in result && result.error) throw result.error;
+      const emp = empResult.data, profs = profsResult.data, members = membersResult.data;
+      setWorkingDaysByUser(Object.fromEntries((emp ?? []).map(e => [e.user_id, e.working_days ?? null])));
+      const nameById: Record<string, string | null> = Object.fromEntries(
+        (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
+      );
+      const storeByUser: Record<string, { name: string | null } | null> = {};
+      for (const e of (emp ?? []) as any[]) storeByUser[e.user_id] = e.store_locations ?? null;
+      rows = rows.map(r => ({
+        ...r,
+        profiles: { full_name: nameById[r.user_id] ?? null },
+        primary_store: storeByUser[r.user_id] ?? null,
+      }));
+      if (isMgr) {
+        const memberIds = Array.from(new Set((members ?? []).map((m: any) => m.user_id)));
+        const missingIds = memberIds.filter(id => !(id in nameById));
+        const missingResult = missingIds.length
+          ? await supabase.from('profiles').select('id, full_name').in('id', missingIds)
+          : { data: [] as any[], error: null };
+        if (request !== sequence.current) return;
+        if (missingResult.error) throw missingResult.error;
+        const missingProfiles = missingResult.data;
+        for (const p of missingProfiles ?? []) nameById[p.id] = p.full_name ?? null;
+        setEmployees(memberIds.map((id) => ({
+          user_id: id,
+          full_name: nameById[id] ?? 'Employee',
+          primary_store_name: storeByUser[id]?.name ?? null,
+        })).sort((a, b) => a.full_name.localeCompare(b.full_name)));
+      } else {
+        setEmployees([]);
+      }
+      setRequests(rows);
+    } catch {
+      if (request === sequence.current) {
+        setRequests([]); setEmployees([]); setWorkingDaysByUser({});
+        setError('Could not load leave requests. Please try again.');
+      }
+    } finally { if (request === sequence.current) setLoading(false); }
   }, [business, user, isMgr]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); return () => { sequence.current++; }; }, [load]);
 
   // Live updates: any insert/update/delete on leave_requests in this business reloads.
   useEffect(() => {

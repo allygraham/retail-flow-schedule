@@ -36,6 +36,7 @@ export default function Rota() {
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [copying, setCopying] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<any | null>(null);
@@ -92,7 +93,7 @@ export default function Rota() {
     return people.filter(p => p.store_ids?.includes(storeFilter) || assignedHere.has(p.user_id));
   }, [people, shifts, storeFilter]);
 
-  const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published).length, [filteredShifts]);
+  const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published && x.status !== 'cancelled').length, [filteredShifts]);
 
   const conflictsFor = (sh: any): string[] => {
     const c: string[] = [];
@@ -246,47 +247,30 @@ export default function Rota() {
 
   const openPublishConfirm = () => {
     if (!isMgr) return;
-    const count = filteredShifts.filter(x => !x.is_published).length;
+    const count = filteredShifts.filter(x => !x.is_published && x.status !== 'cancelled').length;
     if (count === 0) return;
     setPublishModal({ open: true, count });
   };
 
   const confirmPublish = async () => {
     if (!isMgr || !business) return;
-    const drafts = filteredShifts.filter(x => !x.is_published);
+    const drafts = filteredShifts.filter(x => !x.is_published && x.status !== 'cancelled');
     const ids = drafts.map(x => x.id);
     if (ids.length === 0) return;
 
-    const { error: updErr } = await supabase.from('shifts').update({ is_published: true }).in('id', ids);
-    if (updErr) { toast.error(updErr.message); return; }
-
-    // Notify each employee assigned to a newly-published shift (one notification per person).
-    const affectedUserIds = Array.from(new Set(
-      drafts.map(d => d.assigned_user_id).filter((u): u is string => !!u)
-    ));
-    if (affectedUserIds.length > 0) {
-      const storeName = storeFilter === 'all' ? null : storeById[storeFilter]?.name ?? null;
-      const weekLabel = fmtDate(weekStart, 'd MMM yyyy');
-      const rows = affectedUserIds.map(uid => {
-        const count = drafts.filter(d => d.assigned_user_id === uid).length;
-        return {
-          business_id: business.id,
-          user_id: uid,
-          type: 'schedule_published',
-          title: 'New schedule published',
-          body: `Your schedule for the week of ${weekLabel} is ready (${count} shift${count === 1 ? '' : 's'}${storeName ? ` · ${storeName}` : ''}).`,
-          link: '/rota',
-          related_entity_type: 'shift_week',
-          related_entity_id: null as string | null,
-        };
-      });
-      const { error: notifErr } = await supabase.from('notifications').insert(rows as any);
-      if (notifErr) console.error('notifications insert failed', notifErr);
-    }
-
-    toast.success(`Schedule published${affectedUserIds.length ? ` · ${affectedUserIds.length} notified` : ''}`);
-    setPublishModal({ open: false, count: 0 });
-    load();
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      const { data, error } = await supabase.rpc('publish_rota_shifts', { _business_id: business.id, _shift_ids: ids, _week_start: isoDate(weekStart) });
+      if (error) throw error;
+      if (!data?.[0]) throw new Error('Publishing returned no result');
+      const result = data[0];
+      toast.success(result.published_count ? `${result.published_count} shifts published · ${result.notified_count} employees notified in the app` : 'These shifts are already published');
+      setPublishModal({ open: false, count: 0 });
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Could not publish schedule');
+    } finally { setPublishing(false); }
   };
 
   const onDragStart = (e: DragStartEvent) => {
@@ -538,7 +522,7 @@ export default function Rota() {
         </div>
         <div slot="footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <Button variant="ghost" onClick={() => setPublishModal({ open: false, count: 0 })}>Cancel</Button>
-          <Button onClick={confirmPublish}>Publish {publishModal.count} shift{publishModal.count === 1 ? '' : 's'}</Button>
+          <Button onClick={confirmPublish} loading={publishing}>Publish {publishModal.count} shift{publishModal.count === 1 ? '' : 's'}</Button>
         </div>
       </Modal>
 

@@ -80,4 +80,14 @@ describe('account loading and protected routing', () => {
     await act(async () => resolveRoles({ data: [{ role: 'owner' }], error: null }));
     expect(screen.getByText('Login screen')).toBeInTheDocument(); expect(screen.queryByText(/Workspace: Shop/)).not.toBeInTheDocument();
   });
+  it('reports a failed sign-out and permits retry without pretending it succeeded', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null }, error: { message: 'Offline' } });
+    mocks.signOut.mockResolvedValue({ error: { message: 'Sign-out failed' } }); show();
+    await screen.findByRole('button', { name: 'Sign out' }); fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await screen.findByText('Could not sign out. Please try again.');
+    expect(screen.queryByText('Login screen')).not.toBeInTheDocument();
+    mocks.signOut.mockImplementation(async () => { mocks.listener('SIGNED_OUT', null); return { error: null }; });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' })); await screen.findByText('Login screen');
+  });
+
 });

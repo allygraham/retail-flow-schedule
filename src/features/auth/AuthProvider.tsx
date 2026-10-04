@@ -105,7 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { disposed = true; tenancyRequest.current++; sub.subscription.unsubscribe(); };
   }, [loadTenancy]);
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
 
   return (
     <Ctx.Provider value={{ loading, error, session, user, fullName, business, role, hasPermission: can, signOut, refresh }}>

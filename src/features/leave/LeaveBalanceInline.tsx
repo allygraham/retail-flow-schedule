@@ -15,13 +15,13 @@ export function LeaveBalanceInline({ userId, startDate, endDate }: Props) {
   if (error || patternMissing) return <div className={s.row} role="status">{error ?? 'Set this employee’s normal working days in Team to calculate their leave balance.'}</div>;
   if (!balance || !workingDays) return null;
   const pendingDays = startDate && endDate ? daysInYear(startDate, endDate, balance.year, workingDays) : undefined;
-  const after = pendingDays != null ? Math.max(0, balance.remaining - pendingDays) : null;
+  const after = pendingDays != null ? balance.remaining - pendingDays : null;
   const wouldExceed = pendingDays != null && pendingDays > balance.remaining;
   return (
     <div className={s.row}>
       <span className={s.label}>Annual leave {balance.year}</span>
       <span className={s.value}>
-        <strong>{balance.remaining}</strong> remaining
+        <strong>{Math.abs(balance.remaining)}</strong> {balance.remaining < 0 ? 'days over entitlement' : 'remaining'}
         <span className={s.sep}>·</span>
         {balance.taken} taken
         <span className={s.sep}>·</span>

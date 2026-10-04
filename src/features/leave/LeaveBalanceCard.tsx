@@ -27,7 +27,7 @@ export function LeaveBalanceCard({ balance, loading, patternMissing, error, titl
       ) : (
         <div className={`${s.wrap} ${compact ? s.compact : ''}`}>
           <div className={s.stats}>
-            <Stat label="Remaining" value={`${balance.remaining} days`} accent />
+            <Stat label={balance.remaining < 0 ? 'Over entitlement' : 'Remaining'} value={`${Math.abs(balance.remaining)} days`} accent />
             <Stat label="Taken" value={`${balance.taken} days\n`} />
             <Stat label="Entitlement" value={`${balance.entitlement} days`} muted />
           </div>
@@ -57,7 +57,7 @@ function Bar({ entitlement, taken, pending }: { entitlement: number; taken: numb
   const takenPct = (taken / total) * 100;
   const pendingPct = (pending / total) * 100;
   return (
-    <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={entitlement} aria-valuenow={taken}>
+    <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={entitlement} aria-valuenow={Math.min(taken, Math.max(entitlement, 0))} aria-valuetext={`${taken} days taken of ${entitlement} days entitlement`}>
       <div className={s.barTaken} style={{ width: `${takenPct}%` }} />
       <div className={s.barPending} style={{ width: `${pendingPct}%` }} />
     </div>
