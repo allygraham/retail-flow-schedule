@@ -13,7 +13,11 @@
     "test:watch": "vitest",
     "test:leave-transactions": "node scripts/test-leave-transactions.mjs",
     "test:leave-history": "node scripts/test-leave-history.mjs",
-    "test:reliability": "node scripts/test-reliability.mjs"
+    "test:reliability": "node scripts/test-reliability.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
+    "test:db": "node scripts/run-database-tests.mjs",
+    "check:deploy": "npm run audit:security && npm run test && npm run test:db && npm run typecheck && npm run build",
+    "audit:security": "node scripts/audit-security.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -62,7 +66,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.61.1",
     "react-resizable-panels": "^2.1.9",
-    "react-router-dom": "^6.30.1",
+    "react-router-dom": "^7.18.4",
     "recharts": "^2.15.4",
     "sass": "^1.99.0",
     "sonner": "^1.7.4",
@@ -80,19 +84,21 @@
     "@types/node": "^22.19.17",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react-swc": "^3.11.0",
+    "@vitejs/plugin-react-swc": "^4.3.3",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "jsdom": "^20.0.3",
-    "lovable-tagger": "^1.1.13",
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.28",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19",
-    "vitest": "^3.2.4"
+    "vite": "^8.3.2",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }
