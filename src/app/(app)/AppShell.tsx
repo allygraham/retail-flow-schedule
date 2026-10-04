@@ -1,3 +1,4 @@
+import { errorMessage } from '@/lib/errors';
 import { PageBoundary } from "@/components/common/PageBoundary";
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -133,7 +134,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       <Avatar name={fullName} />
       <div className={s.userInfo}>
         <div className={s.userName}>{fullName ?? 'You'}</div>
-        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch { toast.error('Could not sign out. Please try again.'); } }} className={s.signout}>Sign out</button>
+        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch (error) { toast.error(errorMessage(error, 'Could not sign out. Please try again.')); } }} className={s.signout}>Sign out</button>
       </div>
     </div>
   );

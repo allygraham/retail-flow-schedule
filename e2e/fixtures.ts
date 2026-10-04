@@ -7,16 +7,17 @@ export const shiftId = '55555555-5555-4555-8555-555555555555';
 export const user = { id: ownerId, email: 'owner@example.test', aud: 'authenticated', role: 'authenticated', user_metadata: { full_name: 'Test Owner', business_name: 'Test Shop' }, app_metadata: {}, created_at: '2026-01-01' };
 export const business = { id: businessId, name: 'Test Shop', slug: 'test-shop', public_holidays_enabled: false };
 export const session = { access_token: 'test-access-token', refresh_token: 'test-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user };
-export async function authenticate(page: Page) {
-  await page.addInitScript(value => localStorage.setItem('sb-example-auth-token', JSON.stringify(value)), session);
+export async function authenticate(page: Page, personId = ownerId) {
+  await page.addInitScript(value => localStorage.setItem('sb-example-auth-token', JSON.stringify(value)), { ...session, user: { ...user, id: personId, email: personId === ownerId ? user.email : 'employee@example.test' } });
 }
 export type StubState = {
+  logoutFailure: boolean; passwordFailure: boolean; recoveryFailure: boolean; inviteFailure: boolean; inviteUpdateFailure: boolean; memberFailure: boolean; editFailure: boolean; employeeActive: boolean; employeeRole: 'employee' | 'manager'; hours: number; invites: Record<string, unknown>[];
   hasWorkspace: boolean; role: 'owner' | 'employee'; holidayFailure: boolean; notificationFailure: boolean; readFailure: boolean; read: boolean;
   shifts: Record<string, unknown>[]; leaves: Record<string, unknown>[];
   writes: { endpoint: string; body: Record<string, unknown> }[];
 };
-export async function stubApi(page: Page) {
-  const state: StubState = { hasWorkspace: true, role: 'owner', holidayFailure: false, notificationFailure: false, readFailure: false, read: false, shifts: [], leaves: [], writes: [] };
+export async function stubApi(page: Page, shared?: StubState) {
+  const state: StubState = shared ?? { logoutFailure: false, passwordFailure: false, recoveryFailure: false, inviteFailure: false, inviteUpdateFailure: false, memberFailure: false, editFailure: false, employeeActive: true, employeeRole: 'employee', hours: 20, invites: [], hasWorkspace: true, role: 'owner', holidayFailure: false, notificationFailure: false, readFailure: false, read: false, shifts: [], leaves: [], writes: [] };
   await page.route('https://example.supabase.co/**', async route => {
     const request = route.request();
     const url = new URL(request.url());
@@ -28,15 +29,25 @@ export async function stubApi(page: Page) {
     if (method !== 'GET') state.writes.push({ endpoint, body: body ?? {} });
     if (url.pathname.includes('/auth/')) {
       if (endpoint === 'signup') return reply(user); // Email confirmation required: no session.
-      if (endpoint === 'user') return reply(user);
+      if (endpoint === 'user') {
+        if (method === 'PUT' && state.passwordFailure) return reply({ msg: 'Password update failed' }, 400);
+        return reply(user);
+      }
+      if (endpoint === 'recover') return state.recoveryFailure ? reply({ msg: 'Too many requests' }, 429) : reply({});
       if (endpoint === 'token') return reply(session);
-      if (endpoint === 'logout') return reply({});
+      if (endpoint === 'logout') return state.logoutFailure ? reply({ msg: 'Sign-out failed' }, 400) : reply({});
     }
     const single = request.headers().accept?.includes('object+json');
     if (endpoint === 'profiles') return reply(single ? { full_name: 'Test Owner' } : url.searchParams.has('id') && url.searchParams.get('select') === 'full_name' ? [{ full_name: 'Test Owner' }] : [{ id: ownerId, full_name: 'Test Owner' }, { id: employeeId, full_name: 'Test Employee' }]);
+    if (endpoint === 'memberships' && method === 'PATCH') {
+      if (state.memberFailure) return reply({ message: 'Employee access update failed' }, 400);
+      state.employeeActive = body?.is_active === true;
+      return reply([{ user_id: employeeId }]);
+    }
+    if (endpoint === 'memberships' && url.searchParams.get('user_id') === `eq.${employeeId}` && !state.employeeActive) return reply([]);
     if (endpoint === 'memberships' && !state.hasWorkspace) return reply([]);
-    if (endpoint === 'memberships') return reply(single ? { business_id: businessId, businesses: business } : url.searchParams.get('select')?.includes('businesses') ? [{ business_id: businessId, businesses: business }] : [{ user_id: employeeId }]);
-    if (endpoint === 'user_roles') return reply([{ role: state.role }]);
+    if (endpoint === 'memberships') return reply(single ? { business_id: businessId, businesses: business } : url.searchParams.get('select')?.includes('businesses') ? [{ business_id: businessId, businesses: business }] : [{ user_id: employeeId, is_active: state.employeeActive }]);
+    if (endpoint === 'user_roles') return url.searchParams.get('select')?.includes('user_id') ? reply([{ user_id: employeeId, role: state.employeeRole }]) : reply([{ role: url.searchParams.get('user_id') === `eq.${employeeId}` ? state.employeeRole : state.role }]);
     if (endpoint === 'business_branding') return reply(null);
     if (endpoint === 'custom_holidays') return state.holidayFailure ? reply({ message: 'Holiday service unavailable' }, 400) : reply([]);
     if (endpoint === 'notifications') {
@@ -49,7 +60,26 @@ export async function stubApi(page: Page) {
       return reply([{ id: 'notification-1', title: 'Schedule published', body: 'Your shifts are ready', read_at: state.read ? new Date().toISOString() : null, created_at: new Date().toISOString(), link: '/rota' }]);
     }
     if (endpoint === 'store_locations') return reply([{ id: storeId, name: 'Main Store', is_active: true }]);
-    if (endpoint === 'employee_profiles') return reply([{ user_id: employeeId, working_days: [1, 2, 3, 4, 5], store_locations: { name: 'Main Store' } }]);
+    if (endpoint === 'employee_profiles') return reply([{ user_id: employeeId, working_days: [1, 2, 3, 4, 5], primary_store_id: storeId, primary_role_id: null, contracted_hours: state.hours, annual_leave_entitlement: 28, store_locations: { name: 'Main Store' } }]);
+    if (endpoint === 'invite-employee') {
+      if (state.inviteFailure) return reply({ error: 'Could not create the invitation' });
+      state.invites.push({ id: '77777777-7777-4777-8777-777777777777', ...body, status: 'pending', expires_at: '2099-01-01', token: 'test-created-invite' });
+      return reply({ accept_url: 'http://127.0.0.1:4174/accept-invite?token=test-created-invite' });
+    }
+    if (endpoint === 'invitations') {
+      if (method === 'PATCH') {
+        if (state.inviteUpdateFailure) return reply({ message: 'Invite update failed' }, 400);
+        state.invites = state.invites.map(invite => ({ ...invite, ...body }));
+        return reply(state.invites.map(invite => ({ id: invite.id })));
+      }
+      return reply(state.invites);
+    }
+    if (endpoint === 'update_team_member') {
+      if (state.editFailure) return reply({ message: 'Employment update failed' }, 400);
+      if (body?._role) state.employeeRole = body._role as 'employee' | 'manager';
+      state.hours = Number(body?._contracted_hours);
+      return reply(null);
+    }
     if (endpoint === 'get_rota_people') return reply([{ id: employeeId, user_id: employeeId, full_name: 'Test Employee', primary_store_id: storeId, primary_role_id: null, store_ids: [storeId] }]);
     if (endpoint === 'shifts') {
       if (method === 'PATCH') {

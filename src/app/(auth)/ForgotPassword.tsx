@@ -11,7 +11,7 @@ import s from './Auth.module.scss';
  * NOTE: Supabase Auth requires the redirect URL to be allow-listed.
  * Add the following Redirect URLs in your Supabase Auth settings:
  *   - http://localhost:5173/reset-password   (local dev)
- *   - https://<your-netlify-domain>/reset-password   (production)
+ *   - https://<your-app-domain>/reset-password   (production)
  * Also set the Site URL to your production origin.
  */
 export default function ForgotPassword() {
@@ -26,16 +26,20 @@ export default function ForgotPassword() {
     const parsed = forgotSchema.safeParse({ email });
     if (!parsed.success) { setErr('Enter a valid email address'); return; }
     setLoading(true);
-    // Always show generic success to avoid revealing whether the email exists.
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    if (error && error.status && error.status >= 500) {
-      setErr('Something went wrong. Please try again.');
-      return;
-    }
-    setSent(true);
+    try {
+      // Keep the response generic so account existence is never disclosed.
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error?.status === 429) { setErr('Too many requests. Please wait before trying again.'); return; }
+      if (error && (!error.status || error.status >= 500)) {
+        setErr('Something went wrong. Please try again.'); return;
+      }
+      setSent(true);
+    } catch {
+      setErr('Could not send the reset request. Please try again.');
+    } finally { setLoading(false); }
+
   };
 
   return (

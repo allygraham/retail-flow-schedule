@@ -1,3 +1,4 @@
+import { signOutChecked, SignOutError } from '@/features/auth/signOut';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +16,7 @@ import s from './Auth.module.scss';
  *
  * Supabase Auth → URL Configuration must include:
  *   - http://localhost:5173/reset-password
- *   - https://<your-netlify-domain>/reset-password
+ *   - https://<your-app-domain>/reset-password
  */
 export default function ResetPassword() {
   const nav = useNavigate();
@@ -25,44 +26,59 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [verificationError, setVerificationError] = useState(false);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
   const [done, setDone] = useState(false);
+  const [localSignedOut, setLocalSignedOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-
-    // Listen first so we don't miss the PASSWORD_RECOVERY event.
+    setChecked(false); setReady(false); setVerificationError(false);
+    const linkError = new URLSearchParams(window.location.search).has('error')
+      || new URLSearchParams(window.location.hash.slice(1)).has('error');
     const { data: sub } = supabase.auth.onAuthStateChange((evt, session) => {
-      if (!mounted) return;
-      if (evt === 'PASSWORD_RECOVERY' || (evt === 'SIGNED_IN' && session)) {
-        setReady(true);
-      }
+      if (!mounted || linkError) return;
+      if ((evt === 'PASSWORD_RECOVERY' || evt === 'SIGNED_IN') && session) setReady(true);
+      if (evt === 'SIGNED_OUT') setReady(false);
     });
-
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
-      if (data.session) setReady(true);
+      if (error && !linkError) setVerificationError(true);
+      if (!linkError && !error && data.session) setReady(true);
       setChecked(true);
-    });
+    }).catch(() => { if (mounted) { setVerificationError(true); setChecked(true); } });
+    return () => { mounted = false; sub.subscription.unsubscribe(); };
+  }, [verificationAttempt]);
 
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
+  const finish = async () => {
+    setLoading(true); setLogoutError(null);
+    try {
+      await signOutChecked();
+      nav('/login', { replace: true });
+    } catch (error) {
+      const local = error instanceof SignOutError && error.localSignedOut;
+      setLocalSignedOut(local);
+      setLogoutError(local
+        ? 'Your password was updated. You are signed out on this device, but other sessions could not be signed out.'
+        : 'Your password was updated, but we could not sign you out. Please try again.');
+    } finally { setLoading(false); }
+  };
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!ready || loading) return;
     setErr(null);
     const parsed = resetSchema.safeParse({ password, confirm });
     if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-    if (error) { setErr(error.message); return; }
-    setDone(true);
-    // Sign out so the user logs in fresh with the new password.
-    await supabase.auth.signOut();
-    setTimeout(() => nav('/login', { replace: true }), 1500);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) { setErr(error.message); return; }
+      setDone(true);
+      await finish();
+    } catch {
+      setErr('Could not update your password. Please try again.');
+    } finally { setLoading(false); }
   };
 
   return (
@@ -72,8 +88,15 @@ export default function ResetPassword() {
         <h1 className={s.title}>Set a new password</h1>
 
         {done ? (
-          <div className={s.ok}>
-            Password updated. Redirecting you to sign in…
+          <>
+            <div className={s.ok}>Password updated.</div>
+            {logoutError && <div role="alert" className={s.err}>{logoutError}</div>}
+            {localSignedOut ? <Link to="/login">Continue to sign in</Link> : <Button full loading={loading} onClick={() => { void finish(); }}>Sign out and continue</Button>}
+          </>
+        ) : verificationError ? (
+          <div role="alert">
+            <p className={s.err}>Could not verify your reset link. Please try again.</p>
+            <Button onClick={() => setVerificationAttempt(attempt => attempt + 1)}>Try again</Button>
           </div>
         ) : !ready && checked ? (
           <>

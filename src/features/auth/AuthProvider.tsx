@@ -1,3 +1,4 @@
+import { signOutChecked } from './signOut';
 import { Ctx } from './authContext';
 import { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
@@ -92,10 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { disposed = true; requests.current++; sub.subscription.unsubscribe(); };
   }, [loadTenancy]);
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  };
+  const signOut = signOutChecked;
 
   return (
     <Ctx.Provider value={{ loading, error, session, user, fullName, business, role, hasPermission: can, signOut, refresh }}>

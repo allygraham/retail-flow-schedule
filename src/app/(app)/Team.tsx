@@ -314,33 +314,38 @@ export default function Team() {
     });
     if (!parsed.success) { setInviteErr(parsed.error.issues[0].message); return; }
 
+    if (inviteBusy) return;
     setInviteBusy(true);
-    const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`.trim();
-    const { data, error } = await supabase.functions.invoke<{ error?: string; accept_url?: string }>('invite-employee', {
-      body: {
-        business_id: business.id,
-        email: parsed.data.email,
-        full_name: fullName,
-        role: parsed.data.role,
-        primary_store_id: parsed.data.primary_store_id,
-        primary_role_id: parsed.data.primary_role_id ?? null,
-        contracted_hours: parsed.data.contracted_hours ?? null,
-        hire_date: parsed.data.hire_date ?? null,
-        phone: parsed.data.phone ?? null,
-        notes: parsed.data.notes ?? null,
-        redirect_origin: window.location.origin,
-      },
-    });
-    setInviteBusy(false);
-    if (error) {
-      const msg = data?.error || error.message || 'Something went wrong';
-      setInviteErr(msg);
-      return;
-    }
-    if (data?.error) { setInviteErr(data.error); return; }
-    setAcceptUrl(data?.accept_url ?? null);
-    toast.success('Invite created');
-    load();
+    try {
+      const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`.trim();
+      const { data, error } = await supabase.functions.invoke<{ error?: string; accept_url?: string }>('invite-employee', {
+        body: {
+          business_id: business.id,
+          email: parsed.data.email,
+          full_name: fullName,
+          role: parsed.data.role,
+          primary_store_id: parsed.data.primary_store_id,
+          primary_role_id: parsed.data.primary_role_id ?? null,
+          contracted_hours: parsed.data.contracted_hours ?? null,
+          hire_date: parsed.data.hire_date ?? null,
+          phone: parsed.data.phone ?? null,
+          notes: parsed.data.notes ?? null,
+          redirect_origin: window.location.origin,
+        },
+      });
+      if (error) {
+        const msg = data?.error || error.message || 'Something went wrong';
+        setInviteErr(msg);
+        return;
+      }
+      if (data?.error) { setInviteErr(data.error); return; }
+      if (!data?.accept_url) throw new Error('The invitation response did not include a link. Please try again.');
+      setAcceptUrl(data.accept_url);
+      toast.success('Invite created');
+      load();
+    } catch (error) {
+      setInviteErr(errorMessage(error, 'Could not create the invite. Please try again.'));
+    } finally { setInviteBusy(false); }
   };
 
   const copyAccept = async (token: string | null | undefined) => {
@@ -350,23 +355,21 @@ export default function Team() {
     catch { toast.error('Copy failed'); }
   };
 
-  const revokeInvite = async (id: string) => {
-    const { error } = await supabase.from('invitations').update({ status: 'revoked' }).eq('id', id);
-    if (error) { toast.error(error.message); return; }
-    toast.success('Invite revoked');
-    load();
+  const updateInvite = async (id: string, patch: { status: 'revoked' | 'pending'; expires_at?: string }, success: string) => {
+    if (!business) return;
+    try {
+      const { data, error } = await supabase.from('invitations').update(patch)
+        .eq('business_id', business.id).eq('id', id).select('id');
+      if (error) throw error;
+      if (!data?.length) throw new Error('The invite could not be updated. Refresh the team and try again.');
+      toast.success(success);
+      await load();
+    } catch (error) { toast.error(errorMessage(error, 'Could not update the invite. Please try again.')); }
   };
-
-  const resendInvite = async (id: string) => {
-    const newExpiry = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
-    const { error } = await supabase
-      .from('invitations')
-      .update({ expires_at: newExpiry, status: 'pending' })
-      .eq('id', id);
-    if (error) { toast.error(error.message); return; }
-    toast.success('Invite refreshed');
-    load();
-  };
+  const revokeInvite = (id: string) => updateInvite(id, { status: 'revoked' }, 'Invite revoked');
+  const resendInvite = (id: string) => updateInvite(id, {
+    expires_at: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(), status: 'pending',
+  }, 'Invite refreshed');
 
   // ---- Edit member ----
   const openEdit = (row: Row) => {
@@ -424,17 +427,18 @@ export default function Team() {
   // ---- Deactivate / reactivate ----
   const setMembershipActive = async (row: Row, active: boolean) => {
     if (!business || !row.user_id) return;
+    if (confirmBusy) return;
     setConfirmBusy(true);
-    const { error } = await supabase
-      .from('memberships')
-      .update({ is_active: active })
-      .eq('business_id', business.id)
-      .eq('user_id', row.user_id);
-    setConfirmBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(active ? 'Employee reactivated' : 'Employee deactivated');
-    setConfirmRow(null);
-    load();
+    try {
+      const { data, error } = await supabase.from('memberships').update({ is_active: active })
+        .eq('business_id', business.id).eq('user_id', row.user_id).select('user_id');
+      if (error) throw error;
+      if (!data?.length) throw new Error('The employee could not be updated. Refresh the team and try again.');
+      toast.success(active ? 'Employee reactivated' : 'Employee deactivated');
+      setConfirmRow(null);
+      await load();
+    } catch (error) { toast.error(errorMessage(error, 'Could not update employee access. Please try again.')); }
+    finally { setConfirmBusy(false); }
   };
 
   const canEdit = (row: Row) => {
@@ -902,7 +906,7 @@ export default function Team() {
         ) : (
           <>
             <Button variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={submitInvite} loading={inviteBusy}>Send invite</Button>
+            <Button onClick={submitInvite} loading={inviteBusy}>Create invite</Button>
           </>
         )}
       >
