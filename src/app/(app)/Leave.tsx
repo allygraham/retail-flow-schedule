@@ -1247,8 +1247,8 @@ export default function Leave() {
           const meta = parseSicknessMeta(detailsRow.sickness_meta);
           const isSick = detailsRow.leave_type === 'sick';
           const history = requests
-            .filter(r => r.user_id === detailsRow.user_id)
-            .map(r => ({ start_date: r.start_date, end_date: r.end_date, leave_type: r.leave_type }));
+            .filter(r => r.user_id === detailsRow.user_id && r.status === 'approved')
+            .map(r => ({ id: r.id, start_date: r.start_date, end_date: r.end_date, leave_type: r.leave_type, status: r.status }));
           return (
             <div className={s.noteViewer}>
               <div className={s.detailList}>
@@ -1319,10 +1319,12 @@ export default function Leave() {
                   meta="Operational guidance"
                 >
                   <SspPanel
+                    key={`${detailsRow.id}:${detailsRow.start_date}:${detailsRow.end_date}`}
+                    requestId={detailsRow.id}
                     startDate={detailsRow.start_date}
                     endDate={detailsRow.end_date}
                     history={history}
-                    paid={meta.paid_absence}
+                    workingDays={workingDaysByUser[detailsRow.user_id]}
                     employeeName={detailsRow.profiles?.full_name ?? undefined}
                   />
                 </CollapsibleSection>

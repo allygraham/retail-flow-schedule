@@ -25,3 +25,5 @@
 }
 .summary { margin: 0; font-size: $fs-sm; color: var(--color-text-secondary, $text-soft); }
 .actions { display: flex; gap: $sp-2; flex-wrap: wrap; }
+
+.days { border: 0; padding: 0; display: flex; gap: $sp-2; flex-wrap: wrap; legend { font-size: $fs-sm; margin-bottom: $sp-2; } }
