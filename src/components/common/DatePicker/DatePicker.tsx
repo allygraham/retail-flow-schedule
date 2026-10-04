@@ -110,44 +110,23 @@ export function DatePicker(props: DatePickerProps) {
     (props as SingleProps).onChange(d ?? null);
     if (d) setOpen(false);
   };
-  const handleRangeSelect = (r: DateRange | undefined, selectedDay: Date) => {
+  const handleRangeSelect = (_range: DateRange | undefined, selectedDay: Date) => {
     const current = draftRange ?? (props as RangeProps).value;
-
-    if (current?.from && !current.to) {
-      if (isSameDay(selectedDay, current.from)) {
-        const next = { from: current.from, to: current.from };
-        setDraftRange(null);
-        (props as RangeProps).onChange(next);
-        setOpen(false);
-        return;
-      }
-
-      if (isBefore(selectedDay, current.from)) {
-        setDraftRange({ from: selectedDay, to: null });
-        return;
-      }
-
-      const next = { from: current.from, to: selectedDay };
-      setDraftRange(null);
-      (props as RangeProps).onChange(next);
-      setOpen(false);
-      return;
-    }
-
-    if (current?.from && current.to) {
+    const beginRange = () => {
+      // The first click is a valid one-day range immediately. Keep the picker
+      // open so a second click can extend it; closing must not restore old dates.
       setDraftRange({ from: selectedDay, to: null });
-      return;
-    }
-
-    const next: DateRangeValue = { from: r?.from ?? selectedDay ?? null, to: r?.to ?? null };
-    if (next.from && next.to) {
+      (props as RangeProps).onChange({ from: selectedDay, to: selectedDay });
+    };
+    if (current?.from && !current.to) {
+      if (isBefore(selectedDay, current.from)) { beginRange(); return; }
+      const next = { from: current.from, to: isSameDay(selectedDay, current.from) ? current.from : selectedDay };
       setDraftRange(null);
       (props as RangeProps).onChange(next);
       setOpen(false);
       return;
     }
-
-    setDraftRange({ from: next.from, to: next.to });
+    beginRange();
   };
 
   const hasValue = isRange

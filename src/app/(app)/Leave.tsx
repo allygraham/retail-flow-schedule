@@ -100,15 +100,15 @@ export default function Leave() {
   const [addLeaveModal, setAddLeaveModal] = useState(false);
   const [form, setForm] = useState<{ leave_type: 'annual' | 'unpaid' | 'sick' | 'other'; start_date: string; end_date: string; reason: string }>({
     leave_type: 'annual',
-    start_date: isoDate(new Date()),
-    end_date: isoDate(new Date()),
+    start_date: '',
+    end_date: '',
     reason: '',
   });
   const [mgmtForm, setMgmtForm] = useState<{ user_id: string; leave_type: 'annual' | 'unpaid' | 'sick'; start_date: string; end_date: string; reason: string; manager_note: string; status: 'approved'; sickness_meta: SicknessMeta; lifecycle_status: SicknessLifecycleStatus }>({
     user_id: '',
     leave_type: 'sick',
-    start_date: isoDate(new Date()),
-    end_date: isoDate(new Date()),
+    start_date: '',
+    end_date: '',
     reason: '',
     manager_note: '',
     status: 'approved',
@@ -274,6 +274,7 @@ export default function Leave() {
 
   const submitRequest = async () => {
     setFormErr(null);
+    if (!form.start_date || !form.end_date) { setFormErr('Choose the dates for your leave.'); return; }
     const parsed = leaveSchema.safeParse(form);
     if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
     if (parsed.data.leave_type === 'annual' && balance && workingDays) {
@@ -288,7 +289,7 @@ export default function Leave() {
     try {
       await submit(parsed.data);
       setRequestModal(false);
-      setForm({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
+      setForm({ leave_type: 'annual', start_date: '', end_date: '', reason: '' });
       toast.success('Request submitted. Your manager has been notified.');
       reloadBalance();
     } catch (e) {
@@ -301,8 +302,8 @@ export default function Leave() {
     setMgmtForm({
       user_id: userId ?? employees[0]?.user_id ?? '',
       leave_type: 'sick',
-      start_date: isoDate(new Date()),
-      end_date: isoDate(new Date()),
+      start_date: '',
+      end_date: '',
       reason: '',
       manager_note: '',
       status: 'approved',
@@ -326,6 +327,7 @@ export default function Leave() {
       ...mgmtForm.sickness_meta,
       return_to_work_date: mgmtForm.sickness_meta?.return_to_work_date || null,
     } : null;
+    if (!mgmtForm.start_date || !mgmtForm.end_date) { setMgmtErr('Choose the dates for this absence.'); return; }
     const parsed = managementLeaveSchema.safeParse({
       ...mgmtForm,
       reason: mgmtForm.reason || null,
@@ -956,8 +958,8 @@ export default function Leave() {
               value={{ from: parseISODate(form.start_date), to: parseISODate(form.end_date) }}
               onChange={(r) => setForm({
                 ...form,
-                start_date: toISODate(r.from) || form.start_date,
-                end_date: toISODate(r.to) || toISODate(r.from) || form.end_date,
+                start_date: toISODate(r.from),
+                end_date: toISODate(r.to) || toISODate(r.from),
               })}
               placeholder="Pick a date range"
             />
@@ -1029,8 +1031,8 @@ export default function Leave() {
               value={{ from: parseISODate(mgmtForm.start_date), to: parseISODate(mgmtForm.end_date) }}
               onChange={(r) => setMgmtForm({
                 ...mgmtForm,
-                start_date: toISODate(r.from) || mgmtForm.start_date,
-                end_date: toISODate(r.to) || toISODate(r.from) || mgmtForm.end_date,
+                start_date: toISODate(r.from),
+                end_date: toISODate(r.to) || toISODate(r.from),
               })}
               placeholder="Pick a date range"
             />

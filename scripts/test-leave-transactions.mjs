@@ -100,6 +100,13 @@ await check('management recording releases only matching active shifts',async()=
 await check('pending and rejected requests preserve shift assignments',async()=>{
  await shift();const id=await pending();assert.equal((await rows('shifts'))[0].assigned_user_id,employee);await review(id,'rejected');assert.equal((await rows('shifts'))[0].assigned_user_id,employee);
 });await clear();
+await check('approval preserves both dates of a one-day 28 November request',async()=>{
+ const id=await pending();
+ await act(employee,"UPDATE leave_requests SET start_date='2026-11-28',end_date='2026-11-28' WHERE id=$1",[id]);
+ await review(id);
+ const {rows:[leave]}=await db.query('SELECT start_date::text,end_date::text,status FROM leave_requests WHERE id=$1',[id]);
+ assert.equal(leave.start_date,'2026-11-28');assert.equal(leave.end_date,'2026-11-28');assert.equal(leave.status,'approved');
+});await clear();
 await check('approval releases shifts and repeated reviews are rejected',async()=>{
  await shift();const id=await pending();assert.equal((await review(id)).rows[0].released_shift_count,1);assert.equal((await rows('shifts'))[0].assigned_user_id,null);await denied(()=>review(id),'40001');
 });await clear();

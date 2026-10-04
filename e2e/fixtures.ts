@@ -58,7 +58,13 @@ export async function stubApi(page: Page) {
       }
       return reply(state.shifts);
     }
-    if (endpoint === 'leave_requests') return reply(state.leaves);
+    if (endpoint === 'leave_requests') {
+      if (method === 'POST') {
+        state.leaves.push({ ...body, id: '66666666-6666-4666-8666-666666666666', status: 'pending', created_at: '2026-10-04', sickness_meta: null, lifecycle_status: null });
+        return reply(null, 201);
+      }
+      return reply(state.leaves);
+    }
     if (endpoint === 'get_leave_requests') return reply(state.leaves);
     if (endpoint === 'publish_rota_shifts') {
       state.shifts = state.shifts.map(shift => ({ ...shift, is_published: true }));

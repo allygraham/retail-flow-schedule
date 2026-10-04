@@ -102,3 +102,34 @@ test('manager approves an employee leave request', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(state.leaves[0].status).toBe('approved');
 });
+
+test('one click requests 28 November and approval preserves that date', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-04T12:00:00Z') });
+  await authenticate(page);
+  const state = await stubApi(page);
+  state.role = 'employee';
+  await page.goto('/leave');
+  await page.getByRole('button', { name: 'Request time off', exact: true }).click();
+  const request = page.getByRole('dialog').filter({ hasText: 'Request time off' });
+  await request.getByRole('button', { name: 'Submit', exact: true }).click();
+  await expect(request.getByText('Choose the dates for your leave.')).toBeVisible();
+  expect(state.leaves).toHaveLength(0);
+  await request.getByRole('button', { name: 'Pick a date range', exact: true }).click();
+  await page.getByRole('button', { name: /next month/i }).click();
+  await page.getByRole('button', { name: /Saturday, November 28th, 2026/i }).click();
+  await request.getByText('Request time off', { exact: true }).click(); // Closing the picker must preserve the clicked day.
+  await expect(request.getByRole('button', { name: 'Pick a date range' })).toContainText('28 Nov 2026');
+  await request.getByRole('button', { name: 'Submit', exact: true }).click();
+  await expect(request).toHaveCount(0);
+  expect(state.leaves[0].start_date).toBe('2026-11-28');
+  expect(state.leaves[0].end_date).toBe('2026-11-28');
+  state.role = 'owner';
+  await page.reload();
+  await page.getByRole('button', { name: 'Open actions' }).first().click();
+  await page.getByRole('menuitem', { name: 'Approve', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(state.leaves[0].status).toBe('approved');
+  expect(state.leaves[0].start_date).toBe('2026-11-28');
+  expect(state.leaves[0].end_date).toBe('2026-11-28');
+});
