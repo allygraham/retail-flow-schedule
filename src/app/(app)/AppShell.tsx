@@ -160,14 +160,14 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         >
           <Menu size={22} />
         </button>
-        <div className={s.topbarBrand}><Logo size="sm" useBusinessLogo /></div>
+        <div className={s.topbarBrand}><Logo to="/dashboard" size="sm" useBusinessLogo /></div>
         <NotificationsBell variant="mobile" />
       </header>
 
       {/* Desktop sidebar (unchanged behavior) */}
       <aside className={s.side}>
         <div className={s.sideBrand}>
-          <Logo size="sm" useBusinessLogo />
+          <Logo to="/dashboard" size="sm" useBusinessLogo />
           <NotificationsBell variant="desktop" />
         </div>
         {renderBiz()}
@@ -189,7 +189,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         aria-label="Main navigation"
       >
         <div className={s.drawerHead}>
-          <Logo size="sm" useBusinessLogo />
+          <Logo to="/dashboard" size="sm" useBusinessLogo />
           <button
             ref={closeBtnRef}
             type="button"
