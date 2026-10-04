@@ -37,6 +37,7 @@ export function daysInYear(start: string, end: string, year: number, workingDays
 
 export interface BalanceRequest {
   start_date: string; end_date: string; status: string; leave_type: string;
+  charged_working_days?: readonly number[] | null;
 }
 
 /** Count a working date once even if requests overlap; approved takes precedence. */
@@ -45,8 +46,9 @@ export function calculateLeaveDays(requests: readonly BalanceRequest[], year: nu
   const pending = new Set<string>();
   for (const request of requests) {
     if (request.leave_type !== 'annual' || !['approved', 'pending'].includes(request.status)) continue;
+    if (request.status === 'approved' && !request.charged_working_days?.length) throw new Error('Approved leave has no saved working pattern');
     const target = request.status === 'approved' ? approved : pending;
-    for (const date of workingDates(request.start_date, request.end_date, workingDays, year)) target.add(date);
+    for (const date of workingDates(request.start_date, request.end_date, request.status === 'approved' ? request.charged_working_days! : workingDays, year)) target.add(date);
   }
   return { taken: approved.size, pending: [...pending].filter(date => !approved.has(date)).length };
 }

@@ -426,6 +426,7 @@ export type Database = {
       }
       leave_requests: {
         Row: {
+          charged_working_days: number[] | null
           approved_at: string | null
           approved_by: string | null
           business_id: string
@@ -449,6 +450,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          charged_working_days?: number[] | null
           approved_at?: string | null
           approved_by?: string | null
           business_id: string
@@ -472,6 +474,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          charged_working_days?: number[] | null
           approved_at?: string | null
           approved_by?: string | null
           business_id?: string
@@ -866,6 +869,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_leave_request: {
+        Args: { _business_id: string; _leave_id: string }
+        Returns: string
+      }
+
       record_employee_leave: {
         Args: { _business_id: string; _user_id: string; _leave_type: Database["public"]["Enums"]["leave_type"]; _start_date: string; _end_date: string; _reason?: string | null; _manager_note?: string | null; _sickness_meta?: Json | null; _lifecycle_status?: string | null }
         Returns: { leave_id: string; released_shift_count: number }[]

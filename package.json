@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:leave-transactions": "node scripts/test-leave-transactions.mjs"
+    "test:leave-transactions": "node scripts/test-leave-transactions.mjs",
+    "test:leave-history": "node scripts/test-leave-history.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

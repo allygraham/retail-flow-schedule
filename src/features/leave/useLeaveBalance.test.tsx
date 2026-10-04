@@ -15,7 +15,7 @@ beforeEach(() => {
   mocks.auth = { user: { id: 'self' }, business: { id: 'shop' } };
   mocks.profile = { data: { annual_leave_entitlement: 20, working_days: [1,3,5] }, error: null };
   mocks.leaves = { data: [
-    { start_date: '2026-10-05', end_date: '2026-10-11', leave_type: 'annual', status: 'approved' },
+    { start_date: '2026-10-05', end_date: '2026-10-11', leave_type: 'annual', status: 'approved', charged_working_days: [1,3,5] },
     { start_date: '2026-10-12', end_date: '2026-10-18', leave_type: 'annual', status: 'pending' },
   ], error: null };
 });
@@ -55,6 +55,19 @@ describe('annual leave balance integration', () => {
     await waitFor(() => expect(result.current.balance?.entitlement).toBe(10));
     await act(async () => { finishOld({ data: { annual_leave_entitlement: 99, working_days: [1,2,3,4,5] }, error: null }); });
     expect(result.current.balance?.entitlement).toBe(10);
-    expect(result.current.balance?.taken).toBe(1);
+    expect(result.current.balance?.taken).toBe(3);
   });
+  it('keeps historical balance when current working days change', async () => {
+    mocks.profile.data.working_days = [2,4];
+    const { result } = renderHook(() => useLeaveBalance());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.balance?.taken).toBe(3); expect(result.current.balance?.pending).toBe(2);
+  });
+  it('shows an unavailable balance when historical pattern is unknown', async () => {
+    mocks.leaves.data[0].charged_working_days = null;
+    const { result } = renderHook(() => useLeaveBalance());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.patternMissing).toBe(true); expect(result.current.balance).toBeNull();
+  });
+
 });

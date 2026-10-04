@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
+import { AccountLoadError } from './AccountLoadError';
 import { useAuth } from './AuthProvider';
 import type { AppRole } from '@/types/domain';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -16,7 +17,7 @@ interface Props {
 }
 
 export function ProtectedRoute({ children, roles, permission, redirectTo = '/dashboard', fallback = 'redirect' }: Props) {
-  const { loading, user, business, role, hasPermission } = useAuth();
+  const { loading, error, user, business, role, hasPermission } = useAuth();
 
   if (loading) {
     return (
@@ -26,6 +27,7 @@ export function ProtectedRoute({ children, roles, permission, redirectTo = '/das
       </div>
     );
   }
+  if (error) return <div className={s.denied}><AccountLoadError /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!business) return <Navigate to="/signup" replace />;
   const hasAllowedRole = !roles || (role ? roles.includes(role) : false);

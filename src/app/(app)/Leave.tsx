@@ -1,3 +1,4 @@
+import { canCancelLeave } from '@/features/leave/leavePermissions';
 import { daysBetween, daysInYear, workingDaysBetween } from '@/features/leave/leaveDays';
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -260,7 +261,7 @@ export default function Leave() {
   };
 
   const durationLabel = (request: LeaveRequestRow) => {
-    const pattern = request.user_id === user?.id ? workingDays : workingDaysByUser[request.user_id];
+    const pattern = request.status === 'approved' ? request.charged_working_days : request.user_id === user?.id ? workingDays : workingDaysByUser[request.user_id];
     const isWorking = request.leave_type === 'annual' && !!pattern?.length;
     const days = isWorking ? workingDaysBetween(request.start_date, request.end_date, pattern!) : daysBetween(request.start_date, request.end_date);
     return `${days} ${isWorking ? 'working' : 'calendar'} day${days === 1 ? '' : 's'}`;
@@ -370,7 +371,7 @@ export default function Leave() {
   const cancel = async (id: string) => {
     toast('Cancel this request?', {
       action: { label: 'Cancel request', onClick: async () => {
-        try { await cancelOwn(id); toast.success('Request cancelled'); }
+        try { await cancelOwn(id); reloadBalance(); toast.success('Leave cancelled'); }
         catch (e: any) { toast.error(e.message ?? 'Could not cancel'); }
       }},
       cancel: { label: 'Keep', onClick: () => {} },
@@ -679,7 +680,7 @@ export default function Leave() {
                     isMgr ? (r.primary_store?.name ?? null) : null,
                     isSick && meta.category ? SICKNESS_CATEGORY_LABEL[meta.category] : null,
                   ].filter(Boolean) as string[];
-                  const hasMenu = isMgr || (!isMgr && r.status === 'pending');
+                  const hasMenu = isMgr || canCancelLeave(role, user?.id, r);
 
                   return (
                     <div
@@ -748,8 +749,8 @@ export default function Leave() {
                                   <DropdownMenuItem className={t.menuDanger} onSelect={() => openReview(r, 'rejected')}>Decline</DropdownMenuItem>
                                 </>
                               )}
-                              {!isMgr && r.status === 'pending' && (
-                                <DropdownMenuItem className={t.menuDanger} onSelect={() => cancel(r.id)}>Withdraw request</DropdownMenuItem>
+                              {canCancelLeave(role, user?.id, r) && (
+                                <DropdownMenuItem className={t.menuDanger} onSelect={() => cancel(r.id)}>{isMgr ? 'Cancel leave' : 'Withdraw request'}</DropdownMenuItem>
                               )}
                               {r.manager_note && (
                                 <DropdownMenuItem onSelect={() => openNote('Manager note', r.manager_note ?? '')}>View manager note</DropdownMenuItem>
@@ -844,7 +845,7 @@ export default function Leave() {
                               <AlertCircle size={12} /> Linked to recent sickness
                             </span>
                           )}
-                          {!isMgr && r.status === 'pending' && (
+                          {canCancelLeave(role, user?.id, r) && (
                             <button
                               type="button"
                               className={s.noteButton}
@@ -853,7 +854,7 @@ export default function Leave() {
                                 cancel(r.id);
                               }}
                             >
-                              Withdraw request
+                              {isMgr ? 'Cancel leave' : 'Withdraw request'}
                             </button>
                           )}
                         </div>

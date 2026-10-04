@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculateLeaveDays, daysBetween, daysInYear, workingDaysBetween } from './leaveDays';
 const weekdays = [1, 2, 3, 4, 5];
-const request = (start_date: string, end_date: string, status = 'approved', leave_type = 'annual') => ({ start_date, end_date, status, leave_type });
+const request = (start_date: string, end_date: string, status = 'approved', leave_type = 'annual') => ({ start_date, end_date, status, leave_type, charged_working_days: weekdays });
 
 describe('working-pattern annual leave', () => {
   it('deducts five working days for a Monday–Sunday request', () => {
@@ -49,4 +49,18 @@ describe('working-pattern annual leave', () => {
       request('2026-10-05', '2026-10-09', 'rejected'),
     ], 2026, weekdays)).toEqual({ taken: 0, pending: 0 });
   });
+  it('keeps approved deductions on the saved pattern after employment changes', () => {
+    const leave = { ...request('2026-10-05', '2026-10-11'), charged_working_days: [1,3,5] };
+    expect(calculateLeaveDays([leave], 2026, [2,4])).toEqual({ taken: 3, pending: 0 });
+  });
+  it('uses current days for pending leave and saved days for approved leave', () => {
+    expect(calculateLeaveDays([
+      { ...request('2026-10-05', '2026-10-11'), charged_working_days: [1,3,5] },
+      { ...request('2026-10-12', '2026-10-18', 'pending'), charged_working_days: null },
+    ], 2026, [2,4])).toEqual({ taken: 3, pending: 2 });
+  });
+  it('refuses to invent a historical charge without a saved pattern', () => {
+    expect(() => calculateLeaveDays([{ ...request('2026-10-05', '2026-10-11'), charged_working_days: null }], 2026, weekdays)).toThrow('no saved working pattern');
+  });
+
 });

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { AccountLoadError } from '@/features/auth/AccountLoadError';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
@@ -10,7 +11,7 @@ import s from './Auth.module.scss';
 
 export default function Signup() {
   const nav = useNavigate();
-  const { user, business, loading: authLoading, refresh } = useAuth();
+  const { user, business, loading: authLoading, error: accountError, refresh } = useAuth();
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
@@ -26,7 +27,7 @@ export default function Signup() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErr(null);
-    if (authLoading) return;
+    if (authLoading || accountError) return;
     if (user) {
       if (!businessName.trim()) { setErr('Enter your business name.'); return; }
       setLoading(true);
@@ -62,6 +63,7 @@ export default function Signup() {
   };
 
   if (authLoading) return <div className={s.page}>Loading…</div>;
+  if (accountError) return <div className={s.page}><div className={s.card}><AccountLoadError /></div></div>;
   if (user && business) return <Navigate to="/dashboard" replace />;
 
   return (

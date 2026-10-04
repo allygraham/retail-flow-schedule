@@ -51,7 +51,7 @@ export function useLeaveBalance(userId?: string | null) {
           .maybeSingle(),
         supabase
           .from('leave_requests')
-          .select('start_date, end_date, status, leave_type')
+          .select('start_date, end_date, status, leave_type, charged_working_days')
           .eq('user_id', targetId)
           .eq('business_id', business.id)
           .eq('leave_type', 'annual')
@@ -67,7 +67,7 @@ export function useLeaveBalance(userId?: string | null) {
       }
       const pattern = emp?.working_days ?? null;
       setWorkingDays(pattern);
-      if (!pattern?.length) {
+      if (!pattern?.length || (leaves ?? []).some(l => l.status === 'approved' && !l.charged_working_days?.length)) {
         setPatternMissing(true); return;
       }
       const { taken, pending } = calculateLeaveDays(leaves ?? [], year, pattern);

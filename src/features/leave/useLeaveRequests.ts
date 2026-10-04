@@ -156,13 +156,11 @@ export function useLeaveRequests() {
   }, [load]);
 
   const cancelOwn = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('leave_requests')
-      .update({ status: 'cancelled' })
-      .eq('id', id);
+    if (!business || !user) throw new Error('Not ready');
+    const { error } = await supabase.rpc('cancel_leave_request', { _business_id: business.id, _leave_id: id });
     if (error) throw error;
     await load();
-  }, [load]);
+  }, [business, user, load]);
 
   const review = useCallback(async ({ id, status, review_notes }: ReviewInput) => {
     if (!business || !user || !isMgr) throw new Error('Not authorised');

@@ -39,6 +39,7 @@ export interface Schedule {
   week_start: string; status: ScheduleStatus; published_at: string | null;
 }
 export interface LeaveRequest {
+  charged_working_days: number[] | null;
   id: string; business_id: string; user_id: string;
   leave_type: LeaveType; status: LeaveStatus; source: LeaveSource;
   start_date: string; end_date: string; reason: string | null;
