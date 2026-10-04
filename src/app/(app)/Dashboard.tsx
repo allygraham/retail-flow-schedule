@@ -1,6 +1,7 @@
-import type { ShiftRow, ShiftWithNames } from '@/types/rows';
-import type { Tables } from '@/integrations/supabase/types';
-import { useEffect, useMemo, useState } from 'react';
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
+import { DataLoadError } from '@/components/common/DataLoadError';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Plane, ArrowRight, BellRing } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,11 +39,9 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   const nav = useNavigate();
   const { items: notifications } = useNotifications(userId);
   const holidays = useHolidays();
-  const [data, setData] = useState<{ upcoming: ShiftWithNames[]; weekShifts: ShiftWithNames[]; leaves: Tables<'leave_requests'>[] } | null>(null);
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    (async () => {
+  const fetchData = useCallback(async () => {
       const today = isoDate(new Date());
       const weekStart = isoDate(weekStartFor(new Date()));
       const weekEnd = isoDate(weekDays(weekStartFor(new Date()))[6]);
@@ -75,14 +74,16 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
           .limit(20),
       ]);
 
-      setData({
+      assertQueryResults(upcoming, weekShifts, leaveRows);
+      return {
         upcoming: upcoming.data ?? [],
         weekShifts: weekShifts.data ?? [],
         leaves: leaveRows.data ?? [],
-      });
-    })();
+      };
   }, [userId, businessId]);
+  const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
+  if (loadError) return <DataLoadError message={loadError} retry={load} />;
   if (!data) return <div className={s.loading}>Loading…</div>;
 
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
@@ -93,7 +94,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   // This week scaffold
   const wkStart = weekStartFor(new Date());
   const days = weekDays(wkStart);
-  const shiftsByDate: Record<string, ShiftWithNames[]> = {};
+  const shiftsByDate: Record<string, typeof data.weekShifts> = {};
   for (const sh of data.weekShifts) {
     (shiftsByDate[sh.shift_date] ??= []).push(sh);
   }
@@ -334,7 +335,6 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 function ManagerDashboard() {
   const { business, user, fullName, role } = useAuth();
   const holidays = useHolidays();
-  const [data, setData] = useState<{ shiftsToday: ShiftRow[]; leaveApproved: Tables<'leave_requests'>[]; sickToday: Tables<'leave_requests'>[]; pendingLeave: Tables<'leave_requests'>[]; unassigned: ShiftWithNames[]; profilesById: Record<string, string | null> } | null>(null);
 
   const weekHolidays = useMemo(() => {
     if (!holidays.enabled) return [];
@@ -343,9 +343,8 @@ function ManagerDashboard() {
     return holidays.inRange(isoDate(ws), isoDate(we));
   }, [holidays]);
 
-  useEffect(() => {
-    if (!business) return;
-    (async () => {
+  const fetchData = useCallback(async () => {
+    if (!business) throw new Error('No workspace');
       const today = isoDate(new Date());
       const [shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles] = await Promise.all([
         supabase.from('shifts').select('*').eq('business_id', business.id).eq('shift_date', today).eq('is_published', true).neq('status', 'cancelled').order('start_time'),
@@ -355,22 +354,24 @@ function ManagerDashboard() {
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
       ]);
+      assertQueryResults(shiftsToday, leaveApproved, sickToday, pendingLeave, unassigned, profiles);
       const pendingLeaveRows = (pendingLeave.data ?? []).filter((request) => (
         role !== 'manager' || request.user_id !== user?.id
       ));
 
-      setData({
+      return {
         shiftsToday: shiftsToday.data ?? [],
         leaveApproved: leaveApproved.data ?? [],
         sickToday: sickToday.data ?? [],
         pendingLeave: pendingLeaveRows,
         unassigned: unassigned.data ?? [],
         profilesById: Object.fromEntries((profiles.data ?? []).map((p) => [p.id, p.full_name])),
-      });
-    })();
+      };
   }, [business, role, user?.id]);
+  const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
   if (!business) return null;
+  if (loadError) return <DataLoadError message={loadError} retry={load} />;
   if (!data) return <div className={s.loading}>Loading…</div>;
 
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;

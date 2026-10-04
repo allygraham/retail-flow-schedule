@@ -1,3 +1,6 @@
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
+import { DataLoadError } from '@/components/common/DataLoadError';
 import { errorMessage } from '@/lib/errors';
 import type { AppRole } from '@/types/domain';
 import { WEEKDAYS } from '@/features/leave/leaveDays';
@@ -75,10 +78,6 @@ export default function Team() {
   const canManageStaff = hasPermission('manage_staff');
   const isOwner = hasPermission('manage_settings');
 
-  const [rows, setRows] = useState<Row[]>([]);
-  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
-  const [jobs, setJobs] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // filters
   const [q, setQ] = useState('');
@@ -134,39 +133,9 @@ export default function Team() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   type ActiveChip = { key: string; label: string; onRemove: () => void };
-  const activeChips: ActiveChip[] = useMemo(() => {
-    const chips: ActiveChip[] = [];
-    if (q.trim()) chips.push({ key: 'q', label: `“${q.trim()}”`, onRemove: () => setQ('') });
-    if (fRole !== 'all') chips.push({ key: 'role', label: `Role: ${fRole}`, onRemove: () => setFRole('all') });
-    if (fStore !== 'all') chips.push({
-      key: 'store',
-      label: `Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`,
-      onRemove: () => setFStore('all'),
-    });
-    if (fStatus !== 'all') chips.push({
-      key: 'status',
-      label: STATUS_LABEL[fStatus],
-      onRemove: () => setFStatus('all'),
-    });
-    return chips;
-  }, [fRole, fStatus, fStore, q, stores]);
-  const activeFilterChips = activeChips.map(c => c.label);
-  const hasActiveFilters = activeChips.length > 0;
-  const activeNonSearchCount = activeChips.filter(c => c.key !== 'q').length;
-  const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
-
-  const load = useCallback(async () => {
-    if (!business) return;
-    setLoading(true);
-    const [
-      { data: roles },
-      { data: profs },
-      { data: ep },
-      { data: storeRows },
-      { data: jobRows },
-      { data: invites },
-      { data: members },
-    ] = await Promise.all([
+  const fetchData = useCallback(async () => {
+    if (!business) throw new Error('No workspace');
+    const results = await Promise.all([
       supabase.from('user_roles').select('user_id, role').eq('business_id', business.id),
       supabase.from('profiles').select('id, full_name'),
       supabase.from('employee_profiles')
@@ -182,6 +151,9 @@ export default function Team() {
         : Promise.resolve({ data: [] }),
       supabase.from('memberships').select('user_id, is_active').eq('business_id', business.id),
     ]);
+
+    assertQueryResults(...results);
+    const [{ data: roles }, { data: profs }, { data: ep }, { data: storeRows }, { data: jobRows }, { data: invites }, { data: members }] = results;
 
     let memberEmails: Record<string, string> = {};
     if (canManageStaff && (roles ?? []).length) {
@@ -240,13 +212,34 @@ export default function Team() {
         accept_token: i.token,
       }));
 
-    setRows([...memberRows, ...inviteRows]);
-    setStores(storeRows ?? []);
-    setJobs(jobRows ?? []);
-    setLoading(false);
+    return { rows: [...memberRows, ...inviteRows], stores: storeRows ?? [], jobs: jobRows ?? [] };
   }, [business, canManageStaff]);
 
-  useEffect(() => { void load(); }, [load]);
+  const { data, loading, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the team. Please try again.');
+  const { rows, stores, jobs } = useMemo(() => data ?? { rows: [], stores: [], jobs: [] }, [data]);
+
+  const activeChips: ActiveChip[] = useMemo(() => {
+    const chips: ActiveChip[] = [];
+    if (q.trim()) chips.push({ key: 'q', label: `“${q.trim()}”`, onRemove: () => setQ('') });
+    if (fRole !== 'all') chips.push({ key: 'role', label: `Role: ${fRole}`, onRemove: () => setFRole('all') });
+    if (fStore !== 'all') chips.push({
+      key: 'store',
+      label: `Store: ${stores.find((store) => store.id === fStore)?.name ?? 'Unknown'}`,
+      onRemove: () => setFStore('all'),
+    });
+    if (fStatus !== 'all') chips.push({
+      key: 'status',
+      label: STATUS_LABEL[fStatus],
+      onRemove: () => setFStatus('all'),
+    });
+    return chips;
+  }, [fRole, fStatus, fStore, q, stores]);
+  const activeFilterChips = activeChips.map(c => c.label);
+  const hasActiveFilters = activeChips.length > 0;
+  const activeNonSearchCount = activeChips.filter(c => c.key !== 'q').length;
+  const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
+
+
 
   useEffect(() => {
     if (!business || !canManageStaff) return;
@@ -295,7 +288,7 @@ export default function Team() {
       .eq('user_id', userId)
       .eq('business_id', business.id);
     if (error) { toast.error(error.message); return; }
-    setRows(prev => prev.map(m => m.user_id === userId ? { ...m, annual_leave_entitlement: value } : m));
+    await load();
     setEditingId(null);
     toast.success('Entitlement updated');
   };
@@ -496,6 +489,9 @@ export default function Team() {
       setLeaveBusy(false);
     }
   };
+
+  if (loadError) return <DataLoadError message={loadError} retry={load} />;
+  if (loading || !data) return <div role="status" className={s.loading}>Loading team…</div>;
 
   return (
     <div className={s.page}>

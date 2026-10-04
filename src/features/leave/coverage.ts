@@ -1,3 +1,4 @@
+import { assertQueryResults } from '@/lib/queryResults';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AffectedShift {
@@ -33,15 +34,16 @@ export async function fetchAffectedShifts(
   // Pull shifts that overlap the absence window for this employee — they may
   // already be unassigned by the approval hook, in which case they show up as
   // open coverage opportunities.
-  const { data: assigned } = await supabase
+  const assignedResult = await supabase
     .from('shifts')
     .select('id, shift_date, start_time, end_time, store_id, role_id, break_minutes')
     .eq('business_id', businessId)
     .eq('assigned_user_id', userId)
+    .neq('status', 'cancelled')
     .gte('shift_date', startDate)
     .lte('shift_date', endDate);
 
-  const { data: open } = await supabase
+  const openResult = await supabase
     .from('shifts')
     .select('id, shift_date, start_time, end_time, store_id, role_id, break_minutes')
     .eq('business_id', businessId)
@@ -50,7 +52,8 @@ export async function fetchAffectedShifts(
     .gte('shift_date', startDate)
     .lte('shift_date', endDate);
 
-  const rows = [...(assigned ?? []), ...(open ?? [])];
+  assertQueryResults(assignedResult, openResult);
+  const rows = [...(assignedResult.data ?? []), ...(openResult.data ?? [])];
   const seen = new Set<string>();
   const dedup: AffectedShift[] = [];
   for (const r of rows) {
@@ -62,10 +65,12 @@ export async function fetchAffectedShifts(
   // Enrich with store + role names (cheap parallel lookup).
   const storeIds = Array.from(new Set(dedup.map(d => d.store_id).filter(Boolean)));
   const roleIds = Array.from(new Set(dedup.map(d => d.role_id).filter(Boolean) as string[]));
-  const [{ data: stores }, { data: roles }] = await Promise.all([
+  const nameResults = await Promise.all([
     storeIds.length ? supabase.from('store_locations').select('id, name').in('id', storeIds) : Promise.resolve({ data: [] }),
     roleIds.length ? supabase.from('roles_catalog').select('id, name').in('id', roleIds) : Promise.resolve({ data: [] }),
   ]);
+  assertQueryResults(...nameResults);
+  const [{ data: stores }, { data: roles }] = nameResults;
   const storeName: Record<string, string> = Object.fromEntries((stores ?? []).map((s) => [s.id, s.name]));
   const roleName: Record<string, string> = Object.fromEntries((roles ?? []).map((r) => [r.id, r.name]));
 
@@ -75,26 +80,24 @@ export async function fetchAffectedShifts(
 }
 
 /**
- * Replacement candidates ranked by store/role match + low scheduled hours that
- * week. Excludes employees on leave for the shift date.
+ * Active replacement candidates ranked by store and role match.
+ * Excludes employees on leave or with an overlapping non-cancelled shift.
  */
 export async function suggestReplacements(
   businessId: string,
   shift: AffectedShift,
   excludeUserIds: string[] = [],
 ): Promise<ReplacementCandidate[]> {
-  const { data: profiles } = await supabase
-    .from('employee_profiles')
-    .select('user_id, primary_store_id, primary_role_id')
-    .eq('business_id', businessId);
+  const staffResult = await supabase.rpc('get_rota_people', { _business_id: businessId });
+  assertQueryResults(staffResult);
+  const profiles = staffResult.data;
 
   if (!profiles?.length) return [];
 
   const userIds = profiles.map((p) => p.user_id).filter((id: string) => !excludeUserIds.includes(id));
   if (!userIds.length) return [];
 
-  const [{ data: names }, { data: leaves }, { data: weekShifts }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name').in('id', userIds),
+  const availabilityResults = await Promise.all([
     supabase
       .from('leave_requests')
       .select('user_id')
@@ -108,10 +111,12 @@ export async function suggestReplacements(
       .select('assigned_user_id, start_time, end_time, break_minutes, shift_date')
       .eq('business_id', businessId)
       .eq('shift_date', shift.shift_date)
+      .neq('status', 'cancelled')
       .in('assigned_user_id', userIds),
   ]);
 
-  const nameById: Record<string, string> = Object.fromEntries((names ?? []).map((n) => [n.id, n.full_name ?? 'Employee']));
+  assertQueryResults(...availabilityResults);
+  const [{ data: leaves }, { data: weekShifts }] = availabilityResults;
   const onLeave = new Set((leaves ?? []).map((l) => l.user_id));
 
   // Detect direct shift-time conflicts (cannot double-book).
@@ -138,7 +143,7 @@ export async function suggestReplacements(
 
     candidates.push({
       user_id: p.user_id,
-      full_name: nameById[p.user_id] ?? 'Employee',
+      full_name: p.full_name ?? 'Employee',
       reason: reasons.join(' · '),
       score,
     });
@@ -152,34 +157,33 @@ export async function suggestReplacements(
  * Assign a candidate to a shift and mark scheduled. Caller handles toasts.
  */
 export async function assignReplacement(shiftId: string, userId: string) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('shifts')
     .update({ assigned_user_id: userId, status: 'scheduled' })
-    .eq('id', shiftId);
+    .eq('id', shiftId)
+    .neq('status', 'cancelled')
+    .select('id');
   if (error) throw error;
+  if (!data?.length) throw new Error('This shift is no longer available. Reload coverage.');
 }
 
-/**
- * Notify candidates that shifts are open for pickup. Best-effort insert; per-row
- * failures are surfaced as a thrown error so the caller can warn the manager.
- */
-export async function notifyCandidatesOfOpenShifts(
-  businessId: string,
-  candidates: ReplacementCandidate[],
-  shifts: AffectedShift[],
-) {
-  if (!candidates.length || !shifts.length) return 0;
-  const summary = shifts.length === 1
-    ? `${shifts[0].shift_date} ${shifts[0].start_time.slice(0,5)}–${shifts[0].end_time.slice(0,5)}`
-    : `${shifts.length} open shifts`;
-  const rows = candidates.map(c => ({
-    business_id: businessId,
-    user_id: c.user_id,
-    type: 'shift_open_for_pickup',
-    title: 'Shifts open for pickup',
-    body: `Cover needed: ${summary}. Tap to view.`,
+/** Notify each active employee only about shifts they can actually cover. */
+export async function notifyAvailableStaff(businessId: string, shifts: AffectedShift[], excludeUserIds: string[] = []) {
+  const matches = await Promise.all(shifts.map(shift => suggestReplacements(businessId, shift, excludeUserIds)));
+  const eligible = new Map<string, AffectedShift[]>();
+  matches.forEach((candidates, index) => {
+    for (const candidate of candidates) {
+      const list = eligible.get(candidate.user_id) ?? [];
+      list.push(shifts[index]);
+      eligible.set(candidate.user_id, list);
+    }
+  });
+  const rows = Array.from(eligible, ([user_id, available]) => ({
+    business_id: businessId, user_id, type: 'shift_open_for_pickup', title: 'Shifts open for pickup',
+    body: `Cover needed: ${available.map(shift => `${shift.shift_date} ${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}`).join(', ')}. Tap to view.`,
     link: '/rota',
   }));
+  if (!rows.length) return 0;
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) throw error;
   return rows.length;
@@ -194,6 +198,7 @@ export async function openShiftsForPickup(shiftIds: string[]) {
   const { error } = await supabase
     .from('shifts')
     .update({ assigned_user_id: null, status: 'unassigned' })
-    .in('id', shiftIds);
+    .in('id', shiftIds)
+    .neq('status', 'cancelled');
   if (error) throw error;
 }

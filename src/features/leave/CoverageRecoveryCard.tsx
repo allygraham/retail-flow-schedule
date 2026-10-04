@@ -1,5 +1,7 @@
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { DataLoadError } from '@/components/common/DataLoadError';
 import { errorMessage } from '@/lib/errors';
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/common/Button';
 import { Avatar } from '@/components/common/Avatar';
 import { fmtDate } from '@/lib/datetime';
@@ -8,7 +10,7 @@ import {
   fetchAffectedShifts,
   suggestReplacements,
   assignReplacement,
-  notifyCandidatesOfOpenShifts,
+  notifyAvailableStaff,
   openShiftsForPickup,
   type AffectedShift,
   type ReplacementCandidate,
@@ -32,24 +34,14 @@ interface Props {
  *   • Notify available staff.
  */
 export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, onChanged }: Props) {
-  const [shifts, setShifts] = useState<AffectedShift[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [candidates, setCandidates] = useState<Record<string, ReplacementCandidate[]>>({});
-  const [candLoading, setCandLoading] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const rows = await fetchAffectedShifts(businessId, userId, startDate, endDate);
-      setShifts(rows);
-    } finally {
-      setLoading(false);
-    }
-  }, [businessId, userId, startDate, endDate]);
-
-  useEffect(() => { load(); }, [load]);
+  const fetchCoverage = useCallback(() => fetchAffectedShifts(businessId, userId, startDate, endDate), [businessId, userId, startDate, endDate]);
+  const { data, loading, error, reload: load } = useAsyncData(fetchCoverage, 'Could not load coverage. Please try again.');
+  const shifts = data ?? [];
+  const selectedShift = shifts.find(shift => shift.id === expanded);
+  const fetchCandidates = useCallback(async () => selectedShift ? suggestReplacements(businessId, selectedShift, [userId]) : [], [businessId, userId, selectedShift]);
+  const { data: candidates, loading: candLoading, error: candidateError, reload: reloadCandidates } = useAsyncData(fetchCandidates, 'Could not load replacement staff. Please try again.');
 
   const totalHours = shifts.reduce((acc, sh) => {
     const [sh1, sm1] = sh.start_time.split(':').map(Number);
@@ -57,22 +49,6 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
     const mins = (eh * 60 + em) - (sh1 * 60 + sm1) - (sh.break_minutes ?? 0);
     return acc + Math.max(0, mins) / 60;
   }, 0);
-
-  const toggleShift = async (shift: AffectedShift) => {
-    const isOpen = expanded === shift.id;
-    setExpanded(isOpen ? null : shift.id);
-    if (!isOpen && !candidates[shift.id]) {
-      setCandLoading(shift.id);
-      try {
-        const list = await suggestReplacements(businessId, shift, [userId]);
-        setCandidates(prev => ({ ...prev, [shift.id]: list }));
-      } catch (e) {
-        toast.error(errorMessage(e, 'Could not load suggestions'));
-      } finally {
-        setCandLoading(null);
-      }
-    }
-  };
 
   const assign = async (shift: AffectedShift, cand: ReplacementCandidate) => {
     setBusy(true);
@@ -101,12 +77,13 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
     if (!shifts.length) return;
     setBusy(true);
     try {
-      const pool = await suggestReplacements(businessId, shifts[0], [userId]);
-      const sent = await notifyCandidatesOfOpenShifts(businessId, pool, shifts);
+      const sent = await notifyAvailableStaff(businessId, shifts, [userId]);
       toast.success(`Notified ${sent} available staff`);
     } catch (e) { toast.error(errorMessage(e, 'Could not send notifications')); }
     finally { setBusy(false); }
   };
+
+  if (error) return <div className={s.card}><DataLoadError message={error} retry={load} /></div>;
 
   if (loading) {
     return <div className={s.card}><div className={s.eyebrow}>Coverage recovery</div><div className={s.line}>Checking affected shifts…</div></div>;
@@ -138,10 +115,10 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
       <ul className={s.shiftList}>
         {shifts.map(shift => {
           const isOpen = expanded === shift.id;
-          const list = candidates[shift.id];
+          const list = candidates;
           return (
             <li key={shift.id} className={s.shift}>
-              <button type="button" className={s.shiftHead} onClick={() => toggleShift(shift)} aria-expanded={isOpen}>
+              <button type="button" className={s.shiftHead} onClick={() => setExpanded(isOpen ? null : shift.id)} aria-expanded={isOpen}>
                 <div className={s.shiftMeta}>
                   <strong>{fmtDate(shift.shift_date, 'EEE d MMM')}</strong>
                   <span className={s.muted}>· {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}</span>
@@ -152,7 +129,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
               </button>
               {isOpen && (
                 <div className={s.suggestions}>
-                  {candLoading === shift.id ? (
+                  {candidateError ? <DataLoadError message={candidateError} retry={reloadCandidates} /> : candLoading ? (
                     <div className={s.line}>Finding candidates…</div>
                   ) : list && list.length ? (
                     <ul className={s.candidates}>

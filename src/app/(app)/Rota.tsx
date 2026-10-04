@@ -1,6 +1,8 @@
-import type { Tables } from '@/integrations/supabase/types';
-import type { RotaPerson, ShiftRow } from '@/types/rows';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
+import { DataLoadError } from '@/components/common/DataLoadError';
+import type { ShiftRow } from '@/types/rows';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -25,11 +27,6 @@ export default function Rota() {
   const isMgr = hasPermission('manage_schedules');
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
   const [storeFilter, setStoreFilter] = useState<string>(() => sessionStorage.getItem('rota.storeFilter') ?? 'all');
-  const [stores, setStores] = useState<Tables<'store_locations'>[]>([]);
-  const [roles, setRoles] = useState<Tables<'roles_catalog'>[]>([]);
-  const [people, setPeople] = useState<RotaPerson[]>([]);
-  const [shifts, setShifts] = useState<ShiftRow[]>([]);
-  const [leave, setLeave] = useState<Tables<'leave_requests'>[]>([]);
   const [modal, setModal] = useState<{open: boolean; shift?: ShiftRow; date?: string}>({open: false});
   const [publishModal, setPublishModal] = useState<{open: boolean; count: number}>({open: false, count: 0});
   const [form, setForm] = useState({ store_id: '', role_id: '', assigned_user_id: '', shift_date: '', start_time: '', end_time: '', break_minutes: 0 as number | null, notes: '', is_published: false });
@@ -44,8 +41,8 @@ export default function Rota() {
 
   const days = weekDays(weekStart);
 
-  const load = useCallback(async () => {
-    if (!business) return;
+  const fetchData = useCallback(async () => {
+    if (!business) throw new Error('No workspace');
     const [st, rl, epRaw, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
@@ -55,11 +52,11 @@ export default function Rota() {
         : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')),
       supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(addDays(weekStart, 6))).gte('end_date', isoDate(weekStart)),
     ]);
+    assertQueryResults(st, rl, epRaw, sh, lv);
     const ep = { data: epRaw.data ?? [] };
     const nameById = Object.fromEntries(ep.data.map(e => [e.user_id, e.full_name ?? 'Employee']));
     const storesByProfile = Object.fromEntries(ep.data.map(e => [e.id, new Set(e.store_ids)]));
-    setStores(st.data ?? []); setRoles(rl.data ?? []);
-    setPeople((ep.data ?? []).map((e) => {
+    const people = (ep.data ?? []).map((e) => {
       const ids = new Set<string>(storesByProfile[e.id] ?? []);
       if (e.primary_store_id) ids.add(e.primary_store_id);
       return {
@@ -69,10 +66,11 @@ export default function Rota() {
         primary_store_id: e.primary_store_id,
         store_ids: Array.from(ids),
       };
-    }));
-    setShifts(sh.data ?? []); setLeave(lv.data ?? []);
+    });
+    return { stores: st.data ?? [], roles: rl.data ?? [], people, shifts: sh.data ?? [], leave: lv.data ?? [] };
   }, [business, weekStart, isMgr]);
-  useEffect(() => { void load(); }, [load]);
+  const { data, loading, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the rota. Please try again.');
+  const { stores, roles, people, shifts, leave } = useMemo(() => data ?? { stores: [], roles: [], people: [], shifts: [], leave: [] }, [data]);
 
   const filteredShifts = useMemo(() =>
     shifts.filter(x => storeFilter === 'all' || x.store_id === storeFilter)
@@ -306,6 +304,9 @@ export default function Rota() {
       }
     }
   };
+
+  if (loadError) return <DataLoadError message={loadError} retry={load} />;
+  if (loading || !data) return <div role="status" style={{ padding: 24 }}>Loading rota…</div>;
 
   return (
     <div className={s.page}>
