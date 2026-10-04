@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { Tables } from '@/integrations/supabase/types';
+import type { RotaPerson, ShiftRow } from '@/types/rows';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -10,7 +12,6 @@ import { StoreSelect } from '@/components/common/StoreSelect';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
-import { EmptyState } from '@/components/common/EmptyState';
 import { fmtDate, fmtTime, hoursBetween, isoDate, weekDays, weekStartFor, overlap, inRange } from '@/lib/datetime';
 import { addDays, format } from 'date-fns';
 import { shiftSchema } from '@/lib/validation';
@@ -25,43 +26,42 @@ export default function Rota() {
   const isMgr = hasPermission('manage_schedules');
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
   const [storeFilter, setStoreFilter] = useState<string>(() => sessionStorage.getItem('rota.storeFilter') ?? 'all');
-  const [stores, setStores] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [people, setPeople] = useState<any[]>([]);
-  const [shifts, setShifts] = useState<any[]>([]);
-  const [leave, setLeave] = useState<any[]>([]);
-  const [modal, setModal] = useState<{open: boolean; shift?: any; date?: string}>({open: false});
+  const [stores, setStores] = useState<Tables<'store_locations'>[]>([]);
+  const [roles, setRoles] = useState<Tables<'roles_catalog'>[]>([]);
+  const [people, setPeople] = useState<RotaPerson[]>([]);
+  const [shifts, setShifts] = useState<ShiftRow[]>([]);
+  const [leave, setLeave] = useState<Tables<'leave_requests'>[]>([]);
+  const [modal, setModal] = useState<{open: boolean; shift?: ShiftRow; date?: string}>({open: false});
   const [publishModal, setPublishModal] = useState<{open: boolean; count: number}>({open: false, count: 0});
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState({ store_id: '', role_id: '', assigned_user_id: '', shift_date: '', start_time: '', end_time: '', break_minutes: 0 as number | null, notes: '', is_published: false });
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [moving, setMoving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copying, setCopying] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const [activeShift, setActiveShift] = useState<any | null>(null);
+  const [activeShift, setActiveShift] = useState<ShiftRow | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const holidays = useHolidays();
 
   const days = weekDays(weekStart);
-  const weekEnd = addDays(weekStart, 6);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!business) return;
     const [st, rl, epRaw, sh, lv] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
       supabase.rpc('get_rota_people', { _business_id: business.id }),
       (isMgr
-        ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')
-        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(weekEnd)).order('start_time')),
-      supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(weekEnd)).gte('end_date', isoDate(weekStart)),
+        ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')
+        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')),
+      supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(addDays(weekStart, 6))).gte('end_date', isoDate(weekStart)),
     ]);
     const ep = { data: epRaw.data ?? [] };
     const nameById = Object.fromEntries(ep.data.map(e => [e.user_id, e.full_name ?? 'Employee']));
     const storesByProfile = Object.fromEntries(ep.data.map(e => [e.id, new Set(e.store_ids)]));
     setStores(st.data ?? []); setRoles(rl.data ?? []);
-    setPeople((ep.data ?? []).map((e:any) => {
+    setPeople((ep.data ?? []).map((e) => {
       const ids = new Set<string>(storesByProfile[e.id] ?? []);
       if (e.primary_store_id) ids.add(e.primary_store_id);
       return {
@@ -73,8 +73,8 @@ export default function Rota() {
       };
     }));
     setShifts(sh.data ?? []); setLeave(lv.data ?? []);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, weekStart, isMgr]);
+  }, [business, weekStart, isMgr]);
+  useEffect(() => { void load(); }, [load]);
 
   const filteredShifts = useMemo(() =>
     shifts.filter(x => storeFilter === 'all' || x.store_id === storeFilter)
@@ -95,7 +95,7 @@ export default function Rota() {
 
   const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published && x.status !== 'cancelled').length, [filteredShifts]);
 
-  const conflictsFor = (sh: any): string[] => {
+  const conflictsFor = (sh: ShiftRow): string[] => {
     const c: string[] = [];
     if (!sh.assigned_user_id) return c;
     // overlap with another shift same person same day
@@ -117,6 +117,7 @@ export default function Rota() {
   const openCreate = (date: string, userId?: string) => {
     const person = userId ? peopleById[userId] : undefined;
     setForm({
+      is_published: false,
       store_id: storeFilter !== 'all' ? storeFilter : (person?.primary_store_id ?? stores[0]?.id),
       shift_date: date,
       start_time: '09:00',
@@ -129,7 +130,7 @@ export default function Rota() {
     setErr(null);
     setModal({ open: true, date });
   };
-  const openEdit = (sh: any) => {
+  const openEdit = (sh: ShiftRow) => {
     setForm({ ...sh, role_id: sh.role_id ?? '', assigned_user_id: sh.assigned_user_id ?? '', notes: sh.notes ?? '' });
     setErr(null);
     setModal({ open: true, shift: sh });
@@ -211,7 +212,7 @@ export default function Rota() {
       const { data: prev, error } = await q;
       if (error) { toast.error(error.message); return; }
       if (!prev || prev.length === 0) { toast.info('No shifts found in the previous week.'); return; }
-      const rows = prev.map((s: any) => ({
+      const rows = prev.map((s) => ({
         business_id: business.id,
         store_id: s.store_id,
         role_id: s.role_id,
@@ -225,7 +226,7 @@ export default function Rota() {
         status: (s.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
         created_by: user?.id,
       }));
-      const { error: insErr } = await supabase.from('shifts').insert(rows as any);
+      const { error: insErr } = await supabase.from('shifts').insert(rows);
       if (insErr) { toast.error(insErr.message); return; }
       toast.success(`Copied ${rows.length} shift${rows.length === 1 ? '' : 's'} from last week`);
       load();
@@ -365,7 +366,7 @@ export default function Rota() {
                     <Avatar name={p.name} size="sm" />
                     <div>
                       <div className={s.staffName}>{p.name}</div>
-                      <div className={s.staffRole}>{roleById[p.primary_role_id]?.name ?? '—'}</div>
+                      <div className={s.staffRole}>{roleById[p.primary_role_id ?? '']?.name ?? '—'}</div>
                     </div>
                   </div>
                 )}
@@ -386,11 +387,11 @@ export default function Rota() {
                       {cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
-                            onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}
-                            style={{ borderLeftColor: roleById[sh.role_id]?.color ?? undefined }}
+                            onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}
+                            style={{ borderLeftColor: roleById[sh.role_id ?? '']?.color ?? undefined }}
                           >
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {hoursBetween(sh.start_time, sh.end_time, sh.break_minutes)}h</div>
+                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0)}h</div>
                             {conflictsFor(sh).length > 0 && <Badge tone="danger">⚠ {conflictsFor(sh).join(', ')}</Badge>}
                             {!sh.is_published && <Badge tone="warning">Draft</Badge>}
                           </div>
@@ -419,9 +420,9 @@ export default function Rota() {
                       onClick={() => isMgr && openCreate(dStr)}>
                       {cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || moving || sh.status === 'cancelled'}>
-                          <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}>
+                          <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id]?.name ?? 'Floor'}</div>
+                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id ?? '']?.name ?? 'Floor'}</div>
                             <Badge tone="unassigned" dot>Needs cover</Badge>
                           </div>
                         </DraggableShift>
@@ -435,7 +436,7 @@ export default function Rota() {
           </div>
           <DragOverlay dropAnimation={null}>
             {activeShift && (
-              <div className={`${s.shift} ${s.dragGhost}`} style={{ borderLeftColor: roleById[activeShift.role_id]?.color ?? undefined }}>
+              <div className={`${s.shift} ${s.dragGhost}`} style={{ borderLeftColor: roleById[activeShift.role_id ?? '']?.color ?? undefined }}>
                 <div className={s.shiftTime}>{fmtTime(activeShift.start_time)}–{fmtTime(activeShift.end_time)}</div>
                 <div className={s.shiftMeta}>{storeById[activeShift.store_id]?.name}</div>
               </div>

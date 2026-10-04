@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, type MouseEvent as R
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
-import { format, isBefore, isSameDay, parseISO, isValid } from 'date-fns';
+import { format, isBefore, isSameDay } from 'date-fns';
 import s from './DatePicker.module.scss';
 
 export type DateValue = Date | null;
@@ -37,15 +37,6 @@ type RangeProps = CommonProps & {
 };
 
 export type DatePickerProps = SingleProps | RangeProps;
-
-/** Coerce ISO date string `yyyy-MM-dd` ↔ Date safely. */
-export const parseISODate = (v: string | null | undefined): Date | null => {
-  if (!v) return null;
-  const d = parseISO(v);
-  return isValid(d) ? d : null;
-};
-export const toISODate = (d: Date | null | undefined): string =>
-  d && isValid(d) ? format(d, 'yyyy-MM-dd') : '';
 
 export function DatePicker(props: DatePickerProps) {
   const {

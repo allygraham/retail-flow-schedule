@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { useNotifications, type Notification } from './useNotifications';
 import s from './NotificationsBell.module.scss';
 

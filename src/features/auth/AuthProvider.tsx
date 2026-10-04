@@ -1,23 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import { Ctx } from './authContext';
+import { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, Business } from '@/types/domain';
 import { hasPermission, type AppPermission } from './permissions';
-
-interface TenancyState {
-  loading: boolean;
-  error: string | null;
-  session: Session | null;
-  user: User | null;
-  fullName: string | null;
-  business: Business | null;
-  role: AppRole | null;
-  hasPermission: (permission: AppPermission) => boolean;
-  signOut: () => Promise<void>;
-  refresh: (businessId?: string) => Promise<void>;
-}
-
-const Ctx = createContext<TenancyState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -80,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadTenancy]);
 
   useEffect(() => {
+    const requests = tenancyRequest;
     let disposed = false;
     let authEvent = 0;
     const applySession = (s: Session | null) => {
@@ -102,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }).catch(() => {
       if (!disposed && initialEvent === authEvent) { setError('Could not load your account. Please try again.'); setLoading(false); }
     });
-    return () => { disposed = true; tenancyRequest.current++; sub.subscription.unsubscribe(); };
+    return () => { disposed = true; requests.current++; sub.subscription.unsubscribe(); };
   }, [loadTenancy]);
 
   const signOut = async () => {
@@ -115,10 +102,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </Ctx.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
 }

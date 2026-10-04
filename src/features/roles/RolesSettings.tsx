@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
@@ -33,7 +33,7 @@ export function RolesSettings() {
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
     const [{ data: roles, error }, { data: profiles }] = await Promise.all([
@@ -55,9 +55,9 @@ export function RolesSettings() {
     const usedIds = new Set((profiles ?? []).map((p) => p.primary_role_id).filter(Boolean) as string[]);
     setRows((roles ?? []).map((r) => ({ ...r, in_use: usedIds.has(r.id) })));
     setLoading(false);
-  };
+  }, [business]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business?.id]);
+  useEffect(() => { void load(); }, [load]);
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();

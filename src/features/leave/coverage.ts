@@ -53,7 +53,7 @@ export async function fetchAffectedShifts(
   const rows = [...(assigned ?? []), ...(open ?? [])];
   const seen = new Set<string>();
   const dedup: AffectedShift[] = [];
-  for (const r of rows as any[]) {
+  for (const r of rows) {
     if (seen.has(r.id)) continue;
     seen.add(r.id);
     dedup.push(r);
@@ -63,11 +63,11 @@ export async function fetchAffectedShifts(
   const storeIds = Array.from(new Set(dedup.map(d => d.store_id).filter(Boolean)));
   const roleIds = Array.from(new Set(dedup.map(d => d.role_id).filter(Boolean) as string[]));
   const [{ data: stores }, { data: roles }] = await Promise.all([
-    storeIds.length ? supabase.from('store_locations').select('id, name').in('id', storeIds) : Promise.resolve({ data: [] as any[] }),
-    roleIds.length ? supabase.from('roles_catalog').select('id, name').in('id', roleIds) : Promise.resolve({ data: [] as any[] }),
+    storeIds.length ? supabase.from('store_locations').select('id, name').in('id', storeIds) : Promise.resolve({ data: [] }),
+    roleIds.length ? supabase.from('roles_catalog').select('id, name').in('id', roleIds) : Promise.resolve({ data: [] }),
   ]);
-  const storeName: Record<string, string> = Object.fromEntries((stores ?? []).map((s: any) => [s.id, s.name]));
-  const roleName: Record<string, string> = Object.fromEntries((roles ?? []).map((r: any) => [r.id, r.name]));
+  const storeName: Record<string, string> = Object.fromEntries((stores ?? []).map((s) => [s.id, s.name]));
+  const roleName: Record<string, string> = Object.fromEntries((roles ?? []).map((r) => [r.id, r.name]));
 
   return dedup
     .map(d => ({ ...d, store_name: storeName[d.store_id] ?? null, role_name: d.role_id ? roleName[d.role_id] ?? null : null }))
@@ -90,7 +90,7 @@ export async function suggestReplacements(
 
   if (!profiles?.length) return [];
 
-  const userIds = profiles.map((p: any) => p.user_id).filter((id: string) => !excludeUserIds.includes(id));
+  const userIds = profiles.map((p) => p.user_id).filter((id: string) => !excludeUserIds.includes(id));
   if (!userIds.length) return [];
 
   const [{ data: names }, { data: leaves }, { data: weekShifts }] = await Promise.all([
@@ -111,11 +111,11 @@ export async function suggestReplacements(
       .in('assigned_user_id', userIds),
   ]);
 
-  const nameById: Record<string, string> = Object.fromEntries((names ?? []).map((n: any) => [n.id, n.full_name ?? 'Employee']));
-  const onLeave = new Set((leaves ?? []).map((l: any) => l.user_id));
+  const nameById: Record<string, string> = Object.fromEntries((names ?? []).map((n) => [n.id, n.full_name ?? 'Employee']));
+  const onLeave = new Set((leaves ?? []).map((l) => l.user_id));
 
   // Detect direct shift-time conflicts (cannot double-book).
-  const sameDay = (weekShifts ?? []) as any[];
+  const sameDay = (weekShifts ?? []);
   const conflictById = new Set<string>();
   for (const ws of sameDay) {
     if (!ws.assigned_user_id) continue;
@@ -125,7 +125,7 @@ export async function suggestReplacements(
   }
 
   const candidates: ReplacementCandidate[] = [];
-  for (const p of profiles as any[]) {
+  for (const p of profiles) {
     if (!userIds.includes(p.user_id)) continue;
     if (onLeave.has(p.user_id)) continue;
     if (conflictById.has(p.user_id)) continue;
@@ -180,7 +180,7 @@ export async function notifyCandidatesOfOpenShifts(
     body: `Cover needed: ${summary}. Tap to view.`,
     link: '/rota',
   }));
-  const { error } = await supabase.from('notifications').insert(rows as any);
+  const { error } = await supabase.from('notifications').insert(rows);
   if (error) throw error;
   return rows.length;
 }

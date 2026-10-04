@@ -1,4 +1,4 @@
-import { daysBetween, workingDates } from './leaveDays';
+import { workingDates } from './leaveDays';
 
 // HMRC 2026/27: https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
 // Partial-week amounts use the unrounded daily rate and round UP to whole pence.

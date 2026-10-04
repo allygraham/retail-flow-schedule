@@ -5,10 +5,10 @@ import Signup from './Signup';
 
 const mocks = vi.hoisted(() => ({
   signUp: vi.fn(), rpc: vi.fn(), refresh: vi.fn(), nav: vi.fn(),
-  auth: { user: null as any, business: null as any, loading: false },
+  auth: { user: null as { id: string; email?: string; user_metadata?: { business_name?: string } } | null, business: null as { id: string; name: string } | null, loading: false },
 }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { auth: { signUp: mocks.signUp }, rpc: mocks.rpc } }));
-vi.mock('@/features/auth/AuthProvider', () => ({ useAuth: () => ({ ...mocks.auth, refresh: mocks.refresh }) }));
+vi.mock('@/features/auth/authContext', () => ({ useOptionalAuth: () => undefined, useAuth: () => ({ ...mocks.auth, refresh: mocks.refresh }) }));
 vi.mock('react-router-dom', async () => ({ ...await vi.importActual('react-router-dom'), useNavigate: () => mocks.nav }));
 
 afterEach(cleanup);

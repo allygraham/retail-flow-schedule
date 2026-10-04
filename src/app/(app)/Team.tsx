@@ -1,8 +1,10 @@
+import { errorMessage } from '@/lib/errors';
+import type { AppRole } from '@/types/domain';
 import { WEEKDAYS } from '@/features/leave/leaveDays';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
@@ -68,7 +70,7 @@ const STATUS_LABEL: Record<AccountStatus, string> = {
 };
 
 export default function Team() {
-  const { business, role, user, hasPermission } = useAuth();
+  const { business, user, hasPermission } = useAuth();
   const { addForEmployee } = useLeaveRequests();
   const canManageStaff = hasPermission('manage_staff');
   const isOwner = hasPermission('manage_settings');
@@ -153,7 +155,7 @@ export default function Team() {
   const activeNonSearchCount = activeChips.filter(c => c.key !== 'q').length;
   const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
     const [
@@ -177,23 +179,23 @@ export default function Team() {
             .select('id, email, full_name, role, primary_store_id, primary_role_id, status, expires_at, token, contracted_hours')
             .eq('business_id', business.id)
             .order('created_at', { ascending: false })
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] }),
       supabase.from('memberships').select('user_id, is_active').eq('business_id', business.id),
     ]);
 
     let memberEmails: Record<string, string> = {};
     if (canManageStaff && (roles ?? []).length) {
-      const ids = (roles ?? []).map((r: any) => r.user_id);
+      const ids = (roles ?? []).map((r) => r.user_id);
       memberEmails = Object.fromEntries(ids.map((id: string) => [id, '']));
     }
 
-    const profMap = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p.full_name]));
-    const epMap = Object.fromEntries((ep ?? []).map((e: any) => [e.user_id, e]));
-    const storeMap = Object.fromEntries((storeRows ?? []).map((x: any) => [x.id, x.name]));
-    const jobMap = Object.fromEntries((jobRows ?? []).map((x: any) => [x.id, x.name]));
-    const memberMap = Object.fromEntries((members ?? []).map((m: any) => [m.user_id, m.is_active]));
+    const profMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p.full_name]));
+    const epMap = Object.fromEntries((ep ?? []).map((e) => [e.user_id, e]));
+    const storeMap = Object.fromEntries((storeRows ?? []).map((x) => [x.id, x.name]));
+    const jobMap = Object.fromEntries((jobRows ?? []).map((x) => [x.id, x.name]));
+    const memberMap = Object.fromEntries((members ?? []).map((m) => [m.user_id, m.is_active]));
 
-    const memberRows: Row[] = (roles ?? []).map((r: any) => {
+    const memberRows: Row[] = (roles ?? []).map((r) => {
       const isActive = memberMap[r.user_id] !== false;
       return {
         kind: 'member' as const,
@@ -203,9 +205,9 @@ export default function Team() {
         email: memberEmails[r.user_id] ?? '',
         role: r.role,
         store_id: epMap[r.user_id]?.primary_store_id ?? null,
-        store_name: storeMap[epMap[r.user_id]?.primary_store_id] ?? '—',
+        store_name: storeMap[epMap[r.user_id]?.primary_store_id ?? ''] ?? '—',
         job_id: epMap[r.user_id]?.primary_role_id ?? null,
-        job_name: jobMap[epMap[r.user_id]?.primary_role_id] ?? '—',
+        job_name: jobMap[epMap[r.user_id]?.primary_role_id ?? ''] ?? '—',
         contracted_hours: epMap[r.user_id]?.contracted_hours ?? null,
         employment_type: epMap[r.user_id]?.employment_type ?? '—',
         account_status: (isActive ? 'active' : 'disabled') as AccountStatus,
@@ -215,8 +217,8 @@ export default function Team() {
     });
 
     const inviteRows: Row[] = (invites ?? [])
-      .filter((i: any) => i.status === 'pending' || i.status === 'expired' || i.status === 'revoked')
-      .map((i: any) => ({
+      .filter((i) => i.status === 'pending' || i.status === 'expired' || i.status === 'revoked')
+      .map((i) => ({
         kind: 'invite' as const,
         key: `i:${i.id}`,
         invitation_id: i.id,
@@ -224,9 +226,9 @@ export default function Team() {
         email: i.email,
         role: i.role,
         store_id: i.primary_store_id,
-        store_name: storeMap[i.primary_store_id] ?? '—',
+        store_name: storeMap[i.primary_store_id ?? ''] ?? '—',
         job_id: i.primary_role_id,
-        job_name: jobMap[i.primary_role_id] ?? '—',
+        job_name: jobMap[i.primary_role_id ?? ''] ?? '—',
         contracted_hours: i.contracted_hours ?? null,
         employment_type: '—',
         account_status:
@@ -242,9 +244,9 @@ export default function Team() {
     setStores(storeRows ?? []);
     setJobs(jobRows ?? []);
     setLoading(false);
-  };
+  }, [business, canManageStaff]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business, canManageStaff]);
+  useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
     if (!business || !canManageStaff) return;
@@ -255,7 +257,7 @@ export default function Team() {
         () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [business, canManageStaff]);
+  }, [business, canManageStaff, load]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -305,7 +307,7 @@ export default function Team() {
     setInviteOpen(true);
   };
 
-  const submitInvite = async (e: FormEvent) => {
+  const submitInvite = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!business) return;
     setInviteErr(null);
@@ -321,7 +323,7 @@ export default function Team() {
 
     setInviteBusy(true);
     const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`.trim();
-    const { data, error } = await supabase.functions.invoke('invite-employee', {
+    const { data, error } = await supabase.functions.invoke<{ error?: string; accept_url?: string }>('invite-employee', {
       body: {
         business_id: business.id,
         email: parsed.data.email,
@@ -338,12 +340,12 @@ export default function Team() {
     });
     setInviteBusy(false);
     if (error) {
-      const msg = (data as any)?.error || error.message || 'Something went wrong';
+      const msg = data?.error || error.message || 'Something went wrong';
       setInviteErr(msg);
       return;
     }
-    if ((data as any)?.error) { setInviteErr((data as any).error); return; }
-    setAcceptUrl((data as any).accept_url ?? null);
+    if (data?.error) { setInviteErr(data.error); return; }
+    setAcceptUrl(data?.accept_url ?? null);
     toast.success('Invite created');
     load();
   };
@@ -386,7 +388,7 @@ export default function Team() {
     setEditRow(row);
   };
 
-  const submitEdit = async (e: FormEvent) => {
+  const submitEdit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!business || !editRow?.user_id) return;
     setEditErr(null);
@@ -419,8 +421,8 @@ export default function Team() {
       toast.success('Employee updated');
       setEditRow(null);
       load();
-    } catch (err: any) {
-      setEditErr(err.message || 'Update failed');
+    } catch (err) {
+      setEditErr(errorMessage(err, 'Update failed'));
     } finally {
       setEditBusy(false);
     }
@@ -488,8 +490,8 @@ export default function Team() {
           ? `Leave saved — ${result.conflictingShiftCount} shift${result.conflictingShiftCount === 1 ? '' : 's'} reopened for cover.`
           : 'Leave saved'
       );
-    } catch (err: any) {
-      setLeaveErr(err.message || 'Could not save leave');
+    } catch (err) {
+      setLeaveErr(errorMessage(err, 'Could not save leave'));
     } finally {
       setLeaveBusy(false);
     }
@@ -587,7 +589,7 @@ export default function Team() {
                 </Field>
 
                 <Field label="Role">
-                  <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
+                  <Select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
                     <option value="all">All roles</option>
                     <option value="owner">Owner</option>
                     <option value="manager">Manager</option>
@@ -603,7 +605,7 @@ export default function Team() {
                 </Field>
 
                 <Field label="Account status">
-                  <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
+                  <Select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
                     <option value="all">All statuses</option>
                     <option value="active">Active</option>
                     <option value="invited">Invited</option>
@@ -866,7 +868,7 @@ export default function Team() {
             />
           </Field>
           <Field label="Role">
-            <Select value={fRole} onChange={e => setFRole(e.target.value as any)}>
+            <Select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
               <option value="all">All roles</option>
               <option value="owner">Owner</option>
               <option value="manager">Manager</option>
@@ -880,7 +882,7 @@ export default function Team() {
             </Select>
           </Field>
           <Field label="Account status">
-            <Select value={fStatus} onChange={e => setFStatus(e.target.value as any)}>
+            <Select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
               <option value="all">All statuses</option>
               <option value="active">Active</option>
               <option value="invited">Invited</option>
@@ -904,7 +906,7 @@ export default function Team() {
         ) : (
           <>
             <Button variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={submitInvite as any} loading={inviteBusy}>Send invite</Button>
+            <Button onClick={submitInvite} loading={inviteBusy}>Send invite</Button>
           </>
         )}
       >
@@ -937,7 +939,7 @@ export default function Team() {
             </Field>
             <div className={s.row2}>
               <Field label="Role">
-                <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as any })}>
+                <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as AppRole })}>
                   <option value="employee">Employee</option>
                   <option value="manager">Manager</option>
                   {isOwner && <option value="owner">Owner</option>}
@@ -1009,7 +1011,7 @@ export default function Team() {
         <div className={s.form}>
           <div className={s.row2}>
             <Field label="Leave type">
-              <Select value={leaveForm.leave_type} onChange={e => setLeaveForm({ ...leaveForm, leave_type: e.target.value as any })}>
+              <Select value={leaveForm.leave_type} onChange={e => setLeaveForm({ ...leaveForm, leave_type: e.target.value as typeof leaveForm.leave_type })}>
                 <option value="sick">Sick leave</option>
                 <option value="annual">Annual leave</option>
                 <option value="unpaid">Unpaid leave</option>
@@ -1050,7 +1052,7 @@ export default function Team() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setEditRow(null)}>Cancel</Button>
-            <Button onClick={submitEdit as any} loading={editBusy}>Save changes</Button>
+            <Button onClick={submitEdit} loading={editBusy}>Save changes</Button>
           </>
         }
       >
@@ -1060,7 +1062,7 @@ export default function Team() {
               <Select
                 value={editForm.role}
                 disabled={!isOwner}
-                onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}
+                onChange={e => setEditForm({ ...editForm, role: e.target.value as AppRole })}
               >
                 <option value="employee">Employee</option>
                 <option value="manager">Manager</option>

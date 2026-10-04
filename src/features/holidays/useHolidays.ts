@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { holidayMap, getHolidaysInRange } from './holidayService';
 import { useCustomHolidays, customRowToHoliday } from './useCustomHolidays';
 import type { HolidayRegion, PublicHoliday } from './types';

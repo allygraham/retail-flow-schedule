@@ -5,7 +5,7 @@ import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
 import { acceptInviteSchema } from '@/lib/validation';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import s from './Auth.module.scss';
 
 interface InviteRow {
@@ -43,7 +43,7 @@ export default function AcceptInvite() {
       const { data, error } = await supabase.rpc('get_invitation_by_token', { _token: token });
       if (cancelled) return;
       if (error) { setLookupErr(error.message); setLookupDone(true); return; }
-      const row = (data as any[])?.[0] as InviteRow | undefined;
+      const row = data?.[0] as InviteRow | undefined;
       if (!row) { setLookupErr('Invite not found.'); setLookupDone(true); return; }
       setInvite(row);
       setFullName(row.full_name ?? '');

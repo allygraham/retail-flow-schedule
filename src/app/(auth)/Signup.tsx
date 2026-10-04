@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AccountLoadError } from '@/features/auth/AccountLoadError';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
@@ -22,7 +22,7 @@ export default function Signup() {
 
   useEffect(() => {
     if (user?.user_metadata.business_name) setBusinessName(user.user_metadata.business_name);
-  }, [user?.id]);
+  }, [user?.user_metadata.business_name]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

@@ -192,7 +192,6 @@ export function getThemePreset(themeKey?: string | null): ResolvedThemePreset {
     : THEME_PRESETS.default;
 
   const sidebarTextColor = base.sidebarTextColor ?? readableForeground(base.sidebarColor);
-  const primaryTextColor = readableForeground(base.primaryColor);
   const neutralBadgeBg = withAlpha(base.textPrimaryColor, base.key === 'midnight' ? 0.16 : 0.06);
   const neutralBadgeText = base.textSecondaryColor;
 

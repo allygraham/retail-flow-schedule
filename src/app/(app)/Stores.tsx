@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import type { Tables } from '@/integrations/supabase/types';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
@@ -12,23 +13,23 @@ import s from './Stores.module.scss';
 export default function Stores() {
   const { business, hasPermission } = useAuth();
   const canManageStores = hasPermission('manage_stores');
-  const [stores, setStores] = useState<any[]>([]);
+  const [stores, setStores] = useState<Tables<'store_locations'>[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<any>({ name: '', address: '', city: '', postcode: '' });
+  const [form, setForm] = useState({ name: '', address: '', city: '', postcode: '' });
   const [err, setErr] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!business) return;
     const { data } = await supabase.from('store_locations').select('*').eq('business_id', business.id).order('name');
     setStores(data ?? []);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [business]);
+  }, [business]);
+  useEffect(() => { void load(); }, [load]);
 
   const save = async () => {
     setErr(null);
     const parsed = storeSchema.safeParse(form);
     if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
-    const { error } = await supabase.from('store_locations').insert({ ...parsed.data, business_id: business!.id } as any);
+    const { error } = await supabase.from('store_locations').insert({ ...parsed.data, business_id: business!.id });
     if (error) { setErr(error.message); return; }
     setOpen(false); setForm({ name:'',address:'',city:'',postcode:'' }); load();
   };

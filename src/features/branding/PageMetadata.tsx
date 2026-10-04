@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/features/auth/AuthProvider';
-import { useBranding } from './BrandingProvider';
+import { useAuth } from '@/features/auth/authContext';
+import { useBranding } from './brandingContext';
 
 export function PageMetadata() {
   const { business } = useAuth();

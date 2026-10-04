@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return json({ error: 'Not signed in' }, 401);
 
-  let body: any;
+  let body: { business_id?: string; store?: { id?: string; name?: string }; week_start?: string; days?: unknown[]; needs?: string; roles?: unknown[]; employees?: unknown[]; unavailable?: unknown[]; existing_shifts?: unknown[] };
   try { body = await req.json(); } catch { return json({ error: 'Invalid request' }, 400); }
   const { business_id, store, week_start, days, needs, roles, employees, unavailable, existing_shifts } = body ?? {};
   if (!business_id || !store?.id || !week_start || !needs) return json({ error: 'Missing staffing details' }, 400);
@@ -89,7 +89,7 @@ Rules:
         text: { format: { type: 'json_schema', name: 'rota_suggestion', strict: true, schema } },
       }),
     });
-  } catch (e) {
+  } catch {
     if (req.signal.aborted) return new Response(null, { status: 499, headers: corsHeaders });
     return json({ error: 'Could not reach the AI service.' }, 502);
   }
@@ -123,7 +123,7 @@ Rules:
         if (!line) continue;
         const data = line.slice(5).trim();
         if (!data || data === '[DONE]') continue;
-        let ev: any; try { ev = JSON.parse(data); } catch { continue; }
+        let ev: { type?: string; delta?: string; error?: { message?: string }; response?: { error?: { message?: string } } }; try { ev = JSON.parse(data); } catch { continue; }
         if (ev.type === 'response.output_text.delta') text += ev.delta ?? '';
         else if (ev.type === 'response.refusal.delta') refusal = true;
         else if (ev.type === 'error' || ev.type === 'response.failed') errorMsg = ev.error?.message ?? ev.response?.error?.message ?? 'AI request failed.';

@@ -5,10 +5,10 @@ import AcceptInvite from './AcceptInvite';
 
 const mocks = vi.hoisted(() => ({
   signUp: vi.fn(), rpc: vi.fn(), refresh: vi.fn(), signOut: vi.fn(), nav: vi.fn(),
-  auth: { user: null as any, loading: false },
+  auth: { user: null as { id: string; email?: string; user_metadata?: { business_name?: string } } | null, loading: false },
 }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { auth: { signUp: mocks.signUp }, rpc: mocks.rpc } }));
-vi.mock('@/features/auth/AuthProvider', () => ({ useAuth: () => ({ ...mocks.auth, refresh: mocks.refresh, signOut: mocks.signOut }) }));
+vi.mock('@/features/auth/authContext', () => ({ useOptionalAuth: () => undefined, useAuth: () => ({ ...mocks.auth, refresh: mocks.refresh, signOut: mocks.signOut }) }));
 vi.mock('react-router-dom', async () => ({ ...await vi.importActual('react-router-dom'), useNavigate: () => mocks.nav }));
 const invitation = { id: 'invite', business_id: 'business', business_name: 'Test shop', email: 'employee@example.com', full_name: 'Test Employee', role: 'employee', status: 'pending', expires_at: '2099-01-01' };
 afterEach(cleanup);

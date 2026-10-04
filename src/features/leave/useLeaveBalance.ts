@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateLeaveDays } from './leaveDays';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 export { daysBetween, daysInYear } from './leaveDays';
 
 export interface LeaveBalance {
@@ -86,7 +86,7 @@ export function useLeaveBalance(userId?: string | null) {
     }
   }, [targetId, business, year]);
 
-  useEffect(() => { load(); return () => { sequence.current++; }; }, [load]);
+  useEffect(() => { const requests = sequence; void load(); return () => { requests.current++; }; }, [load]);
 
   return { balance, workingDays, patternMissing, error, loading, reload: load };
 }

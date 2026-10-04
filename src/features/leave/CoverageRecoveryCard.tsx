@@ -1,3 +1,4 @@
+import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/common/Button';
 import { Avatar } from '@/components/common/Avatar';
@@ -65,8 +66,8 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
       try {
         const list = await suggestReplacements(businessId, shift, [userId]);
         setCandidates(prev => ({ ...prev, [shift.id]: list }));
-      } catch (e: any) {
-        toast.error(e.message ?? 'Could not load suggestions');
+      } catch (e) {
+        toast.error(errorMessage(e, 'Could not load suggestions'));
       } finally {
         setCandLoading(null);
       }
@@ -80,7 +81,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
       toast.success(`${cand.full_name} assigned to cover`);
       await load();
       onChanged?.();
-    } catch (e: any) { toast.error(e.message ?? 'Could not assign'); }
+    } catch (e) { toast.error(errorMessage(e, 'Could not assign')); }
     finally { setBusy(false); }
   };
 
@@ -92,7 +93,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
       toast.success('Shifts opened for pickup');
       await load();
       onChanged?.();
-    } catch (e: any) { toast.error(e.message ?? 'Could not release shifts'); }
+    } catch (e) { toast.error(errorMessage(e, 'Could not release shifts')); }
     finally { setBusy(false); }
   };
 
@@ -103,7 +104,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
       const pool = await suggestReplacements(businessId, shifts[0], [userId]);
       const sent = await notifyCandidatesOfOpenShifts(businessId, pool, shifts);
       toast.success(`Notified ${sent} available staff`);
-    } catch (e: any) { toast.error(e.message ?? 'Could not send notifications'); }
+    } catch (e) { toast.error(errorMessage(e, 'Could not send notifications')); }
     finally { setBusy(false); }
   };
 

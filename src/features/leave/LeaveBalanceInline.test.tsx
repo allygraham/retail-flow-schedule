@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LeaveBalanceInline } from './LeaveBalanceInline';
-const mocks = vi.hoisted(() => ({ value: {} as any }));
+const mocks = vi.hoisted(() => ({ value: {} as { balance: { year: number; remaining: number; taken: number; entitlement: number } | null; workingDays: number[] | null; loading: boolean; error?: string; patternMissing?: boolean } }));
 vi.mock('./useLeaveBalance', () => ({ useLeaveBalance: () => mocks.value }));
 afterEach(cleanup);
 beforeEach(() => { mocks.value = { balance: { year: 2026, remaining: 10, taken: 10, entitlement: 20 }, workingDays: [1,3,5], loading: false }; });
@@ -11,7 +11,7 @@ describe('annual leave approval preview', () => {
     expect(screen.getByText('7 left after approval')).toBeInTheDocument();
   });
   it('warns based on working days rather than calendar duration', () => {
-    mocks.value.balance.remaining = 2;
+    mocks.value.balance!.remaining = 2;
     render(<LeaveBalanceInline userId="employee" startDate="2026-10-05" endDate="2026-10-11" />);
     expect(screen.getByText('Exceeds balance by 1 day')).toBeInTheDocument();
   });
@@ -21,7 +21,7 @@ describe('annual leave approval preview', () => {
     expect(screen.getByRole('status')).toHaveTextContent('normal working days');
   });
   it('shows an existing deficit and includes it in the next approval warning', () => {
-    mocks.value.balance.remaining = -2;
+    mocks.value.balance!.remaining = -2;
     render(<LeaveBalanceInline userId="employee" startDate="2026-10-05" endDate="2026-10-11" />);
     expect(screen.getByText(/days over entitlement/)).toBeInTheDocument();
     expect(screen.getByText('Exceeds balance by 5 days')).toBeInTheDocument();

@@ -1,7 +1,8 @@
+import { errorMessage } from '@/lib/errors';
 import { canCancelLeave } from '@/features/leave/leavePermissions';
 import { daysBetween, daysInYear, workingDaysBetween } from '@/features/leave/leaveDays';
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
 import { useLeaveBalance } from '@/features/leave/useLeaveBalance';
@@ -97,13 +98,13 @@ export default function Leave() {
 
   const [requestModal, setRequestModal] = useState(false);
   const [addLeaveModal, setAddLeaveModal] = useState(false);
-  const [form, setForm] = useState<any>({
+  const [form, setForm] = useState<{ leave_type: 'annual' | 'unpaid' | 'sick' | 'other'; start_date: string; end_date: string; reason: string }>({
     leave_type: 'annual',
     start_date: isoDate(new Date()),
     end_date: isoDate(new Date()),
     reason: '',
   });
-  const [mgmtForm, setMgmtForm] = useState<any>({
+  const [mgmtForm, setMgmtForm] = useState<{ user_id: string; leave_type: 'annual' | 'unpaid' | 'sick'; start_date: string; end_date: string; reason: string; manager_note: string; status: 'approved'; sickness_meta: SicknessMeta; lifecycle_status: SicknessLifecycleStatus }>({
     user_id: '',
     leave_type: 'sick',
     start_date: isoDate(new Date()),
@@ -290,8 +291,8 @@ export default function Leave() {
       setForm({ leave_type: 'annual', start_date: isoDate(new Date()), end_date: isoDate(new Date()), reason: '' });
       toast.success('Request submitted. Your manager has been notified.');
       reloadBalance();
-    } catch (e: any) {
-      setFormErr(e.message ?? 'Could not submit');
+    } catch (e) {
+      setFormErr(errorMessage(e, 'Could not submit'));
     }
   };
 
@@ -346,8 +347,8 @@ export default function Leave() {
           : 'Leave recorded and approved.'
       );
       reloadBalance();
-    } catch (e: any) {
-      setMgmtErr(e.message ?? 'Could not record leave');
+    } catch (e) {
+      setMgmtErr(errorMessage(e, 'Could not record leave'));
     }
   };
 
@@ -367,8 +368,8 @@ export default function Leave() {
       );
       setReviewing(null);
       reloadBalance();
-    } catch (e: any) {
-      toast.error(e.message ?? 'Could not save decision');
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not save decision'));
     }
   };
 
@@ -376,14 +377,14 @@ export default function Leave() {
     toast('Cancel this request?', {
       action: { label: 'Cancel request', onClick: async () => {
         try { await cancelOwn(id); reloadBalance(); toast.success('Leave cancelled'); }
-        catch (e: any) { toast.error(e.message ?? 'Could not cancel'); }
+        catch (e) { toast.error(errorMessage(e, 'Could not cancel')); }
       }},
       cancel: { label: 'Keep', onClick: () => {} },
     });
   };
 
   const updateMgmtMeta = (patch: Partial<SicknessMeta>) => {
-    setMgmtForm((prev: any) => ({ ...prev, sickness_meta: { ...prev.sickness_meta, ...patch } }));
+    setMgmtForm((prev) => ({ ...prev, sickness_meta: { ...prev.sickness_meta, ...patch } }));
   };
 
   const openNote = (title: string, body: ReactNode) => setNoteViewer({ title, body });
@@ -942,7 +943,7 @@ export default function Leave() {
       >
         <div className={s.form}>
           <Field label="Type">
-            <Select value={form.leave_type} onChange={e => setForm({ ...form, leave_type: e.target.value })}>
+            <Select value={form.leave_type} onChange={e => setForm({ ...form, leave_type: e.target.value as typeof form.leave_type })}>
               <option value="annual">Annual leave</option>
               <option value="unpaid">Unpaid</option>
               <option value="sick">Sick</option>
@@ -999,7 +1000,7 @@ export default function Leave() {
           </Field>
           <div className={s.row2}>
             <Field label="Leave type">
-              <Select value={mgmtForm.leave_type} onChange={e => setMgmtForm({ ...mgmtForm, leave_type: e.target.value })}>
+              <Select value={mgmtForm.leave_type} onChange={e => setMgmtForm({ ...mgmtForm, leave_type: e.target.value as typeof mgmtForm.leave_type })}>
                 <option value="annual">Annual leave</option>
                 <option value="sick">Sick leave</option>
                 <option value="unpaid">Unpaid leave</option>
@@ -1009,7 +1010,7 @@ export default function Leave() {
               <Field label="Sickness status">
                 <Select
                   value={mgmtForm.lifecycle_status}
-                  onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value })}
+                  onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value as SicknessLifecycleStatus })}
                 >
                   {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -1046,7 +1047,7 @@ export default function Leave() {
                   <Field label="Category">
                     <Select
                       value={mgmtForm.sickness_meta?.category ?? 'cold_flu'}
-                      onChange={e => updateMgmtMeta({ category: e.target.value as any })}
+                      onChange={e => updateMgmtMeta({ category: e.target.value as SicknessMeta['category'] })}
                     >
                       {SICKNESS_CATEGORY_OPTIONS.map(o => (
                         <option key={o.value} value={o.value}>{o.label}</option>
@@ -1228,10 +1229,10 @@ export default function Leave() {
                 onChange={async (e) => {
                   if (!detailsRow) return;
                   try {
-                    await updateSickness(detailsRow.id, { lifecycle_status: e.target.value as any });
-                    setDetailsRow({ ...detailsRow, lifecycle_status: e.target.value as any });
+                    await updateSickness(detailsRow.id, { lifecycle_status: e.target.value as SicknessLifecycleStatus });
+                    setDetailsRow({ ...detailsRow, lifecycle_status: e.target.value as SicknessLifecycleStatus });
                     toast.success('Sickness status updated');
-                  } catch (err: any) { toast.error(err.message ?? 'Could not update'); }
+                  } catch (err) { toast.error(errorMessage(err, 'Could not update')); }
                 }}
               >
                 {SICKNESS_LIFECYCLE_OPTIONS.map(o => (

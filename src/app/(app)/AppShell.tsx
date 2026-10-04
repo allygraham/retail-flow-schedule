@@ -4,12 +4,12 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu, X, LayoutDashboard, Calendar, CalendarDays, Users, MapPin, User, Settings,
 } from 'lucide-react';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
-import { useBranding, buildThemeStyle } from '@/features/branding/BrandingProvider';
+import { useBranding, buildThemeStyle } from '@/features/branding/brandingContext';
 import { NAV_PERMISSIONS, type AppNavItem } from '@/features/auth/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -46,6 +46,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   useEffect(() => {
     if (menuOpen) {
       const prev = document.body.style.overflow;
+      const hamburger = hamburgerRef.current;
       document.body.style.overflow = 'hidden';
       closeBtnRef.current?.focus();
       const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
@@ -53,7 +54,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       return () => {
         document.body.style.overflow = prev;
         window.removeEventListener('keydown', onKey);
-        hamburgerRef.current?.focus();
+        hamburger?.focus();
       };
     }
   }, [menuOpen]);
@@ -82,8 +83,8 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         { event: '*', schema: 'public', table: 'leave_requests', filter: `business_id=eq.${business.id}` },
         (payload) => {
           fetchCount();
-          if (payload.eventType === 'INSERT' && (payload.new as any)?.status === 'pending') {
-            const newRow: any = payload.new;
+          if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
+            const newRow = payload.new;
             supabase.auth.getUser().then(({ data }) => {
               if (data.user?.id === newRow.user_id) return;
               toast('New leave request', {

@@ -1,24 +1,15 @@
 import { Link } from 'react-router-dom';
-import { useBranding } from '@/features/branding/BrandingProvider';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useOptionalBranding } from '@/features/branding/brandingContext';
+import { useOptionalAuth } from '@/features/auth/authContext';
 import s from './Logo.module.scss';
 
 interface Props { to?: string; size?: 'sm'|'md'|'lg'; light?: boolean; useBusinessLogo?: boolean }
 
 export function Logo({ to = '/', size = 'md', light, useBusinessLogo }: Props) {
-  // Safe call: outside provider, falls back to default Lavoro mark
-  let logoUrl: string | null = null;
-  let displayName: string | null = null;
-  try {
-    if (useBusinessLogo) {
-      const { theme } = useBranding();
-      const { business } = useAuth();
-      logoUrl = theme.logoUrl;
-      displayName = theme.displayName ?? business?.name ?? null;
-    }
-  } catch {
-    /* not inside providers — fall back */
-  }
+  const branding = useOptionalBranding();
+  const auth = useOptionalAuth();
+  const logoUrl = branding?.theme.logoUrl ?? null;
+  const displayName = branding?.theme.displayName ?? auth?.business?.name ?? null;
 
   if (useBusinessLogo && logoUrl) {
     return (

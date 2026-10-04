@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Building2, Users, CalendarDays, Palette } from 'lucide-react';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { BrandingSettings } from '@/features/branding/BrandingSettings';

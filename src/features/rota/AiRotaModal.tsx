@@ -1,3 +1,6 @@
+import { errorMessage } from '@/lib/errors';
+import type { Tables } from '@/integrations/supabase/types';
+import type { RotaPerson, ShiftRow } from '@/types/rows';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Modal } from '@/components/common/Modal';
@@ -21,11 +24,11 @@ interface Props {
   weekStart: Date;
   days: Date[];
   defaultStoreId: string | null;
-  stores: any[];
-  roles: any[];
-  people: any[];
-  leave: any[];
-  shifts: any[];
+  stores: Tables<'store_locations'>[];
+  roles: Tables<'roles_catalog'>[];
+  people: RotaPerson[];
+  leave: Tables<'leave_requests'>[];
+  shifts: ShiftRow[];
 }
 
 const EXAMPLE = 'e.g. Mon–Fri 09:00–17:30: 2 Floor staff + 1 Keyholder. Sat 09:00–18:00: 3 Floor staff, 1 Cashier, 1 Supervisor. Sun 10:00–16:00: 2 staff incl. a Keyholder.';
@@ -53,14 +56,14 @@ export function AiRotaModal(p: Props) {
       const staff = p.people.filter(x => x.store_ids?.includes(storeId));
       const ids = staff.map(x => x.user_id);
       const [ep, av] = await Promise.all([
-        ids.length ? supabase.from('employee_profiles').select('user_id, contracted_hours').eq('business_id', p.businessId).in('user_id', ids) : Promise.resolve({ data: [] as any[] }),
-        ids.length ? supabase.from('availability').select('user_id, day_of_week, unavailable_date, start_time, end_time, is_recurring').eq('business_id', p.businessId).in('user_id', ids) : Promise.resolve({ data: [] as any[] }),
+        ids.length ? supabase.from('employee_profiles').select('user_id, contracted_hours').eq('business_id', p.businessId).in('user_id', ids) : Promise.resolve({ data: [] }),
+        ids.length ? supabase.from('availability').select('user_id, day_of_week, unavailable_date, start_time, end_time, is_recurring').eq('business_id', p.businessId).in('user_id', ids) : Promise.resolve({ data: [] }),
       ]);
-      const hours = Object.fromEntries((ep.data ?? []).map((e: any) => [e.user_id, e.contracted_hours]));
+      const hours = Object.fromEntries((ep.data ?? []).map((e) => [e.user_id, e.contracted_hours]));
       const start = isoDate(p.days[0]), end = isoDate(p.days[6]);
       const unavailable = [
         ...p.leave.filter(l => ids.includes(l.user_id)).map(l => ({ user_id: l.user_id, type: `leave (${l.status})`, from: l.start_date, to: l.end_date })),
-        ...((av.data ?? []) as any[]).filter(a => !a.unavailable_date || (a.unavailable_date >= start && a.unavailable_date <= end))
+        ...((av.data ?? [])).filter(a => !a.unavailable_date || (a.unavailable_date >= start && a.unavailable_date <= end))
           .map(a => ({ user_id: a.user_id, type: 'availability', day_of_week: a.day_of_week, date: a.unavailable_date, start: a.start_time, end: a.end_time })),
       ];
       const { data, error: fnErr } = await supabase.functions.invoke('suggest-rota', {
@@ -84,7 +87,7 @@ export function AiRotaModal(p: Props) {
       });
       if (fnErr) {
         let msg = fnErr.message;
-        try { const b = await (fnErr as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* keep */ }
+        try { const b = await (fnErr.context as Response | undefined)?.json?.(); if (b?.error) msg = b.error; } catch { /* keep */ }
         throw new Error(msg);
       }
       const validRoles = new Set(p.roles.map(r => r.id));
@@ -100,8 +103,8 @@ export function AiRotaModal(p: Props) {
         .sort((a: Suggestion, b: Suggestion) => (a.shift_date + a.start_time).localeCompare(b.shift_date + b.start_time));
       setResult({ summary: data?.summary ?? '', shifts: clean });
       setSelected(new Set(clean.map((_, i) => i)));
-    } catch (e: any) {
-      setError(e?.message ?? 'Could not generate a rota.');
+    } catch (e) {
+      setError(errorMessage(e, 'Could not generate a rota.'));
     } finally {
       setLoading(false);
     }
@@ -119,14 +122,14 @@ export function AiRotaModal(p: Props) {
     }));
     if (!rows.length) return;
     setSaving(true);
-    const { error: insErr } = await supabase.from('shifts').insert(rows as any);
+    const { error: insErr } = await supabase.from('shifts').insert(rows);
     setSaving(false);
     if (insErr) { toast.error(insErr.message); return; }
     toast.success(`Added ${rows.length} draft shift${rows.length === 1 ? '' : 's'}`);
     p.onAdded(); p.onClose();
   };
 
-  const toggle = (i: number) => setSelected(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  const toggle = (i: number) => setSelected(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
 
   return (
     <Modal open={p.open} onClose={p.onClose} title="Suggest a rota" size="lg">

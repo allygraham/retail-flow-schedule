@@ -1,7 +1,9 @@
+import { errorMessage } from '@/lib/errors';
+import type { ShiftWithNames } from '@/types/rows';
 import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { useLeaveRequests } from '@/features/leave/useLeaveRequests';
 import { Card } from '@/components/common/Card';
 import { Avatar } from '@/components/common/Avatar';
@@ -25,7 +27,7 @@ export default function Profile() {
   const [name, setName] = useState(fullName ?? '');
   const holidays = useHolidays();
   const [phone, setPhone] = useState('');
-  const [shifts, setShifts] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<ShiftWithNames[]>([]);
   const [saving, setSaving] = useState(false);
   const [requestModal, setRequestModal] = useState(false);
   const [collapsible, setCollapsible] = useState(false);
@@ -93,8 +95,8 @@ export default function Profile() {
       await submit(parsed.data);
       setRequestModal(false);
       toast.success('Request submitted. Your manager has been notified.');
-    } catch (error: any) {
-      setRequestError(error.message ?? 'Could not submit request');
+    } catch (error) {
+      setRequestError(errorMessage(error, 'Could not submit request'));
     } finally {
       setRequesting(false);
     }
@@ -142,7 +144,7 @@ export default function Profile() {
             <div className={s.empty}>No upcoming shifts.</div>
           ) : (
             <ul className={s.list}>
-              {shifts.map((sh: any) => {
+              {shifts.map((sh) => {
                 const hol = holidays.get(sh.shift_date);
                 return (
                   <li key={sh.id} className={s.row}>

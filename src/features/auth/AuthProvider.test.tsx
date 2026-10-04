@@ -1,21 +1,23 @@
+import type { MockResponse, MockResult } from '@/test/types';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from './AuthProvider';
+import { AuthProvider } from './AuthProvider';
+import { useAuth } from './authContext';
 import { ProtectedRoute } from './ProtectedRoute';
 const mocks = vi.hoisted(() => ({
-  session: { user: { id: 'self' } }, responses: {} as Record<string, any>, listener: null as any,
+  session: { user: { id: 'self' } }, responses: {} as Record<string, MockResult>, listener: (() => {}) as (event: string, session: unknown) => void,
   getSession: vi.fn(), signOut: vi.fn(),
 }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
   auth: {
     getSession: mocks.getSession, signOut: mocks.signOut,
-    onAuthStateChange: (listener: any) => { mocks.listener = listener; return { data: { subscription: { unsubscribe: vi.fn() } } }; },
+    onAuthStateChange: (listener: typeof mocks.listener) => { mocks.listener = listener; return { data: { subscription: { unsubscribe: vi.fn() } } }; },
   },
   from: (table: string) => {
     const response = mocks.responses[table];
     const query = { select: () => query, eq: () => query, order: () => query, limit: () => query, maybeSingle: () => query,
-      then: (resolve: any, reject: any) => Promise.resolve(response).then(resolve, reject) };
+      then: Promise.resolve(response).then.bind(Promise.resolve(response)) };
     return query;
   },
 } }));
@@ -71,7 +73,7 @@ describe('account loading and protected routing', () => {
     expect(screen.queryByText('Workspace signup')).not.toBeInTheDocument();
   });
   it('ignores a late account response after logout', async () => {
-    let resolveRoles!: (value: any) => void;
+    let resolveRoles!: (value: MockResponse) => void;
     mocks.responses.user_roles = new Promise(resolve => { resolveRoles = resolve; }); show();
     // Membership query completes before the role query starts.
     await waitFor(() => expect(screen.getByText('Loading Lavoro…')).toBeInTheDocument());

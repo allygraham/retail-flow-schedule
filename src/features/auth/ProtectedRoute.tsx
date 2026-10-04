@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AccountLoadError } from './AccountLoadError';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authContext';
 import type { AppRole } from '@/types/domain';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Button } from '@/components/common/Button';

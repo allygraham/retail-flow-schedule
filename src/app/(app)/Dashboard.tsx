@@ -1,8 +1,10 @@
+import type { ShiftRow, ShiftWithNames } from '@/types/rows';
+import type { Tables } from '@/integrations/supabase/types';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Plane, ArrowRight, BellRing, FileText } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plane, ArrowRight, BellRing } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { useNotifications } from '@/features/notifications/useNotifications';
 import { Stat } from '@/components/common/Stat';
 import { Card } from '@/components/common/Card';
@@ -36,7 +38,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   const nav = useNavigate();
   const { items: notifications } = useNotifications(userId);
   const holidays = useHolidays();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<{ upcoming: ShiftWithNames[]; weekShifts: ShiftWithNames[]; leaves: Tables<'leave_requests'>[] } | null>(null);
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -91,13 +93,13 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   // This week scaffold
   const wkStart = weekStartFor(new Date());
   const days = weekDays(wkStart);
-  const shiftsByDate: Record<string, any[]> = {};
-  for (const sh of data.weekShifts as any[]) {
+  const shiftsByDate: Record<string, ShiftWithNames[]> = {};
+  for (const sh of data.weekShifts) {
     (shiftsByDate[sh.shift_date] ??= []).push(sh);
   }
   // Approved leave covering this week (single self), so we can mark "Off" days
   const approvedLeaveDates = new Set<string>();
-  for (const lr of data.leaves as any[]) {
+  for (const lr of data.leaves) {
     if (lr.status !== 'approved') continue;
     for (const d of days) {
       const iso = isoDate(d);
@@ -107,11 +109,11 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 
   // Time off buckets
   const todayISO = today;
-  const nextApproved = (data.leaves as any[])
+  const nextApproved = (data.leaves)
     .filter(l => l.status === 'approved' && l.end_date >= todayISO)
     .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
-  const pendingLeave = (data.leaves as any[]).filter(l => l.status === 'pending');
-  const recentDecisions = (data.leaves as any[])
+  const pendingLeave = (data.leaves).filter(l => l.status === 'pending');
+  const recentDecisions = (data.leaves)
     .filter(l => l.status === 'rejected' || l.status === 'approved')
     .slice(0, 3);
 
@@ -299,7 +301,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
           <Card title="Then after that" subtitle="Your next shifts"
             action={<Button variant="ghost" size="sm" trailing={<ArrowRight size={14} />} onClick={() => nav('/rota')}>Full rota</Button>}>
             <ul className={s.list}>
-              {restUpcoming.map((sh: any) => {
+              {restUpcoming.map((sh) => {
                 const hol = holidays.get(sh.shift_date);
                 return (
                   <li key={sh.id} className={s.shiftRow}>
@@ -332,7 +334,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 function ManagerDashboard() {
   const { business, user, fullName, role } = useAuth();
   const holidays = useHolidays();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<{ shiftsToday: ShiftRow[]; leaveApproved: Tables<'leave_requests'>[]; sickToday: Tables<'leave_requests'>[]; pendingLeave: Tables<'leave_requests'>[]; unassigned: ShiftWithNames[]; profilesById: Record<string, string | null> } | null>(null);
 
   const weekHolidays = useMemo(() => {
     if (!holidays.enabled) return [];
@@ -353,7 +355,7 @@ function ManagerDashboard() {
         supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('business_id', business.id).eq('status', 'unassigned').gte('shift_date', today).order('shift_date'),
         supabase.from('profiles').select('id, full_name'),
       ]);
-      const pendingLeaveRows = (pendingLeave.data ?? []).filter((request: any) => (
+      const pendingLeaveRows = (pendingLeave.data ?? []).filter((request) => (
         role !== 'manager' || request.user_id !== user?.id
       ));
 
@@ -363,7 +365,7 @@ function ManagerDashboard() {
         sickToday: sickToday.data ?? [],
         pendingLeave: pendingLeaveRows,
         unassigned: unassigned.data ?? [],
-        profilesById: Object.fromEntries((profiles.data ?? []).map((p: any) => [p.id, p.full_name])),
+        profilesById: Object.fromEntries((profiles.data ?? []).map((p) => [p.id, p.full_name])),
       });
     })();
   }, [business, role, user?.id]);
@@ -399,7 +401,7 @@ function ManagerDashboard() {
       )}
 
       <div className={s.stats}>
-        <Stat label="Working today" value={data.shiftsToday.filter((s: any) => s.assigned_user_id).length} accent="success" hint="Across all stores" />
+        <Stat label="Working today" value={data.shiftsToday.filter((s) => s.assigned_user_id).length} accent="success" hint="Across all stores" />
         <Stat label="On annual leave" value={data.leaveApproved.length} accent="brand" />
         <Stat label="Off sick" value={data.sickToday.length} accent="danger" />
         <Stat label="Unassigned shifts" value={data.unassigned.length} accent="warn" hint="Need cover" />
@@ -412,7 +414,7 @@ function ManagerDashboard() {
             <EmptyState title="No shifts today" description="Enjoy the quiet day!" />
           ) : (
             <ul className={s.list}>
-              {data.shiftsToday.map((sh: any) => (
+              {data.shiftsToday.map((sh) => (
                 <li key={sh.id} className={s.row}>
                   <Avatar name={sh.assigned_user_id ? data.profilesById[sh.assigned_user_id] : 'Unassigned'} />
                   <div className={s.rowMain}>
@@ -431,7 +433,7 @@ function ManagerDashboard() {
             <EmptyState title="All caught up" description="No requests need attention." />
           ) : (
             <ul className={s.list}>
-              {data.pendingLeave.slice(0, 6).map((lr: any) => (
+              {data.pendingLeave.slice(0, 6).map((lr) => (
                 <li key={lr.id} className={s.row}>
                   <Avatar name={data.profilesById[lr.user_id]} />
                   <div className={s.rowMain}>
@@ -450,7 +452,7 @@ function ManagerDashboard() {
             <EmptyState title="Fully covered" description="No gaps in the published rota." />
           ) : (
             <ul className={s.list}>
-              {data.unassigned.slice(0, 6).map((sh: any) => (
+              {data.unassigned.slice(0, 6).map((sh) => (
                 <li key={sh.id} className={s.row}>
                   <div className={s.rowMain}>
                     <div className={s.rowName}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}</div>

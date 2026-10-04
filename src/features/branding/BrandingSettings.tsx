@@ -1,11 +1,12 @@
+import { errorMessage } from '@/lib/errors';
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Lock, Upload, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
-import { buildThemeStyle, useBranding } from './BrandingProvider';
+import { buildThemeStyle, useBranding } from './brandingContext';
 import type { BrandingTheme, ThemePresetKey } from './types';
 import { THEME_ORDER, THEME_PRESETS, getThemePreset, themeFromPreset } from './presets';
 import s from './BrandingSettings.module.scss';
@@ -76,8 +77,8 @@ export function BrandingSettings() {
       const { data } = supabase.storage.from('business-logos').getPublicUrl(path);
       setDraft((current) => ({ ...current, logoUrl: data.publicUrl }));
       toast.success('Logo uploaded. Save to apply it for everyone.');
-    } catch (e: any) {
-      setError(e.message ?? 'Upload failed');
+    } catch (e) {
+      setError(errorMessage(e, 'Upload failed'));
     } finally {
       setUploading(false);
     }

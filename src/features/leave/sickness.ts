@@ -24,7 +24,7 @@ export const SICKNESS_LIFECYCLE_OPTIONS: { value: SicknessLifecycleStatus; label
 ];
 
 export const SICKNESS_LIFECYCLE_LABEL: Record<SicknessLifecycleStatus, string> =
-  Object.fromEntries(SICKNESS_LIFECYCLE_OPTIONS.map(o => [o.value, o.label])) as any;
+  Object.fromEntries(SICKNESS_LIFECYCLE_OPTIONS.map(o => [o.value, o.label])) as Record<SicknessLifecycleStatus, string>;
 
 export const SICKNESS_LIFECYCLE_TONE: Record<SicknessLifecycleStatus, 'neutral' | 'pending' | 'success' | 'info' | 'danger'> = {
   recorded_absence: 'info',
@@ -54,9 +54,9 @@ export const SICKNESS_CATEGORY_OPTIONS: { value: SicknessCategory; label: string
 ];
 
 export const SICKNESS_CATEGORY_LABEL: Record<SicknessCategory, string> =
-  Object.fromEntries(SICKNESS_CATEGORY_OPTIONS.map(o => [o.value, o.label])) as any;
+  Object.fromEntries(SICKNESS_CATEGORY_OPTIONS.map(o => [o.value, o.label])) as Record<SicknessCategory, string>;
 
-export interface SicknessMeta {
+export type SicknessMeta = {
   category?: SicknessCategory | null;
   return_to_work_date?: string | null;
   self_certified?: boolean;

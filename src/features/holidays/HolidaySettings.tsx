@@ -5,7 +5,7 @@ import { Field, Input, Select } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { fmtDate, isoDate } from '@/lib/datetime';

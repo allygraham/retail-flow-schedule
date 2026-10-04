@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/features/auth/authContext';
 import { daysBetween } from './useLeaveBalance';
 import s from './OperationalImpact.module.scss';
 
@@ -44,7 +44,7 @@ export function OperationalImpactCard({ userId, startDate, endDate }: Props) {
       if (cancelled) return;
       const rows = data ?? [];
       let mins = 0;
-      for (const r of rows as any[]) {
+      for (const r of rows) {
         const [sh, sm] = String(r.start_time).split(':').map(Number);
         const [eh, em] = String(r.end_time).split(':').map(Number);
         const dur = (eh * 60 + em) - (sh * 60 + sm) - (r.break_minutes ?? 0);

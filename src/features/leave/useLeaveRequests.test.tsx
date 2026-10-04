@@ -1,15 +1,16 @@
+import type { MockResponse, MockResult } from '@/test/types';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLeaveRequests } from './useLeaveRequests';
 const mocks = vi.hoisted(() => ({
-  main: null as any, responses: {} as Record<string, any>, profiles: [] as any[],
-  auth: null as any,
+  main: null as MockResult | null, responses: {} as Record<string, MockResult | null>, profiles: [] as (MockResult | null)[],
+  auth: { business: { id: 'shop' }, user: { id: 'owner' }, role: 'owner', hasPermission: () => true },
 }));
-vi.mock('@/features/auth/AuthProvider', () => ({ useAuth: () => mocks.auth }));
+vi.mock('@/features/auth/authContext', () => ({ useOptionalAuth: () => undefined, useAuth: () => mocks.auth }));
 vi.mock('@/integrations/supabase/client', () => {
-  const chain = (response: any) => {
+  const chain = (response: MockResult | null | undefined) => {
     const query = { select: () => query, eq: () => query, order: () => query, in: () => query,
-      then: (resolve: any, reject: any) => Promise.resolve(response).then(resolve, reject) };
+      then: Promise.resolve(response).then.bind(Promise.resolve(response)) };
     return query;
   };
   const channel = { on: () => channel, subscribe: () => channel };
@@ -47,7 +48,7 @@ describe('leave list loading', () => {
     await act(async () => { await result.current.load(); }); expect(result.current.error).toBeNull(); expect(result.current.requests).toHaveLength(1);
   });
   it('checks the additional employee name query for errors', async () => {
-    mocks.responses.memberships.data.push({ user_id: 'second' });
+    ((mocks.responses.memberships as MockResponse).data as { user_id: string }[]).push({ user_id: 'second' });
     mocks.profiles = [mocks.responses.profiles, { data: null, error: { message: 'Permission denied' } }];
     const { result } = renderHook(() => useLeaveRequests()); await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBeTruthy(); expect(result.current.requests).toEqual([]);
@@ -58,7 +59,7 @@ describe('leave list loading', () => {
     expect(result.current.error).toBeTruthy();
   });
   it('ignores a late response from the previous workspace', async () => {
-    let finish!: (value: any) => void;
+    let finish!: (value: MockResponse) => void;
     mocks.main = new Promise(resolve => { finish = resolve; });
     const { result, rerender } = renderHook(() => useLeaveRequests());
     mocks.auth = { ...mocks.auth, business: { id: 'new-shop' } };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/common/Button';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authContext';
 export function AccountLoadError() {
   const { error, refresh, signOut } = useAuth();
   const [logoutError, setLogoutError] = useState<string | null>(null);
