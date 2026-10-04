@@ -65,6 +65,12 @@ describe('employee invitation onboarding', () => {
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/You are signed in as/)).toBeInTheDocument();
   });
+  it('takes already accepted invitations through normal sign-in', async () => {
+    mocks.rpc.mockResolvedValue({ data: [{ ...invitation, status: 'accepted' }], error: null });
+    render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Already accepted' });
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
   it('shows acceptance failures without redirecting or hiding them', async () => {
     mocks.auth.user = { id: 'confirmed', email: invitation.email };
     mocks.rpc.mockImplementation((name: string) => Promise.resolve(name === 'get_invitation_by_token' ? { data: [invitation], error: null } : { data: null, error: { message: 'Invite expired' } }));

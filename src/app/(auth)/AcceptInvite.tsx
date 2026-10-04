@@ -117,7 +117,7 @@ export default function AcceptInvite() {
           <>
             <h1 className={s.title}>Already accepted</h1>
             <p className={s.sub}>This invite has already been used. Sign in with your email and password.</p>
-            <div className={s.foot}><Link to={loginUrl}>Sign in</Link></div>
+            <div className={s.foot}><Link to="/login">Sign in</Link></div>
           </>
         ) : invite.status === 'revoked' ? (
           <>
