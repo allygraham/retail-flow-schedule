@@ -19,7 +19,6 @@ import { toast } from 'sonner';
 import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
 import { planShiftDrop } from '@/features/rota/shiftMoves';
-import { AiRotaModal } from '@/features/rota/AiRotaModal';
 
 export default function Rota() {
   const { business, user, hasPermission } = useAuth();
@@ -39,7 +38,6 @@ export default function Rota() {
   const [moving, setMoving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copying, setCopying] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<ShiftRow | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const holidays = useHolidays();
@@ -317,7 +315,6 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
         <div className={s.controls}>
-          {isMgr && <Button variant="outline" onClick={() => setAiOpen(true)} disabled={stores.length === 0}>Suggest rota</Button>}
           {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek} loading={copying}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
@@ -527,14 +524,6 @@ export default function Rota() {
         </div>
       </Modal>
 
-      {isMgr && business && (
-        <AiRotaModal
-          open={aiOpen} onClose={() => setAiOpen(false)} onAdded={load}
-          businessId={business.id} userId={user?.id} weekStart={weekStart} days={days}
-          defaultStoreId={storeFilter !== 'all' ? storeFilter : null}
-          stores={stores} roles={roles} people={people} leave={leave} shifts={shifts}
-        />
-      )}
     </div>
   );
 }
