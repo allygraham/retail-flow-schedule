@@ -27,11 +27,20 @@ export const shiftSchema = z.object({
   store_id: z.string().uuid('Pick a store'),
   role_id: z.string().uuid().optional().nullable(),
   assigned_user_id: z.string().uuid().optional().nullable(),
-  shift_date: z.string().min(8),
-  start_time: z.string().regex(/^\d{2}:\d{2}/, 'HH:MM'),
-  end_time: z.string().regex(/^\d{2}:\d{2}/, 'HH:MM'),
-  break_minutes: z.coerce.number().min(0).max(240).default(0),
+  shift_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a valid date').refine(value => {
+    const date = new Date(`${value}T00:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }, 'Pick a valid date'),
+  start_time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?$/, 'Enter a valid time'),
+  end_time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?$/, 'Enter a valid time'),
+  break_minutes: z.coerce.number().int().min(0).max(240).default(0),
   notes: z.string().max(500).optional().nullable(),
+  is_published: z.boolean().default(false),
+}).superRefine((shift, ctx) => {
+  const minutes = (value: string) => { const [h, m, s = '0'] = value.split(':'); return Number(h)*60 + Number(m) + Number(s)/60; };
+  const duration = minutes(shift.end_time) - minutes(shift.start_time);
+  if (duration <= 0) ctx.addIssue({ code: 'custom', message: 'Shift end time must be after start time', path: ['end_time'] });
+  if (shift.break_minutes >= duration) ctx.addIssue({ code: 'custom', message: 'Break must be shorter than the shift', path: ['break_minutes'] });
 });
 export type ShiftInput = z.infer<typeof shiftSchema>;
 

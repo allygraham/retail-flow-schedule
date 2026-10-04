@@ -17,6 +17,7 @@ import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
+import { planShiftDrop } from '@/features/rota/shiftMoves';
 import { AiRotaModal } from '@/features/rota/AiRotaModal';
 
 export default function Rota() {
@@ -33,6 +34,9 @@ export default function Rota() {
   const [publishModal, setPublishModal] = useState<{open: boolean; count: number}>({open: false, count: 0});
   const [form, setForm] = useState<any>({});
   const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<any | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -95,7 +99,7 @@ export default function Rota() {
     if (!sh.assigned_user_id) return c;
     // overlap with another shift same person same day
     for (const other of shifts) {
-      if (other.id !== sh.id && other.assigned_user_id === sh.assigned_user_id && other.shift_date === sh.shift_date && overlap(sh.start_time, sh.end_time, other.start_time, other.end_time)) {
+      if (other.id !== sh.id && other.assigned_user_id === sh.assigned_user_id && other.shift_date === sh.shift_date && other.status !== 'cancelled' && sh.status !== 'cancelled' && overlap(sh.start_time, sh.end_time, other.start_time, other.end_time)) {
         c.push('Overlap'); break;
       }
     }
@@ -132,11 +136,14 @@ export default function Rota() {
 
   const save = async () => {
     setErr(null);
+    if (!isMgr || !business || saving) return;
     const parsed = shiftSchema.safeParse({
       ...form, role_id: form.role_id || null, assigned_user_id: form.assigned_user_id || null,
     });
     if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
 
+    // Database validation applies to every write, including direct API calls.
+    // Holiday lookup here gives immediate feedback while the form is open.
     // Block scheduling on a company holiday flagged as blocking (custom only).
     if (parsed.data.assigned_user_id) {
       const blocking = holidays.getBlocking(parsed.data.shift_date);
@@ -149,15 +156,22 @@ export default function Rota() {
     const payload = { ...parsed.data,
       business_id: business!.id,
       status: (parsed.data.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
-      created_by: user?.id,
     };
-    if (modal.shift) {
-      const { error } = await supabase.from('shifts').update(payload).eq('id', modal.shift.id);
-      if (error) { setErr(error.message); return; }
-    } else {
-      const { error } = await supabase.from('shifts').insert(payload as any);
-      if (error) { setErr(error.message); return; }
-    }
+    setSaving(true);
+    try {
+      if (modal.shift) {
+        const { data, error } = await supabase.from('shifts').update(payload)
+          .eq('business_id', business.id).eq('id', modal.shift.id)
+          .eq('updated_at', modal.shift.updated_at).select('id');
+        if (error) { setErr(error.message); return; }
+        if (!data?.length) { setErr('Shift has changed. Close this form and refresh the rota before editing again.'); return; }
+      } else {
+        const { error } = await supabase.from('shifts').insert({ ...payload, created_by: user?.id });
+        if (error) { setErr(error.message); return; }
+      }
+    } catch {
+      setErr('Could not save the shift. Please try again.'); return;
+    } finally { setSaving(false); }
     // Informational warning when scheduling on a public holiday (custom is blocked above)
     const hol = parsed.data.assigned_user_id ? holidays.get(parsed.data.shift_date) : undefined;
     if (hol && hol.kind !== 'custom') {
@@ -185,33 +199,37 @@ export default function Rota() {
   };
 
   const performCopyPreviousWeek = async () => {
-    if (!business) return;
-    const prevStart = addDays(weekStart, -7);
-    const prevEnd = addDays(weekStart, -1);
-    let q = supabase.from('shifts').select('*').eq('business_id', business.id)
-      .gte('shift_date', isoDate(prevStart)).lte('shift_date', isoDate(prevEnd));
-    if (storeFilter !== 'all') q = q.eq('store_id', storeFilter);
-    const { data: prev, error } = await q;
-    if (error) { toast.error(error.message); return; }
-    if (!prev || prev.length === 0) { toast.info('No shifts found in the previous week.'); return; }
-    const rows = prev.map((s: any) => ({
-      business_id: business.id,
-      store_id: s.store_id,
-      role_id: s.role_id,
-      assigned_user_id: s.assigned_user_id,
-      shift_date: isoDate(addDays(new Date(s.shift_date), 7)),
-      start_time: s.start_time,
-      end_time: s.end_time,
-      break_minutes: s.break_minutes ?? 0,
-      notes: s.notes,
-      is_published: false,
-      status: (s.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
-      created_by: user?.id,
-    }));
-    const { error: insErr } = await supabase.from('shifts').insert(rows as any);
-    if (insErr) { toast.error(insErr.message); return; }
-    toast.success(`Copied ${rows.length} shift${rows.length === 1 ? '' : 's'} from last week`);
-    load();
+    if (!business || copying) return;
+    setCopying(true);
+    try {
+      const prevStart = addDays(weekStart, -7);
+      const prevEnd = addDays(weekStart, -1);
+      let q = supabase.from('shifts').select('*').eq('business_id', business.id)
+        .gte('shift_date', isoDate(prevStart)).lte('shift_date', isoDate(prevEnd)).neq('status', 'cancelled');
+      if (storeFilter !== 'all') q = q.eq('store_id', storeFilter);
+      const { data: prev, error } = await q;
+      if (error) { toast.error(error.message); return; }
+      if (!prev || prev.length === 0) { toast.info('No shifts found in the previous week.'); return; }
+      const rows = prev.map((s: any) => ({
+        business_id: business.id,
+        store_id: s.store_id,
+        role_id: s.role_id,
+        assigned_user_id: s.assigned_user_id,
+        shift_date: isoDate(addDays(parseISODate(s.shift_date)!, 7)),
+        start_time: s.start_time,
+        end_time: s.end_time,
+        break_minutes: s.break_minutes ?? 0,
+        notes: s.notes,
+        is_published: false,
+        status: (s.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+        created_by: user?.id,
+      }));
+      const { error: insErr } = await supabase.from('shifts').insert(rows as any);
+      if (insErr) { toast.error(insErr.message); return; }
+      toast.success(`Copied ${rows.length} shift${rows.length === 1 ? '' : 's'} from last week`);
+      load();
+    } catch { toast.error('Could not copy shifts. Please try again.'); }
+    finally { setCopying(false); }
   };
 
   const copyPreviousWeek = async () => {
@@ -285,55 +303,18 @@ export default function Rota() {
     const newAssigned = targetUserId === 'unassigned' ? null : targetUserId;
     if (dragged.assigned_user_id === newAssigned && dragged.shift_date === targetDate) return;
 
-    // Block drops onto an approved-leave date for the target employee
-    if (newAssigned) {
-      const blocked = leave.find(l =>
-        l.status === 'approved' &&
-        l.user_id === newAssigned &&
-        inRange(targetDate, l.start_date, l.end_date)
-      );
-      if (blocked) {
-        toast.error(`${peopleById[newAssigned]?.name ?? 'Employee'} is on approved leave that day.`);
-        return;
-      }
-      // Block drops onto a company holiday flagged as blocking
-      const blockingHol = holidays.getBlocking(targetDate);
-      if (blockingHol) {
-        toast.error(`Scheduling is blocked on ${blockingHol.name} (${targetDate}).`);
-        return;
-      }
-    }
-
-    // find an occupant in the target cell (for swap). If multiple, swap with the first.
-    const occupant = filteredShifts.find(x =>
-      x.id !== dragged.id &&
-      x.shift_date === targetDate &&
-      (x.assigned_user_id ?? 'unassigned') === (newAssigned ?? 'unassigned')
-    );
-
-    // optimistic update
-    setShifts(prev => prev.map(x => {
-      if (x.id === dragged.id) return { ...x, assigned_user_id: newAssigned, shift_date: targetDate, status: newAssigned ? 'scheduled' : 'unassigned' };
-      if (occupant && x.id === occupant.id) return { ...x, assigned_user_id: dragged.assigned_user_id, shift_date: dragged.shift_date, status: dragged.assigned_user_id ? 'scheduled' : 'unassigned' };
-      return x;
-    }));
-
-    const updates: any[] = [
-      supabase.from('shifts').update({
-        assigned_user_id: newAssigned,
-        shift_date: targetDate,
-        status: (newAssigned ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
-      }).eq('id', dragged.id),
-    ];
-    if (occupant) {
-      updates.push(supabase.from('shifts').update({
-        assigned_user_id: dragged.assigned_user_id,
-        shift_date: dragged.shift_date,
-        status: (dragged.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
-      }).eq('id', occupant.id));
-    }
-    const results = await Promise.all(updates);
-    if (results.some((r: any) => r.error)) load();
+    if (!business || moving) return;
+    try {
+      const plan = planShiftDrop(filteredShifts, dragged, newAssigned, targetDate);
+      if (!plan) return;
+      setMoving(true);
+      const { error } = await supabase.rpc('move_rota_shift', { _business_id: business.id, ...plan });
+      if (error) { toast.error(error.message); await load(); return; }
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not move the shift. Please try again.');
+      return;
+    } finally { setMoving(false); }
     // Informational warning when dragging a person onto a public holiday (custom is blocked above)
     if (newAssigned) {
       const hol = holidays.get(targetDate);
@@ -352,7 +333,7 @@ export default function Rota() {
         </div>
         <div className={s.controls}>
           {isMgr && <Button variant="outline" onClick={() => setAiOpen(true)} disabled={stores.length === 0}>Suggest rota</Button>}
-          {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek}>Copy previous week</Button>}
+          {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek} loading={copying}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>Current week</button>
@@ -419,7 +400,7 @@ export default function Rota() {
                         </div>
                       )}
                       {cell.map(sh => (
-                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
+                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
                             onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}
                             style={{ borderLeftColor: roleById[sh.role_id]?.color ?? undefined }}
@@ -453,7 +434,7 @@ export default function Rota() {
                       className={hol ? s.cellHoliday : ''}
                       onClick={() => isMgr && openCreate(dStr)}>
                       {cell.map(sh => (
-                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr}>
+                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); isMgr && openEdit(sh); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
                             <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id]?.name ?? 'Floor'}</div>
@@ -492,7 +473,7 @@ export default function Rota() {
           <>
             {modal.shift && <Button variant="danger" onClick={remove}>Delete</Button>}
             <Button variant="ghost" onClick={() => setModal({open: false})}>Cancel</Button>
-            <Button onClick={save}>Save</Button>
+            <Button onClick={save} loading={saving}>Save</Button>
           </>
         }>
         <div className={s.form}>
