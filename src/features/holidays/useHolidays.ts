@@ -5,6 +5,9 @@ import { useCustomHolidays, customRowToHoliday } from './useCustomHolidays';
 import type { HolidayRegion, PublicHoliday } from './types';
 
 interface UseHolidaysResult {
+  loading: boolean;
+  error: string | null;
+  reload: () => Promise<void>;
   enabled: boolean;
   region: HolidayRegion | null;
   /** Map of ISO date → holiday. Custom holidays take precedence on the same date. */
@@ -21,7 +24,7 @@ export function useHolidays(): UseHolidaysResult {
   const { business } = useAuth();
   const enabled = !!business?.public_holidays_enabled;
   const region = (business?.public_holidays_region as HolidayRegion | undefined) ?? null;
-  const { rows: customRows } = useCustomHolidays(business?.id ?? null);
+  const { rows: customRows, loading, error, reload } = useCustomHolidays(business?.id ?? null);
 
   const byDate = useMemo<Map<string, PublicHoliday>>(() => {
     const m = new Map<string, PublicHoliday>();
@@ -34,6 +37,7 @@ export function useHolidays(): UseHolidaysResult {
   }, [enabled, region, customRows]);
 
   return {
+    loading, error, reload,
     enabled,
     region,
     byDate,

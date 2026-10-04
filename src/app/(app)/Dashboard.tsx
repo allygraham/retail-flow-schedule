@@ -37,7 +37,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   userId: string; fullName?: string | null; businessName: string; businessId: string;
 }) {
   const nav = useNavigate();
-  const { items: notifications } = useNotifications(userId);
+  const { items: notifications, loading: notificationsLoading, error: notificationsError, reload: reloadNotifications } = useNotifications(userId);
   const holidays = useHolidays();
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<string[]>([]);
 
@@ -278,7 +278,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
             </Button>
           )}
         >
-          {recentNotifs.length === 0 ? (
+          {notificationsError ? <DataLoadError message={notificationsError} retry={reloadNotifications} /> : notificationsLoading ? <div role="status">Loading notifications…</div> : recentNotifs.length === 0 ? (
             <EmptyState title="You're all caught up" description="No new updates right now." />
           ) : (
             <ul className={s.list}>

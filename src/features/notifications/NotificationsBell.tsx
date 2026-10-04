@@ -1,3 +1,4 @@
+import { DataLoadError } from '@/components/common/DataLoadError';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell } from 'lucide-react';
@@ -12,7 +13,7 @@ type Props = { variant?: 'mobile' | 'desktop' };
 export function NotificationsBell({ variant = 'desktop' }: Props) {
   const { user } = useAuth();
   const nav = useNavigate();
-  const { items, unreadCount, markRead, markAllRead } = useNotifications(user?.id);
+  const { items, unreadCount, loading, error, reload, saving, writeError, markRead, markAllRead } = useNotifications(user?.id);
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -45,7 +46,7 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
   }, [open, variant]);
 
   const onClickItem = async (n: Notification) => {
-    if (!n.read_at) await markRead(n.id);
+    if (!n.read_at && !await markRead(n.id)) return;
     setOpen(false);
     if (n.link) nav(n.link);
   };
@@ -80,19 +81,21 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
               <button
                 type="button"
                 className={s.markAll}
-                onClick={markAllRead}
-                disabled={unreadCount === 0}
+                onClick={() => { void markAllRead(); }}
+                disabled={unreadCount === 0 || saving || loading || !!error}
               >
                 Mark all read
               </button>
             </div>
             <div className={s.list}>
-              {items.length === 0 ? (
+              {writeError && <div role="alert" className={s.empty}>{writeError}</div>}
+              {error ? <DataLoadError message={error} retry={reload} /> : loading ? <div role="status" className={s.empty}>Loading notifications…</div> : items.length === 0 ? (
                 <div className={s.empty}>You're all caught up.</div>
               ) : items.map(n => (
                 <button
                   key={n.id}
                   type="button"
+                  disabled={saving}
                   className={`${s.item} ${!n.read_at ? s.itemUnread : ''}`}
                   onClick={() => onClickItem(n)}
                 >

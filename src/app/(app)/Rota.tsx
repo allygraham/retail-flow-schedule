@@ -305,6 +305,8 @@ export default function Rota() {
     }
   };
 
+  if (holidays.error) return <DataLoadError message={holidays.error} retry={holidays.reload} />;
+  if (holidays.loading) return <div role="status" style={{ padding: 24 }}>Loading scheduling rules…</div>;
   if (loadError) return <DataLoadError message={loadError} retry={load} />;
   if (loading || !data) return <div role="status" style={{ padding: 24 }}>Loading rota…</div>;
 

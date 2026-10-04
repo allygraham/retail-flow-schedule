@@ -1,3 +1,4 @@
+import { DataLoadError } from '@/components/common/DataLoadError';
 import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { Card } from '@/components/common/Card';
@@ -24,7 +25,7 @@ export function HolidaySettings() {
   const [saving, setSaving] = useState(false);
 
   // Custom holiday form state
-  const { rows: customs, add, remove } = useCustomHolidays(business?.id ?? null);
+  const { rows: customs, loading, error: loadError, reload, add, remove } = useCustomHolidays(business?.id ?? null);
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
   const [newBlocks, setNewBlocks] = useState(true);
@@ -170,7 +171,7 @@ export function HolidaySettings() {
                 value={parseISODate(newDate)}
                 onChange={(d) => setNewDate(toISODate(d))}
                 minDate={new Date(today)}
-                disabled={adding}
+                disabled={adding || loading || !!loadError}
                 placeholder="Pick a date"
               />
             </Field>
@@ -181,7 +182,7 @@ export function HolidaySettings() {
                 placeholder="e.g. Christmas shutdown"
                 maxLength={100}
                 onChange={(e) => setNewName(e.target.value)}
-                disabled={adding}
+                disabled={adding || loading || !!loadError}
               />
             </Field>
             <label className={s.blocksLabel}>
@@ -189,17 +190,17 @@ export function HolidaySettings() {
                 type="checkbox"
                 checked={newBlocks}
                 onChange={(e) => setNewBlocks(e.target.checked)}
-                disabled={adding}
+                disabled={adding || loading || !!loadError}
               />
               <span>Block scheduling</span>
             </label>
-            <Button variant="primary" onClick={onAddCustom} disabled={adding} leading={<Plus size={14} />}>
+            <Button variant="primary" onClick={onAddCustom} disabled={adding || loading || !!loadError} leading={<Plus size={14} />}>
               Add
             </Button>
           </div>
         )}
 
-        {upcomingCustom.length === 0 ? (
+        {loadError ? <DataLoadError message={loadError} retry={reload} /> : loading ? <div role="status">Loading company holidays…</div> : upcomingCustom.length === 0 ? (
           <div className={s.disabledMsg}>No upcoming company holidays.</div>
         ) : (
           <div className={s.customList}>

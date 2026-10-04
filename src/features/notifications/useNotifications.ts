@@ -1,3 +1,5 @@
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,25 +18,20 @@ export type Notification = {
 };
 
 export function useNotifications(userId: string | undefined) {
-  const [items, setItems] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(30);
-    setItems((data as Notification[]) ?? []);
-    setLoading(false);
+  const [saving, setSaving] = useState(false);
+  const [writeError, setWriteError] = useState<{ userId: string; message: string } | null>(null);
+  const fetchItems = useCallback(async () => {
+    if (!userId) return [];
+    const result = await supabase.from('notifications').select('*')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+    assertQueryResults(result);
+    return result.data as Notification[] ?? [];
   }, [userId]);
+  const { data, loading, error, reload: load } = useAsyncData(fetchItems, 'Could not load notifications. Please try again.');
+  const items = data ?? [];
 
   useEffect(() => {
-    if (!userId) { setItems([]); return; }
-    load();
+    if (!userId) return;
     const channel = supabase
       .channel(`notifications:${userId}:${Math.random().toString(36).slice(2)}`)
       .on(
@@ -48,18 +45,25 @@ export function useNotifications(userId: string | undefined) {
 
   const unreadCount = items.filter(n => !n.read_at).length;
 
-  const markRead = async (id: string) => {
-    setItems(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
-    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id);
+  const saveRead = async (ids: string[]) => {
+    if (!userId || saving) return false;
+    if (!ids.length) return true;
+    setSaving(true);
+    setWriteError(null);
+    try {
+      const result = await supabase.from('notifications')
+        .update({ read_at: new Date().toISOString() }).eq('user_id', userId).in('id', ids).select('id');
+      assertQueryResults(result);
+      if (result.data?.length !== ids.length) throw new Error('Notifications were not updated');
+      await load();
+      return true;
+    } catch {
+      setWriteError({ userId, message: 'Could not mark notifications as read. Please try again.' });
+      return false;
+    } finally { setSaving(false); }
   };
+  const markRead = (id: string) => saveRead([id]);
+  const markAllRead = () => saveRead(items.filter(n => !n.read_at).map(n => n.id));
 
-  const markAllRead = async () => {
-    if (!userId) return;
-    const ids = items.filter(n => !n.read_at).map(n => n.id);
-    if (ids.length === 0) return;
-    setItems(prev => prev.map(n => n.read_at ? n : { ...n, read_at: new Date().toISOString() }));
-    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).in('id', ids);
-  };
-
-  return { items, unreadCount, loading, markRead, markAllRead, reload: load };
+  return { items, unreadCount, loading, error, saving, writeError: writeError && writeError.userId === userId ? writeError.message : null, markRead, markAllRead, reload: load };
 }

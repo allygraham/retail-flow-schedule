@@ -1,34 +1,21 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
 import { supabase } from '@/integrations/supabase/client';
 import type { CustomHolidayRow, PublicHoliday } from './types';
 
 /** Fetches custom (per-business) holidays and exposes CRUD helpers. */
 export function useCustomHolidays(businessId: string | null) {
-  const [rows, setRows] = useState<CustomHolidayRow[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const reload = useCallback(async () => {
-    if (!businessId) {
-      setRows([]);
-      return;
-    }
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('custom_holidays')
+  const load = useCallback(async () => {
+    if (!businessId) return [];
+    const result = await supabase.from('custom_holidays')
       .select('id, business_id, date, name, blocks_scheduling')
-      .eq('business_id', businessId)
-      .order('date');
-    setLoading(false);
-    if (error) {
-      setRows([]);
-      return;
-    }
-    setRows(data ?? []);
+      .eq('business_id', businessId).order('date');
+    assertQueryResults(result);
+    return result.data ?? [];
   }, [businessId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const { data, loading, error, reload } = useAsyncData(load, 'Could not load company holidays. Please try again.');
+  const rows: CustomHolidayRow[] = data ?? [];
 
   const add = useCallback(
     async (input: { date: string; name: string; blocks_scheduling?: boolean }) => {
@@ -66,7 +53,7 @@ export function useCustomHolidays(businessId: string | null) {
     [reload],
   );
 
-  return { rows, loading, reload, add, update, remove };
+  return { rows, loading, error, reload, add, update, remove };
 }
 
 /** Convert a DB row to the unified PublicHoliday shape. */
