@@ -21,6 +21,7 @@ export interface StoreLocation {
 }
 export interface RoleCatalog { id: string; business_id: string; name: string; color: string | null; }
 export interface EmployeeProfile {
+  working_days: number[] | null;
   id: string; user_id: string; business_id: string;
   primary_store_id: string | null; primary_role_id: string | null;
   employment_type: EmploymentType; contracted_hours: number | null;

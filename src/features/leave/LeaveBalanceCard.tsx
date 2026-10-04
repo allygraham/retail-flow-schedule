@@ -6,18 +6,24 @@ import s from './LeaveBalanceCard.module.scss';
 interface Props {
   balance: LeaveBalance | null;
   loading?: boolean;
+  patternMissing?: boolean;
+  error?: string | null;
   title?: string;
   subtitle?: string;
   compact?: boolean;
   action?: ReactNode;
 }
 
-export function LeaveBalanceCard({ balance, loading, title = 'Annual leave', subtitle, compact, action }: Props) {
+export function LeaveBalanceCard({ balance, loading, patternMissing, error, title = 'Annual leave', subtitle, compact, action }: Props) {
   const sub = subtitle ?? (balance ? `${balance.year} entitlement` : undefined);
   return (
     <Card title={title} subtitle={sub}>
-      {loading || !balance ? (
+      {loading ? (
         <div className={s.loading}>Loading…</div>
+      ) : error || patternMissing || !balance ? (
+        <div className={s.loading} role="status">{error ?? (patternMissing
+          ? 'Your manager needs to set your normal working days in Team before your annual leave balance can be calculated.'
+          : 'Annual leave balance is unavailable.')}</div>
       ) : (
         <div className={`${s.wrap} ${compact ? s.compact : ''}`}>
           <div className={s.stats}>

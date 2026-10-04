@@ -228,6 +228,7 @@ export type Database = {
       }
       employee_profiles: {
         Row: {
+          working_days: number[] | null
           annual_leave_entitlement: number
           business_id: string
           contracted_hours: number | null
@@ -243,6 +244,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          working_days?: number[] | null
           annual_leave_entitlement?: number
           business_id: string
           contracted_hours?: number | null
@@ -260,6 +262,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          working_days?: number[] | null
           annual_leave_entitlement?: number
           business_id?: string
           contracted_hours?: number | null

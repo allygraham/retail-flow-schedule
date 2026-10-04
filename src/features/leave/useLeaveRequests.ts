@@ -40,6 +40,7 @@ export function useLeaveRequests() {
   const isMgr = hasPermission('manage_leave');
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
   const [employees, setEmployees] = useState<{ user_id: string; full_name: string; primary_store_name: string | null }[]>([]);
+  const [workingDaysByUser, setWorkingDaysByUser] = useState<Record<string, number[] | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +61,7 @@ export function useLeaveRequests() {
       isMgr
         ? supabase
             .from('employee_profiles')
-            .select('user_id, store_locations:primary_store_id(name)')
+            .select('user_id, working_days, store_locations:primary_store_id(name)')
             .eq('business_id', business.id)
         : Promise.resolve({ data: [] as any[] }),
       requestUserIds.length
@@ -71,6 +72,7 @@ export function useLeaveRequests() {
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
+    setWorkingDaysByUser(Object.fromEntries((emp ?? []).map(e => [e.user_id, e.working_days ?? null])));
     const nameById: Record<string, string | null> = Object.fromEntries(
       (profs ?? []).map((p: any) => [p.id, p.full_name ?? null])
     );
@@ -249,5 +251,5 @@ export function useLeaveRequests() {
 
   const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests]);
 
-  return { requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review, updateSickness };
+  return { workingDaysByUser, requests, loading, error, isMgr, pendingCount, employees, load, submit, addForEmployee, cancelOwn, review, updateSickness };
 }

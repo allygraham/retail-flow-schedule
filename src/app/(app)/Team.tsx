@@ -1,3 +1,4 @@
+import { WEEKDAYS } from '@/features/leave/leaveDays';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +48,7 @@ interface Row {
   employment_type: string;
   account_status: AccountStatus;
   annual_leave_entitlement: number;
+  working_days: number[] | null;
   accept_token?: string | null;
 }
 
@@ -108,6 +110,7 @@ export default function Team() {
     primary_store_id: '',
     primary_role_id: '',
     contracted_hours: '',
+    working_days: [] as number[],
   });
 
   // confirm deactivate
@@ -165,7 +168,7 @@ export default function Team() {
       supabase.from('user_roles').select('user_id, role').eq('business_id', business.id),
       supabase.from('profiles').select('id, full_name'),
       supabase.from('employee_profiles')
-        .select('user_id, employment_type, contracted_hours, primary_store_id, primary_role_id, annual_leave_entitlement')
+        .select('user_id, employment_type, contracted_hours, primary_store_id, primary_role_id, annual_leave_entitlement, working_days')
         .eq('business_id', business.id),
       supabase.from('store_locations').select('id, name').eq('business_id', business.id).order('name'),
       supabase.from('roles_catalog').select('id, name').eq('business_id', business.id).order('name'),
@@ -206,6 +209,7 @@ export default function Team() {
         contracted_hours: epMap[r.user_id]?.contracted_hours ?? null,
         employment_type: epMap[r.user_id]?.employment_type ?? '—',
         account_status: (isActive ? 'active' : 'disabled') as AccountStatus,
+        working_days: epMap[r.user_id]?.working_days ?? null,
         annual_leave_entitlement: epMap[r.user_id]?.annual_leave_entitlement ?? 28,
       };
     });
@@ -230,6 +234,7 @@ export default function Team() {
             ? (new Date(i.expires_at) < new Date() ? 'expired' : 'invited')
             : (i.status as AccountStatus),
         annual_leave_entitlement: 28,
+        working_days: null,
         accept_token: i.token,
       }));
 
@@ -376,6 +381,7 @@ export default function Team() {
       primary_store_id: row.store_id ?? '',
       primary_role_id: row.job_id ?? '',
       contracted_hours: row.contracted_hours != null ? String(row.contracted_hours) : '',
+      working_days: row.working_days ?? [],
     });
     setEditRow(row);
   };
@@ -389,6 +395,7 @@ export default function Team() {
     if (hours != null && (!Number.isFinite(hours) || hours < 0 || hours > 168)) {
       setEditErr('Contracted hours must be between 0 and 168'); return;
     }
+    if (!editForm.working_days.length) { setEditErr('Select at least one normal working day for leave calculations'); return; }
     if (!editForm.primary_store_id) { setEditErr('Pick a primary store'); return; }
 
     setEditBusy(true);
@@ -425,6 +432,7 @@ export default function Team() {
             primary_store_id: editForm.primary_store_id,
             primary_role_id: editForm.primary_role_id || null,
             contracted_hours: hours,
+            working_days: editForm.working_days,
           })
           .eq('id', existing.id);
         if (epErr) throw epErr;
@@ -437,6 +445,7 @@ export default function Team() {
             primary_store_id: editForm.primary_store_id,
             primary_role_id: editForm.primary_role_id || null,
             contracted_hours: hours,
+            working_days: editForm.working_days,
           });
         if (epErr) throw epErr;
       }
@@ -803,6 +812,7 @@ export default function Team() {
                         {m.annual_leave_entitlement} days
                       </span>
                     )}
+                    {m.kind === 'member' && !m.working_days?.length && <div className={s.muted}>Working days not set</div>}
                   </td>
                   {canManageStaff && (
                     <td>
@@ -1120,6 +1130,18 @@ export default function Team() {
               />
             </Field>
           </div>
+          <fieldset className={t.workingDays}>
+            <legend>Normal working days</legend>
+            <p className={s.muted}>Annual leave deducts only these days. Include weekends if the employee normally works them.</p>
+            <div className={t.weekdayOptions}>
+              {WEEKDAYS.map(({ day, label }) => <label key={day}>
+                <input type="checkbox" checked={editForm.working_days.includes(day)} onChange={e => {
+                  const days = e.target.checked ? [...editForm.working_days, day] : editForm.working_days.filter(d => d !== day);
+                  setEditForm({ ...editForm, working_days: days.sort((a, b) => a - b) });
+                }} /> {label}
+              </label>)}
+            </div>
+          </fieldset>
           {editErr && <div className={s.err}>{editErr}</div>}
         </form>
       </Modal>

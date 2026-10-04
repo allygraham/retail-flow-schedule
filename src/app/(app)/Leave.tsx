@@ -1,8 +1,9 @@
+import { daysBetween, daysInYear, workingDaysBetween } from '@/features/leave/leaveDays';
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
 import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
-import { useLeaveBalance, daysBetween } from '@/features/leave/useLeaveBalance';
+import { useLeaveBalance } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import { LeaveBalanceInline } from '@/features/leave/LeaveBalanceInline';
 import {
@@ -90,8 +91,8 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 export default function Leave() {
   const { user, role, business } = useAuth();
-  const { requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
-  const { balance, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
+  const { workingDaysByUser, requests, loading, isMgr, employees, submit, addForEmployee, cancelOwn, review, updateSickness } = useLeaveRequests();
+  const { balance, workingDays, patternMissing, error: balanceError, loading: balanceLoading, reload: reloadBalance } = useLeaveBalance();
 
   const [requestModal, setRequestModal] = useState(false);
   const [addLeaveModal, setAddLeaveModal] = useState(false);
@@ -258,15 +259,22 @@ export default function Leave() {
     }
   };
 
+  const durationLabel = (request: LeaveRequestRow) => {
+    const pattern = request.user_id === user?.id ? workingDays : workingDaysByUser[request.user_id];
+    const isWorking = request.leave_type === 'annual' && !!pattern?.length;
+    const days = isWorking ? workingDaysBetween(request.start_date, request.end_date, pattern!) : daysBetween(request.start_date, request.end_date);
+    return `${days} ${isWorking ? 'working' : 'calendar'} day${days === 1 ? '' : 's'}`;
+  };
+
   const submitRequest = async () => {
     setFormErr(null);
     const parsed = leaveSchema.safeParse(form);
     if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
-    if (parsed.data.leave_type === 'annual' && balance) {
-      const days = daysBetween(parsed.data.start_date, parsed.data.end_date);
+    if (parsed.data.leave_type === 'annual' && balance && workingDays) {
+      const days = daysInYear(parsed.data.start_date, parsed.data.end_date, balance.year, workingDays);
       if (days > balance.remaining) {
         const ok = window.confirm(
-          `This request is ${days} day${days === 1 ? '' : 's'} but you only have ${balance.remaining} day${balance.remaining === 1 ? '' : 's'} of annual leave remaining. Submit anyway?`
+          `This request uses ${days} working day${days === 1 ? '' : 's'} but you only have ${balance.remaining} day${balance.remaining === 1 ? '' : 's'} of annual leave remaining in ${balance.year}. Submit anyway?`
         );
         if (!ok) return;
       }
@@ -405,7 +413,7 @@ export default function Leave() {
       </header>
 
       {!isMgr && (
-        <LeaveBalanceCard balance={balance} loading={balanceLoading} />
+        <LeaveBalanceCard balance={balance} loading={balanceLoading} patternMissing={patternMissing} error={balanceError} />
       )}
 
       {!isMgr && (
@@ -420,7 +428,7 @@ export default function Leave() {
                   </div>
                   <div className={s.upcomingMeta}>
                     {fmtDate(upcomingLeave.request.start_date, 'd MMM')} → {fmtDate(upcomingLeave.request.end_date, 'd MMM yyyy')}
-                    <span className={s.upcomingPill}>{daysBetween(upcomingLeave.request.start_date, upcomingLeave.request.end_date)} day{daysBetween(upcomingLeave.request.start_date, upcomingLeave.request.end_date) === 1 ? '' : 's'}</span>
+                    <span className={s.upcomingPill}>{durationLabel(upcomingLeave.request)}</span>
                   </div>
                 </>
               ) : (
@@ -665,10 +673,9 @@ export default function Leave() {
                   const isSick = r.leave_type === 'sick';
                   const linked = isSick && detectLinkedSickness(r);
                   const lifecycle = r.lifecycle_status as SicknessLifecycleStatus | null;
-                  const days = daysBetween(r.start_date, r.end_date);
                   const dateLabel = `${fmtDate(r.start_date, 'd MMM')} → ${fmtDate(r.end_date, 'd MMM yyyy')}`;
                   const metaParts = [
-                    `${days} day${days === 1 ? '' : 's'}`,
+                    durationLabel(r),
                     isMgr ? (r.primary_store?.name ?? null) : null,
                     isSick && meta.category ? SICKNESS_CATEGORY_LABEL[meta.category] : null,
                   ].filter(Boolean) as string[];
@@ -812,7 +819,7 @@ export default function Leave() {
                       </td>
                       <td className={s.dates}>
                         <div className={s.dateRange}>{fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}</div>
-                        <div className={s.muted}>{daysBetween(r.start_date, r.end_date)} day{daysBetween(r.start_date, r.end_date) === 1 ? '' : 's'}</div>
+                        <div className={s.muted}>{durationLabel(r)}</div>
                       </td>
                       <td>
                         <div className={s.statusStack}>
@@ -1129,7 +1136,8 @@ export default function Leave() {
           {mgmtForm.leave_type === 'annual' && mgmtForm.user_id && (
             <LeaveBalanceInline
               userId={mgmtForm.user_id}
-              pendingDays={daysBetween(mgmtForm.start_date, mgmtForm.end_date)}
+              startDate={mgmtForm.start_date}
+              endDate={mgmtForm.end_date}
             />
           )}
           {mgmtErr && <div className={s.err}>{mgmtErr}</div>}
@@ -1168,7 +1176,8 @@ export default function Leave() {
             {reviewing.row.leave_type === 'annual' && (
               <LeaveBalanceInline
                 userId={reviewing.row.user_id}
-                pendingDays={daysBetween(reviewing.row.start_date, reviewing.row.end_date)}
+                startDate={reviewing.row.start_date}
+                endDate={reviewing.row.end_date}
               />
             )}
             {reviewing.row.reason && (
@@ -1225,7 +1234,6 @@ export default function Leave() {
         }
       >
         {detailsRow && (() => {
-          const duration = daysBetween(detailsRow.start_date, detailsRow.end_date);
           const meta = parseSicknessMeta(detailsRow.sickness_meta);
           const isSick = detailsRow.leave_type === 'sick';
           const history = requests
@@ -1237,7 +1245,7 @@ export default function Leave() {
                 <div className={s.detailRow}><span>Employee</span><strong>{detailsRow.profiles?.full_name ?? 'Employee'}</strong></div>
                 <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[detailsRow.leave_type]}</strong></div>
                 <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(detailsRow.start_date, 'd MMM')} → {fmtDate(detailsRow.end_date, 'd MMM yyyy')}</strong></div>
-                <div className={s.detailRow}><span>Duration</span><strong>{duration} day{duration === 1 ? '' : 's'}</strong></div>
+                <div className={s.detailRow}><span>Duration</span><strong>{durationLabel(detailsRow)}</strong></div>
                 {isSick ? (
                   <div className={s.detailRow}>
                     <span>Sickness status</span>

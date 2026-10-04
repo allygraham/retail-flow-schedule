@@ -1,17 +1,20 @@
+import { daysInYear } from './leaveDays';
 import { useLeaveBalance } from './useLeaveBalance';
 import s from './LeaveBalanceInline.module.scss';
 
 interface Props {
   userId: string;
-  /** Days about to be taken (for context, e.g. the request being reviewed). */
-  pendingDays?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 /** Compact one-line balance summary, used inside review modal etc. */
-export function LeaveBalanceInline({ userId, pendingDays }: Props) {
-  const { balance, loading } = useLeaveBalance(userId);
+export function LeaveBalanceInline({ userId, startDate, endDate }: Props) {
+  const { balance, workingDays, patternMissing, error, loading } = useLeaveBalance(userId);
   if (loading) return <div className={s.row}><span className={s.label}>Annual leave</span><span className={s.muted}>Loading…</span></div>;
-  if (!balance) return null;
+  if (error || patternMissing) return <div className={s.row} role="status">{error ?? 'Set this employee’s normal working days in Team to calculate their leave balance.'}</div>;
+  if (!balance || !workingDays) return null;
+  const pendingDays = startDate && endDate ? daysInYear(startDate, endDate, balance.year, workingDays) : undefined;
   const after = pendingDays != null ? Math.max(0, balance.remaining - pendingDays) : null;
   const wouldExceed = pendingDays != null && pendingDays > balance.remaining;
   return (
