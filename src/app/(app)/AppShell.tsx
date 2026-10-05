@@ -29,7 +29,7 @@ const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof Layo
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
-  const { fullName, business, role, user, signOut, hasPermission } = useAuth();
+  const { fullName, business, role, user, signOut, hasPermission, loading } = useAuth();
   const { theme } = useBranding();
   const workspaceName = theme.displayName || business?.name || 'Workspace';
   const nav = useNavigate();
@@ -101,6 +101,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   }, [business, canManageLeave, nav, role, user?.id]);
 
   const items = NAV.filter((item) => {
+    if (loading) return ['dashboard', 'rota', 'leave', 'profile'].includes(item.key);
     const permission = NAV_PERMISSIONS[item.key];
     return permission ? hasPermission(permission) : true;
   });
@@ -206,7 +207,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         {renderUser()}
       </aside>
 
-      <main className={s.main}>{children ?? <PageBoundary><Outlet /></PageBoundary>}</main>
+      <main className={s.main}><PageBoundary>{children ?? <Outlet />}</PageBoundary></main>
     </div>
   );
 }

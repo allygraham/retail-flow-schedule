@@ -320,20 +320,14 @@ export default function Rota() {
     }
   };
 
-  if (holidays.error) return <DataLoadError message={holidays.error} retry={holidays.reload} />;
-  if (holidays.loading) return <LoadingSkeleton layout="rota" label="Loading scheduling rules" />;
-  if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (loading || !data) return <LoadingSkeleton layout="rota" label="Loading rota" />;
-
-  return (
-    <div className={s.page}>
-      <header className={s.header}>
+  const pageHeader = (
+<header className={s.header}>
         <div>
           <span className={s.eye}>Rota</span>
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
         <div className={s.controls}>
-          {isMgr && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek} loading={copying}>Copy previous week</Button>}
+          {isMgr && !loading && !holidays.loading && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek} loading={copying}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>Current week</button>
@@ -344,21 +338,30 @@ export default function Rota() {
             options={stores.map(st => ({ id: st.id, name: st.name }))}
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
           />
-          {isMgr && (
-            <Button onClick={openPublishConfirm} disabled={draftCount === 0}>
+          {isMgr && !holidays.error && (
+            <Button onClick={openPublishConfirm} disabled={loading || holidays.loading || draftCount === 0}>
               Publish{draftCount > 0 ? ` (${draftCount})` : ''}
             </Button>
           )}
         </div>
       </header>
-
-
-      {isMobile && <Field label="Rota day">
+  );
+  const dayControl = (isMobile && <Field label="Rota day">
         <Select aria-label="Rota day" value={selectedDay} onChange={event => setSelectedDay(Number(event.target.value))}>
           {days.map((day, index) => <option key={index} value={index}>{fmtDate(day, 'EEEE d MMM')}</option>)}
         </Select>
         <p className={s.mobileHint}>{isMgr ? 'Tap a shift to edit its date or assignment.' : 'Choose a day to see your shifts.'}</p>
-      </Field>}
+      </Field>);
+  if (holidays.error) return <div className={s.page}>{pageHeader}<DataLoadError message={holidays.error} retry={holidays.reload} /></div>;
+  if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
+  if (loading || !data || holidays.loading) return <div className={s.page}>{pageHeader}{dayControl}<Card padded={false}><LoadingSkeleton layout="rota-content" label="Loading rota" /></Card></div>;
+
+  return (
+    <div className={s.page}>
+      {pageHeader}
+
+
+      {dayControl}
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className={`${s.grid} ${!isMgr ? s.gridEmployee : ''} ${isMobile ? s.gridMobile : ''}`}>

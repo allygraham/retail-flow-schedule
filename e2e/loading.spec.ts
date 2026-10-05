@@ -17,6 +17,8 @@ for (const scenario of [
   const skeleton = page.getByRole('status', { name: scenario.label, exact: true });
   try {
     await expect(skeleton).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
     await expect(skeleton).toHaveAttribute('aria-busy', 'true');
     await page.screenshot({ path: test.info().outputPath('loading.png') });
     await expect(skeleton.getByRole('button')).toHaveCount(0);
@@ -24,4 +26,22 @@ for (const scenario of [
   } finally { release(); }
   await expect(skeleton).toHaveCount(0);
   await expect(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
+});
+
+test('app navigation stays mounted while account and page data load', async ({ page }) => {
+  await authenticate(page); await stubApi(page);
+  let releaseAccount!: () => void;
+  const accountReady = new Promise<void>(resolve => { releaseAccount = resolve; });
+  await page.route(url => url.hostname === 'example.supabase.co' && url.pathname.endsWith('/memberships'), async route => { await accountReady; await route.fallback(); });
+  await page.goto('/rota');
+  const navigation = page.getByRole('navigation').filter({ visible: true });
+  try {
+    await expect(navigation.getByRole('link', { name: 'Rota', exact: true })).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Loading account', exact: true })).toBeVisible();
+  } finally { releaseAccount(); }
+  await expect(page.getByRole('heading', { name: /Week of/ })).toBeVisible();
+  const shell = await navigation.elementHandle();
+  await navigation.getByRole('link', { name: 'Team', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Your people' })).toBeVisible();
+  expect(await shell?.evaluate(el => el.isConnected)).toBe(true);
 });

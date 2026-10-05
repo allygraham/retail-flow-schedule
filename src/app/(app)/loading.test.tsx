@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Rota from './Rota';
@@ -46,11 +46,12 @@ for (const page of cases) {
       const Page = page.component;
       render(<MemoryRouter><Page /></MemoryRouter>);
       await screen.findByRole('alert');
-      expect(screen.queryByRole('heading', { name: page.heading })).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: page.heading })).toBeInTheDocument();
+      expect(screen.queryByText(/No shifts this week|No upcoming shifts|No team yet/)).not.toBeInTheDocument();
       mocks.failure = null;
       fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
       await screen.findByRole('heading', { name: page.heading });
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
     });
     it('handles rejected network requests with the same retryable error', async () => {
       mocks.failure = 0; mocks.reject = true; mocks.manager = page.manager;

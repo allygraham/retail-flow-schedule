@@ -106,12 +106,17 @@ export default function Profile() {
     }
   };
 
-  if (profileError) return <DataLoadError message={profileError} retry={reloadProfile} />;
-  if (profileLoading) return <LoadingSkeleton layout="page" label="Loading profile" />;
+  const pageHeader = <header className={s.header}><div><span className={s.eye}>My profile</span><h1 className={s.h1}>Your details</h1></div></header>;
+  if (profileError) return <div className={s.page}>{pageHeader}<DataLoadError message={profileError} retry={reloadProfile} /></div>;
+  if (profileLoading) return <div className={s.page}>{pageHeader}<div className={s.grid}>
+    <Card title="Personal info"><LoadingSkeleton layout="form" label="Loading profile" /></Card>
+    <LeaveBalanceCard balance={balance} loading={balanceLoading} />
+    <Card title="Upcoming shifts" subtitle="Next 10 published"><LoadingSkeleton label="Loading upcoming shifts" /></Card>
+  </div></div>;
 
   return (
     <div className={s.page}>
-      <header className={s.header}><div><span className={s.eye}>My profile</span><h1 className={s.h1}>Your details</h1></div></header>
+      {pageHeader}
       <div className={s.grid}>
         <Card title="Personal info">
           <div className={s.who}>

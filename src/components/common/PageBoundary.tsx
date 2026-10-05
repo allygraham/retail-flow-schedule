@@ -26,7 +26,7 @@ export function PageBoundary({ children }: { children: ReactNode }) {
   return (
     <PageLoadError>
       <Suspense fallback={
-        <LoadingSkeleton layout="page" label="Loading page" />
+        <LoadingSkeleton label="Loading page" />
       }>
         {children}
       </Suspense>

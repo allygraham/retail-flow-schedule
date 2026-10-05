@@ -22,7 +22,7 @@ export function ProtectedRoute({ children, roles, permission, redirectTo = '/das
 
   if (loading) {
     return (
-      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}><LoadingSkeleton layout="page" label="Loading account" /></div>
+      <LoadingSkeleton label="Loading account" />
     );
   }
   if (error) return <div className={s.denied}><AccountLoadError /></div>;

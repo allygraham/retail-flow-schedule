@@ -84,10 +84,24 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   }, [userId, businessId]);
   const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
-  if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (!data) return <LoadingSkeleton layout="dashboard" label="Loading dashboard" />;
-
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
+  const pageHeader = (
+<header className={s.header}>
+        <div>
+          <span className={s.eye}>My dashboard</span>
+          <h1 className={s.h1}>{greeting}</h1>
+          <p className={`${s.sub} text-justify`}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {businessName}</p>
+        </div>
+        <div className={s.quickActions}>
+          <Button variant="primary" leading={<Plane size={16} />} onClick={() => nav('/leave')}>Request time off</Button>
+          <Button variant="secondary" leading={<Calendar size={16} />} onClick={() => nav('/rota')}>View full rota</Button>
+        </div>
+      </header>
+  );
+  if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
+  if (!data) return <div className={s.page}>{pageHeader}<LoadingSkeleton layout="dashboard-content" label="Loading dashboard" /></div>;
+
+
   const next = data.upcoming[0];
   const restUpcoming = data.upcoming.slice(1, 4);
   const today = isoDate(new Date());
@@ -123,17 +137,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 
   return (
     <div className={s.page}>
-      <header className={s.header}>
-        <div>
-          <span className={s.eye}>My dashboard</span>
-          <h1 className={s.h1}>{greeting}</h1>
-          <p className={`${s.sub} text-justify`}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {businessName}</p>
-        </div>
-        <div className={s.quickActions}>
-          <Button variant="primary" leading={<Plane size={16} />} onClick={() => nav('/leave')}>Request time off</Button>
-          <Button variant="secondary" leading={<Calendar size={16} />} onClick={() => nav('/rota')}>View full rota</Button>
-        </div>
-      </header>
+      {pageHeader}
 
       {/* HERO: Next shift */}
       <section className={s.heroWrap}>
@@ -372,20 +376,24 @@ function ManagerDashboard() {
   const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
   if (!business) return null;
-  if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (!data) return <LoadingSkeleton layout="dashboard" label="Loading dashboard" />;
-
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
-
-  return (
-    <div className={s.page}>
-      <header className={s.header}>
+  const pageHeader = (
+<header className={s.header}>
         <div>
           <span className={s.eye}>Manager dashboard</span>
           <h1 className={s.h1}>{greeting}</h1>
           <p className={s.sub}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {business.name}</p>
         </div>
       </header>
+  );
+  if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
+  if (!data) return <div className={s.page}>{pageHeader}<LoadingSkeleton layout="dashboard-content" label="Loading dashboard" /></div>;
+
+
+
+  return (
+    <div className={s.page}>
+      {pageHeader}
 
       {weekHolidays.length > 0 && (
         <div className={s.holidayBanner} role="status">

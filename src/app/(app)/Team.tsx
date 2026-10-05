@@ -495,16 +495,12 @@ export default function Team() {
     }
   };
 
-  if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (loading || !data) return <LoadingSkeleton layout="page" label="Loading team" />;
-
-  return (
-    <div className={s.page}>
-      <header className={s.header}>
+  const pageHeader = (
+<header className={s.header}>
         <div>
           <span className={s.eye}>Team</span>
           <h1 className={s.h1}>Your people</h1>
-          <p className={s.sub}>
+          <p className={s.sub} hidden={loading || !data}>
             {counts.active} active · {counts.invited} invited
             {counts.disabled > 0 ? ` · ${counts.disabled} disabled` : ''}
             {counts.expired > 0 ? ` · ${counts.expired} expired` : ''}
@@ -512,6 +508,11 @@ export default function Team() {
         </div>
         {canManageStaff && <Button onClick={openInvite}>Add employee</Button>}
       </header>
+  );
+
+  return (
+    <div className={s.page}>
+      {pageHeader}
 
       <Card>
         {isCompact ? (
@@ -622,8 +623,8 @@ export default function Team() {
       </Card>
 
       <Card padded={false}>
-        {loading ? (
-          <LoadingSkeleton label="Loading employees" />
+        {loadError ? <DataLoadError message={loadError} retry={load} /> : loading || !data ? (
+          <LoadingSkeleton label="Loading team" />
         ) : filtered.length === 0 ? (
           <EmptyState
             title={rows.length === 0 ? 'No team yet' : 'No matches'}

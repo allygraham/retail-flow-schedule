@@ -1,14 +1,10 @@
 .root { width: 100%; min-width: 0; }
-.page { display: block; }
-.line, .avatar, .title, .value, .input, .shift {
+.line, .avatar, .value, .input, .shift {
   background: var(--color-surface-muted, #e8edf3);
   border-radius: 6px;
   animation: pulse 1.6s ease-in-out infinite;
 }
 .line { height: 14px; max-width: 100%; min-width: 36px; }
-.heading { margin-bottom: 24px; display: grid; gap: 12px; }
-.title { height: 34px; width: min(340px, 80%); }
-.toolbar { display: flex; gap: 12px; margin-top: 8px; > div { height: 42px; } }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
 .value { height: 32px; width: 65%; margin-top: 14px; }
 .card { background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); border-radius: 12px; padding: 20px; }
@@ -26,4 +22,4 @@
   .stats .card { padding: 12px; }
   .rotaRow { grid-template-columns: 1fr 1.4fr; > :last-child { display: none; } }
 }
-@media (prefers-reduced-motion: reduce) { .line, .avatar, .title, .value, .input, .shift { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .line, .avatar, .value, .input, .shift { animation: none; } }
