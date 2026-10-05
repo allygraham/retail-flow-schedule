@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
-import { acceptInviteSchema } from '@/lib/validation';
 import { useAuth } from '@/features/auth/authContext';
 import s from './Auth.module.scss';
 
@@ -76,6 +75,7 @@ export default function AcceptInvite() {
     setLoading(true);
     try {
       if (!user) {
+        const { acceptInviteSchema } = await import('@/lib/validation');
         const parsed = acceptInviteSchema.safeParse({ full_name: fullName, password });
         if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
         const { data, error } = await supabase.auth.signUp({

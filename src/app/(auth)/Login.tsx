@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
-import { loginSchema } from '@/lib/validation';
 import s from './Auth.module.scss';
 
 export default function Login() {
@@ -19,10 +18,18 @@ export default function Login() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setErr(null);
-    const parsed = loginSchema.safeParse({ email, password });
-    if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
     setLoading(true);
+    try {
+      const { loginSchema } = await import('@/lib/validation');
+      const parsed = loginSchema.safeParse({ email, password });
+      if (!parsed.success) { setLoading(false); setErr(parsed.error.issues[0].message); return; }
+    } catch {
+      setErr('Could not load form validation. Please try again.');
+      setLoading(false);
+      return;
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { setErr(error.message); return; }

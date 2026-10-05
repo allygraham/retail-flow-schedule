@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
-import { forgotSchema } from '@/lib/validation';
 import s from './Auth.module.scss';
 
 /**
@@ -22,10 +21,18 @@ export default function ForgotPassword() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setErr(null);
-    const parsed = forgotSchema.safeParse({ email });
-    if (!parsed.success) { setErr('Enter a valid email address'); return; }
     setLoading(true);
+    try {
+      const { forgotSchema } = await import('@/lib/validation');
+      const parsed = forgotSchema.safeParse({ email });
+      if (!parsed.success) { setLoading(false); setErr('Enter a valid email address'); return; }
+    } catch {
+      setErr('Could not load form validation. Please try again.');
+      setLoading(false);
+      return;
+    }
     try {
       // Keep the response generic so account existence is never disclosed.
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {

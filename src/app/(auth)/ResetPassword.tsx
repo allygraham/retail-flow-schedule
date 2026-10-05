@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
-import { resetSchema } from '@/lib/validation';
 import s from './Auth.module.scss';
 
 /**
@@ -69,9 +68,16 @@ export default function ResetPassword() {
     e.preventDefault();
     if (!ready || loading) return;
     setErr(null);
-    const parsed = resetSchema.safeParse({ password, confirm });
-    if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
     setLoading(true);
+    try {
+      const { resetSchema } = await import('@/lib/validation');
+      const parsed = resetSchema.safeParse({ password, confirm });
+      if (!parsed.success) { setLoading(false); setErr(parsed.error.issues[0].message); return; }
+    } catch {
+      setErr('Could not load form validation. Please try again.');
+      setLoading(false);
+      return;
+    }
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) { setErr(error.message); return; }

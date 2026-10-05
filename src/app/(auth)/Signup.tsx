@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
 import { Field, Input } from '@/components/common/Field';
-import { signupSchema } from '@/lib/validation';
 import s from './Auth.module.scss';
 
 export default function Signup() {
@@ -26,6 +25,7 @@ export default function Signup() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setErr(null);
     if (authLoading || accountError) return;
     if (user) {
@@ -41,9 +41,16 @@ export default function Signup() {
       } finally { setLoading(false); }
       return;
     }
-    const parsed = signupSchema.safeParse({ fullName, businessName, email, password });
-    if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
     setLoading(true);
+    try {
+      const { signupSchema } = await import('@/lib/validation');
+      const parsed = signupSchema.safeParse({ fullName, businessName, email, password });
+      if (!parsed.success) { setLoading(false); setErr(parsed.error.issues[0].message); return; }
+    } catch {
+      setErr('Could not load form validation. Please try again.');
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { data: { full_name: fullName, role: 'owner', business_name: businessName }, emailRedirectTo: window.location.origin + '/dashboard' }
@@ -80,7 +87,7 @@ export default function Signup() {
           {!user && <Field label="Work email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>}
           {!user && <Field label="Password" hint="At least 8 characters"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>}
           {err && <div className={s.err}>{err}</div>}
-          <Button type="submit" full loading={loading} disabled={authLoading || !!accountError}>Create workspace</Button>
+          <Button type="submit" full loading={loading} disabled={loading || authLoading || !!accountError}>Create workspace</Button>
         </form>
         </>}
         <div className={s.foot}>
