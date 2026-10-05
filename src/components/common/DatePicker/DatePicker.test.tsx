@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { DatePicker, type DateRangeValue } from './DatePicker';
 import { toISODate } from './dateValues';
@@ -17,7 +17,7 @@ it('one click on 28 November replaces 4 October even when closed outside', () =>
   render(<Form />); november();
   fireEvent.click(screen.getByRole('button', { name: /Saturday, November 28th, 2026/i }));
   expect(screen.getByLabelText('Saved dates')).toHaveTextContent('2026-11-28 / 2026-11-28');
-  fireEvent.mouseDown(screen.getByRole('button', { name: 'Submit' }));
+  act(() => screen.getByRole('button', { name: 'Submit' }).focus());
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Saved dates')).toHaveTextContent('2026-11-28 / 2026-11-28');
 });

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
-import { createPortal } from 'react-dom';
+import * as Dialog from '@radix-ui/react-dialog';
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
@@ -49,25 +49,19 @@ export function DatePicker(props: DatePickerProps) {
 
   const [open, setOpen] = useState(false);
   const [draftRange, setDraftRange] = useState<DateRangeValue | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 8, top: 8, width: 320 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const rangeValue = isRange ? (draftRange ?? (props as RangeProps).value) : null;
 
-  // Close on outside click + Escape
+  // Handle Escape in capture so it closes the calendar before its parent form.
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node) && !popoverRef.current?.contains(e.target as Node)) setOpen(false);
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); triggerRef.current?.focus(); }
     };
-    document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey, true);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey, true);
     };
   }, [open]);
@@ -130,10 +124,6 @@ export function DatePicker(props: DatePickerProps) {
     else (props as SingleProps).onChange(null);
   }, [isRange, props]);
 
-  const handleTriggerClick = useCallback(() => {
-    setOpen((current) => !current);
-  }, []);
-
   const handleSingleSelect = (d: Date | undefined) => {
     (props as SingleProps).onChange(d ?? null);
     if (d) setOpen(false);
@@ -162,9 +152,10 @@ export function DatePicker(props: DatePickerProps) {
     : !!(props as SingleProps).value;
 
   return (
-    <div className={`${s.wrap} ${className ?? ''}`} ref={wrapRef}>
+    <Dialog.Root open={open} onOpenChange={setOpen} modal={false}>
+    <div className={`${s.wrap} ${className ?? ''}`}>
       <div className={s.triggerWrap}>
-        <button
+        <Dialog.Trigger asChild><button
           ref={triggerRef}
           type="button"
           id={id}
@@ -175,12 +166,11 @@ export function DatePicker(props: DatePickerProps) {
           aria-expanded={open}
           aria-required={required || undefined}
           className={`${s.trigger} ${hasValue ? '' : s.placeholder} ${allowClear && hasValue && !disabled ? s.triggerWithClear : ''}`}
-          onClick={handleTriggerClick}
         >
           <CalendarIcon size={16} aria-hidden />
           <span>{hasValue ? label : placeholder}</span>
           <CalendarIcon size={14} className={s.icon} aria-hidden />
-        </button>
+        </button></Dialog.Trigger>
         {allowClear && hasValue && !disabled && (
           <button
             type="button"
@@ -193,8 +183,10 @@ export function DatePicker(props: DatePickerProps) {
         )}
       </div>
 
-      {open && createPortal(
+      <Dialog.Portal>
+        <Dialog.Content asChild aria-describedby={undefined}>
         <div ref={popoverRef} className={s.popover} style={position} role="dialog" aria-label="Choose date" aria-modal="false" onClick={event => event.stopPropagation()}>
+          <Dialog.Title className={s.srOnly}>Choose date</Dialog.Title>
           {isRange ? (
             <DayPicker
               mode="range"
@@ -222,8 +214,10 @@ export function DatePicker(props: DatePickerProps) {
               weekStartsOn={1}
             />
           )}
-        </div>, document.body
-      )}
+        </div>
+        </Dialog.Content>
+      </Dialog.Portal>
     </div>
+    </Dialog.Root>
   );
 }
