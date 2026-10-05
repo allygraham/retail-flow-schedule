@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
@@ -84,7 +85,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
   if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (!data) return <div className={s.loading}>Loading…</div>;
+  if (!data) return <LoadingSkeleton layout="dashboard" label="Loading dashboard" />;
 
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
   const next = data.upcoming[0];
@@ -278,7 +279,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
             </Button>
           )}
         >
-          {notificationsError ? <DataLoadError message={notificationsError} retry={reloadNotifications} /> : notificationsLoading ? <div role="status">Loading notifications…</div> : recentNotifs.length === 0 ? (
+          {notificationsError ? <DataLoadError message={notificationsError} retry={reloadNotifications} /> : notificationsLoading ? <LoadingSkeleton label="Loading notifications" /> : recentNotifs.length === 0 ? (
             <EmptyState title="You're all caught up" description="No new updates right now." />
           ) : (
             <ul className={s.list}>
@@ -372,7 +373,7 @@ function ManagerDashboard() {
 
   if (!business) return null;
   if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (!data) return <div className={s.loading}>Loading…</div>;
+  if (!data) return <LoadingSkeleton layout="dashboard" label="Loading dashboard" />;
 
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
 

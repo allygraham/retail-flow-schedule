@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
@@ -200,7 +201,7 @@ export function HolidaySettings() {
           </div>
         )}
 
-        {loadError ? <DataLoadError message={loadError} retry={reload} /> : loading ? <div role="status">Loading company holidays…</div> : upcomingCustom.length === 0 ? (
+        {loadError ? <DataLoadError message={loadError} retry={reload} /> : loading ? <LoadingSkeleton label="Loading company holidays" /> : upcomingCustom.length === 0 ? (
           <div className={s.disabledMsg}>No upcoming company holidays.</div>
         ) : (
           <div className={s.customList}>

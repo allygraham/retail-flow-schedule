@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AccountLoadError } from '@/features/auth/AccountLoadError';
@@ -62,7 +63,7 @@ export default function Signup() {
     nav('/dashboard', { replace: true });
   };
 
-  if (authLoading) return <div className={s.page}>Loading…</div>;
+  if (authLoading) return <div className={s.page}><div className={s.card}><LoadingSkeleton layout="form" label="Loading account" /></div></div>;
   if (accountError) return <div className={s.page}><div className={s.card}><AccountLoadError /></div></div>;
   if (user && business) return <Navigate to="/dashboard" replace />;
 

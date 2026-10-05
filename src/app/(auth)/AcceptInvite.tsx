@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -97,7 +98,7 @@ export default function AcceptInvite() {
       <div className={s.page}>
         <div className={s.card}>
           <Logo />
-          <p className={s.sub}>Loading your invite…</p>
+          <LoadingSkeleton layout="form" label="Loading invitation" />
         </div>
       </div>
     );

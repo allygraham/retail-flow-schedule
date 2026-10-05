@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { Component, Suspense, type ReactNode } from 'react';
 import s from '@/features/auth/ProtectedRoute.module.scss';
 
@@ -25,10 +26,7 @@ export function PageBoundary({ children }: { children: ReactNode }) {
   return (
     <PageLoadError>
       <Suspense fallback={
-        <div className={s.loader} role="status" aria-live="polite">
-          <div className={s.spinner} aria-hidden="true" />
-          <div className={s.label}>Loading page…</div>
-        </div>
+        <LoadingSkeleton layout="page" label="Loading page" />
       }>
         {children}
       </Suspense>

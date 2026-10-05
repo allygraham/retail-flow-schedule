@@ -76,7 +76,7 @@ describe('account loading and protected routing', () => {
     let resolveRoles!: (value: MockResponse) => void;
     mocks.responses.user_roles = new Promise(resolve => { resolveRoles = resolve; }); show();
     // Membership query completes before the role query starts.
-    await waitFor(() => expect(screen.getByText('Loading Lavoro…')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Loading account' })).toBeInTheDocument());
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); mocks.listener('SIGNED_OUT', null); });
     await screen.findByText('Login screen');
     await act(async () => resolveRoles({ data: [{ role: 'owner' }], error: null }));

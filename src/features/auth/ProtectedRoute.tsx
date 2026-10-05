@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AccountLoadError } from './AccountLoadError';
@@ -21,10 +22,7 @@ export function ProtectedRoute({ children, roles, permission, redirectTo = '/das
 
   if (loading) {
     return (
-      <div className={s.loader}>
-        <div className={s.spinner} />
-        <div className={s.label}>Loading Lavoro…</div>
-      </div>
+      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}><LoadingSkeleton layout="page" label="Loading account" /></div>
     );
   }
   if (error) return <div className={s.denied}><AccountLoadError /></div>;

@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import type { ReactNode } from 'react';
 import { Card } from '@/components/common/Card';
 import type { LeaveBalance } from './useLeaveBalance';
@@ -19,7 +20,7 @@ export function LeaveBalanceCard({ balance, loading, patternMissing, error, titl
   return (
     <Card title={title} subtitle={sub}>
       {loading ? (
-        <div className={s.loading}>Loading…</div>
+        <LoadingSkeleton layout="balance" label="Loading annual leave balance" />
       ) : error || patternMissing || !balance ? (
         <div className={s.loading} role="status">{error ?? (patternMissing
           ? 'Your manager needs to set your normal working days in Team before your annual leave balance can be calculated.'

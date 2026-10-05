@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { errorMessage } from '@/lib/errors';
@@ -86,7 +87,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
   if (error) return <div className={s.card}><DataLoadError message={error} retry={load} /></div>;
 
   if (loading) {
-    return <div className={s.card}><div className={s.eyebrow}>Coverage recovery</div><div className={s.line}>Checking affected shifts…</div></div>;
+    return <div className={s.card}><div className={s.eyebrow}>Coverage recovery</div><LoadingSkeleton label="Loading affected shifts" /></div>;
   }
 
   if (shifts.length === 0) {
@@ -130,7 +131,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
               {isOpen && (
                 <div className={s.suggestions}>
                   {candidateError ? <DataLoadError message={candidateError} retry={reloadCandidates} /> : candLoading ? (
-                    <div className={s.line}>Finding candidates…</div>
+                    <LoadingSkeleton label="Loading replacement staff" />
                   ) : list && list.length ? (
                     <ul className={s.candidates}>
                       {list.map(cand => (

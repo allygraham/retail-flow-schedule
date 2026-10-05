@@ -39,6 +39,7 @@ export async function stubApi(page: Page, shared?: StubState) {
       if (endpoint === 'logout') return state.logoutFailure ? reply({ msg: 'Sign-out failed' }, 400) : reply({});
     }
     const single = request.headers().accept?.includes('object+json');
+    if (endpoint === 'profiles' && url.searchParams.get('select') === 'phone') return reply(single ? { phone: null } : [{ phone: null }]);
     if (endpoint === 'profiles') return reply(single ? { full_name: 'Test Owner' } : url.searchParams.has('id') && url.searchParams.get('select') === 'full_name' ? [{ full_name: 'Test Owner' }] : [{ id: ownerId, full_name: 'Test Owner' }, { id: employeeId, full_name: 'Test Employee' }]);
     if (endpoint === 'memberships' && method === 'PATCH') {
       if (state.memberFailure) return reply({ message: 'Employee access update failed' }, 400);

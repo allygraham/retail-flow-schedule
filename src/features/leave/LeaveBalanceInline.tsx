@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { daysInYear } from './leaveDays';
 import { useLeaveBalance } from './useLeaveBalance';
 import s from './LeaveBalanceInline.module.scss';
@@ -11,7 +12,7 @@ interface Props {
 /** Compact one-line balance summary, used inside review modal etc. */
 export function LeaveBalanceInline({ userId, startDate, endDate }: Props) {
   const { balance, workingDays, patternMissing, error, loading } = useLeaveBalance(userId);
-  if (loading) return <div className={s.row}><span className={s.label}>Annual leave</span><span className={s.muted}>Loading…</span></div>;
+  if (loading) return <div className={s.row}><span className={s.label}>Annual leave</span><LoadingSkeleton layout="inline" label="Loading annual leave balance" /></div>;
   if (error || patternMissing) return <div className={s.row} role="status">{error ?? 'Set this employee’s normal working days in Team to calculate their leave balance.'}</div>;
   if (!balance || !workingDays) return null;
   const pendingDays = startDate && endDate ? daysInYear(startDate, endDate, balance.year, workingDays) : undefined;

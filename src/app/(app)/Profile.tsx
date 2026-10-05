@@ -1,6 +1,9 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
+import { DataLoadError } from '@/components/common/DataLoadError';
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
 import { errorMessage } from '@/lib/errors';
-import type { ShiftWithNames } from '@/types/rows';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -27,7 +30,6 @@ export default function Profile() {
   const [name, setName] = useState(fullName ?? '');
   const holidays = useHolidays();
   const [phone, setPhone] = useState('');
-  const [shifts, setShifts] = useState<ShiftWithNames[]>([]);
   const [saving, setSaving] = useState(false);
   const [requestModal, setRequestModal] = useState(false);
   const [collapsible, setCollapsible] = useState(false);
@@ -51,18 +53,20 @@ export default function Profile() {
 
   useEffect(() => { setName(fullName ?? ''); }, [fullName]);
 
-  useEffect(() => {
-    if (!user || !business) return;
-    (async () => {
-      const today = isoDate(new Date());
-      const [{ data: prof }, { data: sh }] = await Promise.all([
-        supabase.from('profiles').select('phone').eq('id', user.id).maybeSingle(),
-        supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('assigned_user_id', user.id).gte('shift_date', today).eq('is_published', true).order('shift_date').limit(10),
-      ]);
-      setPhone(prof?.phone ?? '');
-      setShifts(sh ?? []);
-    })();
+  const fetchProfile = useCallback(async () => {
+    if (!user || !business) return null;
+    const today = isoDate(new Date());
+    const [profile, upcoming] = await Promise.all([
+      supabase.from('profiles').select('phone').eq('id', user.id).maybeSingle(),
+      supabase.from('shifts').select('*, store_locations(name), roles_catalog(name)').eq('assigned_user_id', user.id).gte('shift_date', today).eq('is_published', true).order('shift_date').limit(10),
+    ]);
+    assertQueryResults(profile, upcoming);
+    return { phone: profile.data?.phone ?? '', shifts: upcoming.data ?? [] };
   }, [user, business]);
+  const { data: profileData, loading: profileLoading, error: profileError, reload: reloadProfile } = useAsyncData(fetchProfile, 'Could not load your profile. Please try again.');
+  const shifts = profileData?.shifts ?? [];
+  useEffect(() => { if (profileData) setPhone(profileData.phone); }, [profileData]);
+
 
   const save = async () => {
     setSaving(true);
@@ -101,6 +105,9 @@ export default function Profile() {
       setRequesting(false);
     }
   };
+
+  if (profileError) return <DataLoadError message={profileError} retry={reloadProfile} />;
+  if (profileLoading) return <LoadingSkeleton layout="page" label="Loading profile" />;
 
   return (
     <div className={s.page}>

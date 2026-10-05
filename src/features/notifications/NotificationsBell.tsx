@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -89,7 +90,7 @@ export function NotificationsBell({ variant = 'desktop' }: Props) {
             </div>
             <div className={s.list}>
               {writeError && <div role="alert" className={s.empty}>{writeError}</div>}
-              {error ? <DataLoadError message={error} retry={reload} /> : loading ? <div role="status" className={s.empty}>Loading notifications…</div> : items.length === 0 ? (
+              {error ? <DataLoadError message={error} retry={reload} /> : loading ? <LoadingSkeleton label="Loading notifications" /> : items.length === 0 ? (
                 <div className={s.empty}>You're all caught up.</div>
               ) : items.map(n => (
                 <button

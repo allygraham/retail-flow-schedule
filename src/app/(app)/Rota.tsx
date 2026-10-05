@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
@@ -320,9 +321,9 @@ export default function Rota() {
   };
 
   if (holidays.error) return <DataLoadError message={holidays.error} retry={holidays.reload} />;
-  if (holidays.loading) return <div role="status" style={{ padding: 24 }}>Loading scheduling rules…</div>;
+  if (holidays.loading) return <LoadingSkeleton layout="rota" label="Loading scheduling rules" />;
   if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (loading || !data) return <div role="status" style={{ padding: 24 }}>Loading rota…</div>;
+  if (loading || !data) return <LoadingSkeleton layout="rota" label="Loading rota" />;
 
   return (
     <div className={s.page}>

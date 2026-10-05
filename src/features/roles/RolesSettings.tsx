@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,7 +126,7 @@ export function RolesSettings() {
       </form>
 
       {loading ? (
-        <div style={{ fontSize: 14, color: 'hsl(var(--muted-foreground))' }}>Loading…</div>
+        <LoadingSkeleton label="Loading roles" />
       ) : rows.length === 0 ? (
         <EmptyState title="No job roles yet" description="Add your first role above." />
       ) : (

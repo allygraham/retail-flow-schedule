@@ -1,5 +1,8 @@
-import type { Tables } from '@/integrations/supabase/types';
-import { useCallback, useEffect, useState } from 'react';
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
+import { DataLoadError } from '@/components/common/DataLoadError';
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { assertQueryResults } from '@/lib/queryResults';
+import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
@@ -13,17 +16,18 @@ import s from './Stores.module.scss';
 export default function Stores() {
   const { business, hasPermission } = useAuth();
   const canManageStores = hasPermission('manage_stores');
-  const [stores, setStores] = useState<Tables<'store_locations'>[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', address: '', city: '', postcode: '' });
   const [err, setErr] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!business) return;
-    const { data } = await supabase.from('store_locations').select('*').eq('business_id', business.id).order('name');
-    setStores(data ?? []);
+  const fetchStores = useCallback(async () => {
+    if (!business) return [];
+    const result = await supabase.from('store_locations').select('*').eq('business_id', business.id).order('name');
+    assertQueryResults(result);
+    return result.data ?? [];
   }, [business]);
-  useEffect(() => { void load(); }, [load]);
+  const { data, loading, error, reload: load } = useAsyncData(fetchStores, 'Could not load stores. Please try again.');
+  const stores = data ?? [];
 
   const save = async () => {
     setErr(null);
@@ -40,7 +44,7 @@ export default function Stores() {
         <div><span className={s.eye}>Stores</span><h1 className={s.h1}>Your locations</h1></div>
         {canManageStores && <Button onClick={() => setOpen(true)}>Add store</Button>}
       </header>
-      {stores.length === 0 ? (
+      {error ? <DataLoadError message={error} retry={load} /> : loading ? <LoadingSkeleton label="Loading stores" /> : stores.length === 0 ? (
         <Card><EmptyState title="No stores yet" description="Add your first location." /></Card>
       ) : (
         <div className={s.grid}>

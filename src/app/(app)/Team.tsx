@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
@@ -495,7 +496,7 @@ export default function Team() {
   };
 
   if (loadError) return <DataLoadError message={loadError} retry={load} />;
-  if (loading || !data) return <div role="status" className={s.loading}>Loading team…</div>;
+  if (loading || !data) return <LoadingSkeleton layout="page" label="Loading team" />;
 
   return (
     <div className={s.page}>
@@ -622,7 +623,7 @@ export default function Team() {
 
       <Card padded={false}>
         {loading ? (
-          <div className={s.loading}>Loading…</div>
+          <LoadingSkeleton label="Loading employees" />
         ) : filtered.length === 0 ? (
           <EmptyState
             title={rows.length === 0 ? 'No team yet' : 'No matches'}

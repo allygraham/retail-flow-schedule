@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { errorMessage } from '@/lib/errors';
 import { canCancelLeave } from '@/features/leave/leavePermissions';
 import { daysBetween, daysInYear, workingDaysBetween } from '@/features/leave/leaveDays';
@@ -664,7 +665,7 @@ export default function Leave() {
             </div>
           )}
           {loading ? (
-            <div className={s.loading}>Loading…</div>
+            <LoadingSkeleton label="Loading leave requests" />
           ) : filtered.length === 0 ? (
             <EmptyState
               title={hasActiveFilters ? 'No leave & absence matches those filters' : isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}

@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { signOutChecked, SignOutError } from '@/features/auth/signOut';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -109,7 +110,7 @@ export default function ResetPassword() {
           </>
         ) : (
           <>
-            {!ready && <p className={s.sub}>Verifying your reset link…</p>}
+            {!ready && <LoadingSkeleton layout="inline" label="Verifying reset link" />}
             <form onSubmit={onSubmit} className={s.form}>
               <Field label="New password" hint="At least 8 characters">
                 <Input
