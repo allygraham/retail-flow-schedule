@@ -115,3 +115,22 @@ test('company closure prevents assigned shift save before any write', async ({ p
   await expect(dialog.getByText(/Scheduling is blocked on Shop closed/)).toBeVisible();
   expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(0);
 });
+
+
+test('weekly employee hours include drafts, deduct breaks, exclude cancellations and update after edits', async ({ page }) => {
+  const state = await open(page);
+  state.shifts = [shift(), shift({ id: 'short-shift', shift_date: '2026-10-06', start_time: '09:00:00', end_time: '09:10:00', break_minutes: null, is_published: true }), shift({ id: 'another-short-shift', shift_date: '2026-10-07', start_time: '09:00:00', end_time: '09:10:00', break_minutes: 0 }), shift({ id: 'cancelled-shift', status: 'cancelled' }), shift({ id: 'open-shift', assigned_user_id: null })];
+  await page.goto('/rota');
+  const total = page.getByLabel('Test Employee weekly hours');
+  await expect(total).toHaveText('7.83h');
+  await page.locator(`[data-shift-id="${shiftId}"]`).getByText('09:00–17:00').click();
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('select').nth(2).selectOption('');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(total).toHaveText('0.33h');
+});
+
+test('employees without shifts show zero weekly hours', async ({ page }) => {
+  await open(page); await page.goto('/rota');
+  await expect(page.getByLabel('Test Employee weekly hours')).toHaveText('0h');
+});

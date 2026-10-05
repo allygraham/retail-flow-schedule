@@ -12,6 +12,7 @@ for (const width of [320, 390]) test(`calendar and rota remain usable at ${width
   await expect(page.locator('[data-rota-cell]')).toHaveCount(2);
   const card = page.locator(`[data-shift-id="${shiftId}"]`);
   await expect(card).toBeVisible();
+  await expect(page.getByLabel('Test Employee weekly hours').filter({ visible: true })).toHaveText('7.5h this week');
   expect(await card.evaluate(el => getComputedStyle(el).touchAction)).toBe('auto');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   await page.getByRole('combobox', { name: 'Rota day' }).selectOption('1');

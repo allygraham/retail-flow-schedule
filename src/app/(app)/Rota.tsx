@@ -14,7 +14,7 @@ import { StoreSelect } from '@/components/common/StoreSelect';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
-import { fmtDate, fmtTime, hoursBetween, isoDate, weekDays, weekStartFor, overlap, inRange } from '@/lib/datetime';
+import { fmtDate, fmtTime, hoursBetween, minutesBetween, isoDate, weekDays, weekStartFor, overlap, inRange } from '@/lib/datetime';
 import { addDays, format } from 'date-fns';
 import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
@@ -79,6 +79,16 @@ export default function Rota() {
   const filteredShifts = useMemo(() =>
     shifts.filter(x => storeFilter === 'all' || x.store_id === storeFilter)
   , [shifts, storeFilter]);
+
+  const weeklyHours = useMemo(() => {
+    const minutes: Record<string, number> = {};
+    for (const shift of filteredShifts) {
+      if (!shift.assigned_user_id || shift.status === 'cancelled') continue;
+      minutes[shift.assigned_user_id] = (minutes[shift.assigned_user_id] ?? 0)
+        + minutesBetween(shift.start_time, shift.end_time, shift.break_minutes ?? 0);
+    }
+    return Object.fromEntries(Object.entries(minutes).map(([id, total]) => [id, +(total / 60).toFixed(2)]));
+  }, [filteredShifts]);
 
   const peopleById = useMemo(() => Object.fromEntries(people.map(p => [p.user_id, p])), [people]);
   const storeById = useMemo(() => Object.fromEntries(stores.map(s => [s.id, s])), [stores]);
@@ -377,6 +387,7 @@ export default function Rota() {
                     <div>
                       <div className={s.staffName}>{p.name}</div>
                       <div className={s.staffRole}>{roleById[p.primary_role_id ?? '']?.name ?? '—'}</div>
+                      {isMobile && <div className={s.staffRole} aria-label={`${p.name} weekly hours`}>{weeklyHours[p.user_id] ?? 0}h this week</div>}
                     </div>
                   </div>
                 )}
@@ -410,7 +421,9 @@ export default function Rota() {
                     </DroppableCell>
                   );
                 })}
-                {isMgr && <div className={s.totalCell} />}
+                {isMgr && <div className={s.totalCell} aria-label={`${p.name} weekly hours`} title="Scheduled hours this week, excluding breaks and cancelled shifts">
+                  {weeklyHours[p.user_id] ?? 0}<span className={s.totalUnit}>h</span>
+                </div>}
               </div>
             ))}
             {/* Unassigned row — managers only */}
