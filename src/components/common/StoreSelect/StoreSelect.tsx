@@ -13,6 +13,15 @@ interface Props {
 
 export function StoreSelect({ value, options, onChange, allLabel = 'All stores' }: Props) {
   const [open, setOpen] = useState(false);
+  const lastSoleStore = useRef<string | null>(null);
+  const soleStoreId = options.length === 1 ? options[0].id : null;
+
+  useEffect(() => {
+    const changed = lastSoleStore.current !== soleStoreId;
+    lastSoleStore.current = soleStoreId;
+    if (changed && soleStoreId && (value === 'all' || !value)) onChange(soleStoreId);
+  }, [soleStoreId, value, onChange]);
+
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
