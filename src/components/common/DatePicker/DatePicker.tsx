@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
@@ -49,6 +50,8 @@ export function DatePicker(props: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [draftRange, setDraftRange] = useState<DateRangeValue | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ left: 8, top: 8, width: 320 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const rangeValue = isRange ? (draftRange ?? (props as RangeProps).value) : null;
 
@@ -56,16 +59,41 @@ export function DatePicker(props: DatePickerProps) {
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current?.contains(e.target as Node) && !popoverRef.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setOpen(false); triggerRef.current?.focus(); }
+      if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); triggerRef.current?.focus(); }
     };
     document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const anchor = triggerRef.current?.getBoundingClientRect();
+      if (!anchor) return;
+      const width = Math.min(320, window.innerWidth - 16);
+      const height = Math.min(popoverRef.current?.offsetHeight ?? 0, window.innerHeight - 16);
+      const below = anchor.bottom + 6;
+      const top = below + height <= window.innerHeight - 8 ? below
+        : anchor.top - height - 6 >= 8 ? anchor.top - height - 6
+        : Math.max(8, window.innerHeight - height - 8);
+      setPosition({ width, left: Math.max(8, Math.min(anchor.left, window.innerWidth - width - 8)), top });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null;
+    if (popoverRef.current) observer?.observe(popoverRef.current);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+      observer?.disconnect();
     };
   }, [open]);
 
@@ -165,8 +193,8 @@ export function DatePicker(props: DatePickerProps) {
         )}
       </div>
 
-      {open && (
-        <div className={s.popover} role="dialog" aria-modal="false">
+      {open && createPortal(
+        <div ref={popoverRef} className={s.popover} style={position} role="dialog" aria-label="Choose date" aria-modal="false" onClick={event => event.stopPropagation()}>
           {isRange ? (
             <DayPicker
               mode="range"
@@ -194,7 +222,7 @@ export function DatePicker(props: DatePickerProps) {
               weekStartsOn={1}
             />
           )}
-        </div>
+        </div>, document.body
       )}
     </div>
   );

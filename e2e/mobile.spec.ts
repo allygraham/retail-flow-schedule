@@ -22,8 +22,13 @@ for (const width of [320, 390]) test(`calendar and rota remain usable at ${width
   await card.getByText('09:00–17:00', { exact: true }).tap();
   const modal = page.getByRole('dialog').filter({ hasText: 'Edit shift' });
   await modal.getByRole('button', { name: 'Pick a date', exact: true }).tap();
-  const calendar = modal.getByRole('dialog');
+  const calendar = page.getByRole('dialog', { name: 'Choose date', exact: true });
   await expect(calendar.getByRole('button', { name: 'Go to the next month' })).toBeVisible();
+  expect(await calendar.evaluate(el => el.parentElement === document.body)).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(calendar).toHaveCount(0);
+  await expect(modal).toBeVisible();
+  await modal.getByRole('button', { name: 'Pick a date', exact: true }).tap();
   const bounds = await calendar.evaluate(element => {
     const el = element as HTMLElement;
     const root = el.getBoundingClientRect();
@@ -32,6 +37,8 @@ for (const width of [320, 390]) test(`calendar and rota remain usable at ${width
   expect(bounds.left).toBeGreaterThanOrEqual(0);
   expect(bounds.right).toBeLessThanOrEqual(width);
   expect(bounds.contentRight).toBeLessThanOrEqual(bounds.right + 1);
+  await page.setViewportSize({ width, height: 480 });
+  await expect.poll(async () => calendar.evaluate(el => { const box = el.getBoundingClientRect(); return box.top >= 8 && box.bottom <= innerHeight - 7; })).toBe(true);
   await calendar.getByRole('button', { name: 'Go to the next month' }).tap();
   await calendar.getByRole('button', { name: /Sunday, November 29th, 2026/ }).tap();
   await expect(modal.getByRole('button', { name: 'Pick a date', exact: true })).toContainText('29 Nov 2026');
