@@ -45,7 +45,9 @@
   border-radius: $r-lg;
   box-shadow: $shadow-lg;
   padding: $sp-2;
-  min-width: 280px;
+  width: min(320px, 100%);
+  min-width: 0;
+  container-type: inline-size;
   animation: pop $dur-fast $ease;
 }
 @keyframes pop {
@@ -54,7 +56,11 @@
 }
 
 .rdp {
-  --rdp-cell-size: 38px;
+  --rdp-day-width: min(44px, calc(100cqi / 7));
+  --rdp-day-height: 44px;
+  --rdp-day_button-width: min(42px, calc(100cqi / 7 - 2px));
+  --rdp-day_button-height: 42px;
+  --rdp-accent-background-color: var(--color-row-hover, #{$brand-50});
   --rdp-accent-color: var(--color-primary, #{$brand-600});
   --rdp-background-color: var(--color-row-hover, #{$brand-50});
   --rdp-accent-color-dark: var(--color-primary-hover, #{$brand-700});
@@ -66,6 +72,9 @@
   font-size: $fs-sm;
   color: var(--color-text-primary, #{$text});
 
+  :global(.rdp-months), :global(.rdp-month), :global(.rdp-month_grid) { width: 100%; }
+  :global(.rdp-month_grid) { table-layout: fixed; }
+  :global(.rdp-month_caption) { font-size: $fs-base; }
   :global(.rdp-caption_label) { font-weight: $fw-semibold; color: var(--color-text-primary, #{$text}); }
   :global(.rdp-head_cell) { color: var(--color-text-secondary, #{$text-muted}); font-weight: $fw-medium; text-transform: none; font-size: $fs-xs; }
   :global(.rdp-nav_button) {

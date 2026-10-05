@@ -136,3 +136,15 @@
 }
 .emptyIcon { font-size: 14px; }
 .emptyText { color: var(--color-text-secondary, $text-soft); }
+
+.mobileHint { margin: 0; font-size: $fs-sm; color: var(--color-text-secondary, $text-muted); }
+.gridMobile {
+  grid-template-columns: minmax(100px, 0.8fr) minmax(0, 1fr);
+  overflow-x: visible;
+  .gridHeadTotal, .totalCell { display: none; }
+  .staffCell, .gridHead { padding: $sp-3 $sp-2; min-width: 0; }
+  .staffName { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .staffCell > div { min-width: 0; }
+  .shiftTime { overflow-wrap: anywhere; }
+  &.gridEmployee { grid-template-columns: minmax(0, 1fr); }
+}

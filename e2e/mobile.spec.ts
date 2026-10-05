@@ -1,0 +1,42 @@
+import { test, expect, devices } from '@playwright/test';
+import { authenticate, stubApi, employeeId, businessId, storeId, shiftId } from './fixtures';
+
+test.use({ ...devices['Pixel 7'], defaultBrowserType: 'chromium' });
+for (const width of [320, 390]) test(`calendar and rota remain usable at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 844 });
+  await page.clock.setFixedTime(new Date('2026-10-05T12:00:00Z'));
+  await authenticate(page); const state = await stubApi(page);
+  state.shifts = [{ id: shiftId, business_id: businessId, store_id: storeId, role_id: null, assigned_user_id: employeeId, shift_date: '2026-10-05', start_time: '09:00:00', end_time: '17:00:00', break_minutes: 30, status: 'scheduled', is_published: false, updated_at: '2026-10-04T00:00:00Z', notes: null }];
+  await page.goto('/rota');
+  await expect(page.getByRole('combobox', { name: 'Rota day' })).toBeVisible();
+  await expect(page.locator('[data-rota-cell]')).toHaveCount(2);
+  const card = page.locator(`[data-shift-id="${shiftId}"]`);
+  await expect(card).toBeVisible();
+  expect(await card.evaluate(el => getComputedStyle(el).touchAction)).toBe('auto');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  await page.getByRole('combobox', { name: 'Rota day' }).selectOption('1');
+  await expect(page.locator(`[data-rota-cell="${employeeId}|2026-10-06"]`)).toBeVisible();
+  await expect(card).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Rota day' }).selectOption('0');
+  await card.getByText('09:00–17:00', { exact: true }).tap();
+  const modal = page.getByRole('dialog').filter({ hasText: 'Edit shift' });
+  await modal.getByRole('button', { name: 'Pick a date', exact: true }).tap();
+  const calendar = modal.getByRole('dialog');
+  await expect(calendar.getByRole('button', { name: 'Go to the next month' })).toBeVisible();
+  const bounds = await calendar.evaluate(element => {
+    const el = element as HTMLElement;
+    const root = el.getBoundingClientRect();
+    return { left: root.left, right: root.right, contentRight: Math.max(...[...el.querySelectorAll('button')].map(button => button.getBoundingClientRect().right)) };
+  });
+  expect(bounds.left).toBeGreaterThanOrEqual(0);
+  expect(bounds.right).toBeLessThanOrEqual(width);
+  expect(bounds.contentRight).toBeLessThanOrEqual(bounds.right + 1);
+  await calendar.getByRole('button', { name: 'Go to the next month' }).tap();
+  await calendar.getByRole('button', { name: /Sunday, November 29th, 2026/ }).tap();
+  await expect(modal.getByRole('button', { name: 'Pick a date', exact: true })).toContainText('29 Nov 2026');
+  await modal.locator('select').nth(2).selectOption('');
+  await modal.getByRole('button', { name: 'Save', exact: true }).tap();
+  await expect(modal).toHaveCount(0);
+  expect(state.shifts[0]).toMatchObject({ assigned_user_id: null, shift_date: '2026-11-29' });
+  expect(state.writes.filter(write => write.endpoint === 'move_rota_shift')).toHaveLength(0);
+});

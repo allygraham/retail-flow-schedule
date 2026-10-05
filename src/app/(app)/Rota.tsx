@@ -20,10 +20,13 @@ import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { planShiftDrop } from '@/features/rota/shiftMoves';
 
 export default function Rota() {
   const { business, user, hasPermission } = useAuth();
+  const isMobile = useIsMobile();
+  const [selectedDay, setSelectedDay] = useState((new Date().getDay() + 6) % 7);
   const isMgr = hasPermission('manage_schedules');
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
   const [storeFilter, setStoreFilter] = useState<string>(() => sessionStorage.getItem('rota.storeFilter') ?? 'all');
@@ -40,6 +43,7 @@ export default function Rota() {
   const holidays = useHolidays();
 
   const days = weekDays(weekStart);
+  const visibleDays = isMobile ? [days[selectedDay]] : days;
 
   const fetchData = useCallback(async () => {
     if (!business) throw new Error('No workspace');
@@ -338,11 +342,17 @@ export default function Rota() {
       </header>
 
 
+      {isMobile && <Field label="Rota day">
+        <Select aria-label="Rota day" value={selectedDay} onChange={event => setSelectedDay(Number(event.target.value))}>
+          {days.map((day, index) => <option key={index} value={index}>{fmtDate(day, 'EEEE d MMM')}</option>)}
+        </Select>
+        <p className={s.mobileHint}>{isMgr ? 'Tap a shift to edit its date or assignment.' : 'Choose a day to see your shifts.'}</p>
+      </Field>}
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className={`${s.grid} ${!isMgr ? s.gridEmployee : ''}`}>
+          <div className={`${s.grid} ${!isMgr ? s.gridEmployee : ''} ${isMobile ? s.gridMobile : ''}`}>
             {isMgr && <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>}
-            {days.map(d => {
+            {visibleDays.map(d => {
               const dStr = isoDate(d);
               const hol = holidays.get(dStr);
               return (
@@ -370,7 +380,7 @@ export default function Rota() {
                     </div>
                   </div>
                 )}
-                {days.map(d => {
+                {visibleDays.map(d => {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
                   const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
@@ -385,7 +395,7 @@ export default function Rota() {
                         </div>
                       )}
                       {cell.map(sh => (
-                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || moving || sh.status === 'cancelled'}>
+                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
                             onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}
                             style={{ borderLeftColor: roleById[sh.role_id ?? '']?.color ?? undefined }}
@@ -410,7 +420,7 @@ export default function Rota() {
                   <Avatar name="?" size="sm" />
                   <div><div className={s.staffName}>Unassigned</div><div className={s.staffRole}>Open shifts</div></div>
                 </div>
-                {days.map(d => {
+                {visibleDays.map(d => {
                   const dStr = isoDate(d);
                   const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
                   const hol = holidays.get(dStr);
@@ -419,7 +429,7 @@ export default function Rota() {
                       className={hol ? s.cellHoliday : ''}
                       onClick={() => isMgr && openCreate(dStr)}>
                       {cell.map(sh => (
-                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || moving || sh.status === 'cancelled'}>
+                        <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
                             <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id ?? '']?.name ?? 'Floor'}</div>
@@ -543,7 +553,7 @@ function DroppableCell({ id, disabled, onClick, className, children }: { id: str
 function DraggableShift({ id, disabled, children }: { id: string; disabled?: boolean; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled });
   return (
-    <div ref={setNodeRef} data-shift-id={id} {...attributes} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: 'none', cursor: disabled ? 'pointer' : 'grab' }}>
+    <div ref={setNodeRef} data-shift-id={id} {...(disabled ? {} : attributes)} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: disabled ? 'auto' : 'none', cursor: disabled ? 'pointer' : 'grab' }}>
       {children}
     </div>
   );
