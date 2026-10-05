@@ -8,22 +8,23 @@ export const user = { id: ownerId, email: 'owner@example.test', aud: 'authentica
 export const business = { id: businessId, name: 'Test Shop', slug: 'test-shop', public_holidays_enabled: false };
 export const session = { access_token: 'test-access-token', refresh_token: 'test-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user };
 export async function authenticate(page: Page, personId = ownerId) {
-  await page.addInitScript(value => localStorage.setItem('sb-example-auth-token', JSON.stringify(value)), { ...session, user: { ...user, id: personId, email: personId === ownerId ? user.email : 'employee@example.test' } });
+  await page.addInitScript(value => localStorage.setItem('sb-example-auth-token', JSON.stringify({ ...value, expires_at: Math.floor(Date.now() / 1000) + 3600 })), { ...session, user: { ...user, id: personId, email: personId === ownerId ? user.email : 'employee@example.test' } });
 }
 export type StubState = {
   logoutFailure: boolean; passwordFailure: boolean; recoveryFailure: boolean; inviteFailure: boolean; inviteUpdateFailure: boolean; memberFailure: boolean; editFailure: boolean; employeeActive: boolean; employeeRole: 'employee' | 'manager'; hours: number; invites: Record<string, unknown>[];
   hasWorkspace: boolean; role: 'owner' | 'employee'; holidayFailure: boolean; notificationFailure: boolean; readFailure: boolean; read: boolean;
-  shifts: Record<string, unknown>[]; leaves: Record<string, unknown>[];
+  shiftFailure: string | null; holidays: Record<string, unknown>[]; batches: Record<string, unknown>[][]; shifts: Record<string, unknown>[]; leaves: Record<string, unknown>[];
   writes: { endpoint: string; body: Record<string, unknown> }[];
 };
 export async function stubApi(page: Page, shared?: StubState) {
-  const state: StubState = shared ?? { logoutFailure: false, passwordFailure: false, recoveryFailure: false, inviteFailure: false, inviteUpdateFailure: false, memberFailure: false, editFailure: false, employeeActive: true, employeeRole: 'employee', hours: 20, invites: [], hasWorkspace: true, role: 'owner', holidayFailure: false, notificationFailure: false, readFailure: false, read: false, shifts: [], leaves: [], writes: [] };
+  const state: StubState = shared ?? { logoutFailure: false, passwordFailure: false, recoveryFailure: false, inviteFailure: false, inviteUpdateFailure: false, memberFailure: false, editFailure: false, employeeActive: true, employeeRole: 'employee', hours: 20, invites: [], hasWorkspace: true, role: 'owner', holidayFailure: false, notificationFailure: false, readFailure: false, read: false, shiftFailure: null, holidays: [], batches: [], shifts: [], leaves: [], writes: [] };
   await page.route('https://example.supabase.co/**', async route => {
     const request = route.request();
     const url = new URL(request.url());
     const endpoint = url.pathname.split('/').pop()!;
     const method = request.method();
-    const body = request.postDataJSON() as Record<string, unknown> | null;
+    const rawBody = request.postDataJSON() as Record<string, unknown> | Record<string, unknown>[] | null;
+    const body = Array.isArray(rawBody) ? null : rawBody;
     const reply = (data: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
     if (method === 'OPTIONS') return route.fulfill({ status: 204 });
     if (method !== 'GET') state.writes.push({ endpoint, body: body ?? {} });
@@ -49,7 +50,7 @@ export async function stubApi(page: Page, shared?: StubState) {
     if (endpoint === 'memberships') return reply(single ? { business_id: businessId, businesses: business } : url.searchParams.get('select')?.includes('businesses') ? [{ business_id: businessId, businesses: business }] : [{ user_id: employeeId, is_active: state.employeeActive }]);
     if (endpoint === 'user_roles') return url.searchParams.get('select')?.includes('user_id') ? reply([{ user_id: employeeId, role: state.employeeRole }]) : reply([{ role: url.searchParams.get('user_id') === `eq.${employeeId}` ? state.employeeRole : state.role }]);
     if (endpoint === 'business_branding') return reply(null);
-    if (endpoint === 'custom_holidays') return state.holidayFailure ? reply({ message: 'Holiday service unavailable' }, 400) : reply([]);
+    if (endpoint === 'custom_holidays') return state.holidayFailure ? reply({ message: 'Holiday service unavailable' }, 400) : reply(state.holidays);
     if (endpoint === 'notifications') {
       if (method === 'PATCH') {
         if (state.readFailure) return reply({ message: 'Save failed' }, 400);
@@ -81,12 +82,37 @@ export async function stubApi(page: Page, shared?: StubState) {
       return reply(null);
     }
     if (endpoint === 'get_rota_people') return reply([{ id: employeeId, user_id: employeeId, full_name: 'Test Employee', primary_store_id: storeId, primary_role_id: null, store_ids: [storeId] }]);
+    const matchingShifts = () => state.shifts.filter(shift => [...url.searchParams].every(([key, filter]) => {
+      const [op, ...parts] = filter.split('.'); const value = parts.join('.');
+      if (!['eq', 'neq', 'gte', 'lte'].includes(op)) return true;
+      const actual = String(shift[key]);
+      return op === 'eq' ? actual === value : op === 'neq' ? actual !== value : op === 'gte' ? actual >= value : actual <= value;
+    }));
+    if (endpoint === 'move_rota_shift') {
+      if (state.shiftFailure) return reply({ message: state.shiftFailure }, 400);
+      const source = state.shifts.find(shift => shift.id === body?._shift_id)!;
+      const target = state.shifts.find(shift => shift.id === body?._swap_shift_id);
+      if (source.updated_at !== body?._expected_updated_at || (target && target.updated_at !== body?._swap_expected_updated_at)) return reply({ message: 'Shift has changed. Refresh the rota.' }, 400);
+      const original = { assigned_user_id: source.assigned_user_id, shift_date: source.shift_date };
+      Object.assign(source, { assigned_user_id: body?._assigned_user_id, shift_date: body?._shift_date });
+      if (target) Object.assign(target, original);
+      return reply(null);
+    }
     if (endpoint === 'shifts') {
-      if (method === 'PATCH') {
-        state.shifts = state.shifts.map(shift => ({ ...shift, ...body }));
-        return reply([{ id: shiftId }]);
+      if (method === 'POST') {
+        if (state.shiftFailure) return reply({ message: state.shiftFailure }, 400);
+        const rows = Array.isArray(rawBody) ? rawBody : [body ?? {}];
+        state.batches.push(rows);
+        state.shifts.push(...rows.map((row, index) => ({ ...row, id: `copied-${index}`, updated_at: '2026-10-05T12:00:00Z' })));
+        return reply(null, 201);
       }
-      return reply(state.shifts);
+      if (method === 'PATCH') {
+        if (state.shiftFailure) return reply({ message: state.shiftFailure }, 400);
+        const matches = matchingShifts();
+        matches.forEach(shift => Object.assign(shift, body));
+        return reply(matches.map(shift => ({ id: shift.id })));
+      }
+      return reply(matchingShifts());
     }
     if (endpoint === 'leave_requests') {
       if (method === 'POST') {

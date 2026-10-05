@@ -534,7 +534,7 @@ export default function Rota() {
 function DroppableCell({ id, disabled, onClick, className, children }: { id: string; disabled?: boolean; onClick?: () => void; className?: string; children: ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id, disabled });
   return (
-    <div ref={setNodeRef} className={`${s.cell} ${className ?? ''} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
+    <div ref={setNodeRef} data-rota-cell={id} className={`${s.cell} ${className ?? ''} ${isOver ? s.cellOver : ''}`} onClick={onClick}>
       {children}
     </div>
   );
@@ -543,7 +543,7 @@ function DroppableCell({ id, disabled, onClick, className, children }: { id: str
 function DraggableShift({ id, disabled, children }: { id: string; disabled?: boolean; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled });
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: 'none', cursor: disabled ? 'pointer' : 'grab' }}>
+    <div ref={setNodeRef} data-shift-id={id} {...attributes} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: 'none', cursor: disabled ? 'pointer' : 'grab' }}>
       {children}
     </div>
   );
