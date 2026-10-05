@@ -50,3 +50,21 @@ describe('notification reliability', () => {
     expect(result.current.loading).toBe(false);
   });
 });
+
+it.each(['focus', 'online'])('recovers missed notification updates on %s', async event => {
+  const { result } = renderHook(() => useNotifications('user'));
+  await waitFor(() => expect(result.current.unreadCount).toBe(1));
+  api.read = true;
+  await act(async () => { window.dispatchEvent(new Event(event)); });
+  await waitFor(() => expect(result.current.unreadCount).toBe(0));
+});
+
+it('recovers a failed notification load when connectivity returns', async () => {
+  api.offline = true;
+  const { result } = renderHook(() => useNotifications('user'));
+  await waitFor(() => expect(result.current.error).toBeTruthy());
+  api.offline = false;
+  await act(async () => { window.dispatchEvent(new Event('online')); });
+  await waitFor(() => expect(result.current.unreadCount).toBe(1));
+  expect(result.current.error).toBeNull();
+});

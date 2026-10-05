@@ -178,15 +178,16 @@ export async function notifyAvailableStaff(businessId: string, shifts: AffectedS
       eligible.set(candidate.user_id, list);
     }
   });
-  const rows = Array.from(eligible, ([user_id, available]) => ({
-    business_id: businessId, user_id, type: 'shift_open_for_pickup', title: 'Shifts open for pickup',
-    body: `Cover needed: ${available.map(shift => `${shift.shift_date} ${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}`).join(', ')}. Tap to view.`,
-    link: '/rota',
+  const recipients = Array.from(eligible, ([user_id, available]) => ({
+    user_id, shift_ids: available.map(shift => shift.id),
   }));
-  if (!rows.length) return 0;
-  const { error } = await supabase.from('notifications').insert(rows);
+  if (!recipients.length) return { sent: 0, alreadySent: 0 };
+  const { data, error } = await supabase.rpc('notify_coverage_staff', {
+    _business_id: businessId, _notifications: recipients,
+  });
   if (error) throw error;
-  return rows.length;
+  if (!data?.[0]) throw new Error('No notification confirmation received. Please retry.');
+  return { sent: data[0].sent_count, alreadySent: data[0].already_sent_count };
 }
 
 /**

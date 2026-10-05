@@ -4,7 +4,7 @@ import { fetchAffectedShifts, suggestReplacements, assignReplacement, openShifts
 import { OperationalImpactCard } from './OperationalImpactCard';
 const mocks = vi.hoisted(() => ({
   rows: {} as Record<string, Record<string, unknown>[]>, count: 0, failure: null as number | null,
-  business: { id: 'shop' },
+  business: { id: 'shop' }, notify: vi.fn(),
 }));
 vi.mock('@/features/auth/authContext', () => ({ useAuth: () => ({ business: mocks.business }) }));
 vi.mock('@/integrations/supabase/client', () => {
@@ -33,12 +33,13 @@ vi.mock('@/integrations/supabase/client', () => {
     };
     return chain;
   };
-  return { supabase: { from: query, rpc: query } };
+  return { supabase: { from: query, rpc: (name: string, args: unknown) => name === 'notify_coverage_staff' ? mocks.notify(args) : query(name) } };
 });
 const target = { id: 'target', store_id: 'store', role_id: null, shift_date: '2026-10-05', start_time: '09:00', end_time: '17:00', break_minutes: 30 };
 const shift = (id: string, assigned_user_id: string | null, status: string, patch = {}) => ({ ...target, id, business_id: 'shop', assigned_user_id, status, ...patch });
 beforeEach(() => {
   mocks.count = 0; mocks.failure = null;
+  mocks.notify.mockReset().mockResolvedValue({ data: [{ sent_count: 2, already_sent_count: 0 }], error: null });
   mocks.rows = {
     shifts: [shift('cancelled', 'absent', 'cancelled'), shift('assigned', 'absent', 'scheduled'), shift('open', null, 'unassigned'), shift('other-shop', 'absent', 'scheduled', { business_id: 'another' })],
     store_locations: [{ id: 'store', name: 'Shop' }], roles_catalog: [],
@@ -107,10 +108,35 @@ describe('coverage actions', () => {
       { user_id: 'first-day', business_id: 'shop', start_date: '2026-10-06', end_date: '2026-10-06', status: 'approved' },
       { user_id: 'second-day', business_id: 'shop', start_date: '2026-10-05', end_date: '2026-10-05', status: 'approved' },
     ];
-    expect(await notifyAvailableStaff('shop', [target, { ...target, id: 'next', shift_date: '2026-10-06' }])).toBe(2);
-    expect(mocks.rows.notifications.find(row => row.user_id === 'first-day')?.body).toContain('2026-10-05');
-    expect(mocks.rows.notifications.find(row => row.user_id === 'first-day')?.body).not.toContain('2026-10-06');
-    expect(mocks.rows.notifications.find(row => row.user_id === 'second-day')?.body).toContain('2026-10-06');
-    expect(mocks.rows.notifications.find(row => row.user_id === 'second-day')?.body).not.toContain('2026-10-05');
+    expect(await notifyAvailableStaff('shop', [target, { ...target, id: 'next', shift_date: '2026-10-06' }])).toEqual({ sent: 2, alreadySent: 0 });
+    expect(mocks.notify).toHaveBeenCalledWith({
+      _business_id: 'shop', _notifications: [
+        { user_id: 'first-day', shift_ids: ['target'] },
+        { user_id: 'second-day', shift_ids: ['next'] },
+      ],
+    });
+  });
+});
+
+describe('coverage notification confirmation', () => {
+  beforeEach(() => {
+    mocks.rows.get_rota_people = [{ user_id: 'available', full_name: 'Available', primary_store_id: 'store', primary_role_id: null }];
+    mocks.rows.shifts = [];
+  });
+  it('throws on a failed notification write so the manager can retry', async () => {
+    mocks.notify.mockResolvedValueOnce({ data: null, error: { message: 'Offline' } });
+    await expect(notifyAvailableStaff('shop', [target])).rejects.toMatchObject({ message: 'Offline' });
+    mocks.notify.mockResolvedValueOnce({ data: [{ sent_count: 0, already_sent_count: 1 }], error: null });
+    await expect(notifyAvailableStaff('shop', [target])).resolves.toEqual({ sent: 0, alreadySent: 1 });
+    expect(mocks.notify.mock.calls[0]).toEqual(mocks.notify.mock.calls[1]);
+  });
+  it('requires confirmation instead of claiming an empty response succeeded', async () => {
+    mocks.notify.mockResolvedValue({ data: [], error: null });
+    await expect(notifyAvailableStaff('shop', [target])).rejects.toThrow('No notification confirmation');
+  });
+  it('does not write notifications when nobody is eligible', async () => {
+    mocks.rows.get_rota_people = [];
+    expect(await notifyAvailableStaff('shop', [target])).toEqual({ sent: 0, alreadySent: 0 });
+    expect(mocks.notify).not.toHaveBeenCalled();
   });
 });

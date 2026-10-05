@@ -43,6 +43,23 @@ export function useNotifications(userId: string | undefined) {
     return () => { supabase.removeChannel(channel); };
   }, [userId, load]);
 
+  // Realtime can miss events while offline or suspended. Reconcile on return
+  // and periodically while visible so a dropped subscription cannot leave stale notices.
+  useEffect(() => {
+    if (!userId) return;
+    const reconcile = () => { if (document.visibilityState !== 'hidden') void load(); };
+    window.addEventListener('focus', reconcile);
+    window.addEventListener('online', reconcile);
+    document.addEventListener('visibilitychange', reconcile);
+    const timer = window.setInterval(reconcile, 60_000);
+    return () => {
+      window.removeEventListener('focus', reconcile);
+      window.removeEventListener('online', reconcile);
+      document.removeEventListener('visibilitychange', reconcile);
+      window.clearInterval(timer);
+    };
+  }, [userId, load]);
+
   const unreadCount = items.filter(n => !n.read_at).length;
 
   const saveRead = async (ids: string[]) => {

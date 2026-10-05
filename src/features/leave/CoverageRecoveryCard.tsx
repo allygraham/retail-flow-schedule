@@ -2,7 +2,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { errorMessage } from '@/lib/errors';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/common/Button';
 import { Avatar } from '@/components/common/Avatar';
 import { fmtDate } from '@/lib/datetime';
@@ -36,6 +36,8 @@ interface Props {
  */
 export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, onChanged }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const notificationLock = useRef(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fetchCoverage = useCallback(() => fetchAffectedShifts(businessId, userId, startDate, endDate), [businessId, userId, startDate, endDate]);
   const { data, loading, error, reload: load } = useAsyncData(fetchCoverage, 'Could not load coverage. Please try again.');
@@ -75,13 +77,17 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
   };
 
   const notifyAll = async () => {
-    if (!shifts.length) return;
+    if (!shifts.length || notificationLock.current) return;
+    notificationLock.current = true;
+    setNotificationError(null);
     setBusy(true);
     try {
-      const sent = await notifyAvailableStaff(businessId, shifts, [userId]);
-      toast.success(`Notified ${sent} available staff`);
-    } catch (e) { toast.error(errorMessage(e, 'Could not send notifications')); }
-    finally { setBusy(false); }
+      const result = await notifyAvailableStaff(businessId, shifts, [userId]);
+      toast.success(result.sent
+        ? `${result.sent} staff notified in the app${result.alreadySent ? ` · ${result.alreadySent} already notified` : ''}`
+        : result.alreadySent ? 'Staff have already been notified in the app' : 'No available staff to notify');
+    } catch (e) { setNotificationError(errorMessage(e, 'Could not confirm notifications. Retry safely without sending duplicates.')); }
+    finally { notificationLock.current = false; setBusy(false); }
   };
 
   if (error) return <div className={s.card}><DataLoadError message={error} retry={load} /></div>;
@@ -113,6 +119,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
           <Button size="sm" onClick={notifyAll} disabled={busy}>Notify available staff</Button>
         </div>
       </header>
+      {notificationError && <DataLoadError message={notificationError} retry={notifyAll} />}
       <ul className={s.shiftList}>
         {shifts.map(shift => {
           const isOpen = expanded === shift.id;
