@@ -1,3 +1,4 @@
+import * as Dialog from '@radix-ui/react-dialog';
 import { errorMessage } from '@/lib/errors';
 import { PageBoundary } from "@/components/common/PageBoundary";
 import { ReactNode, useEffect, useRef, useState } from 'react';
@@ -38,27 +39,23 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingLeave, setPendingLeave] = useState(0);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const navigatingRef = useRef(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
-  // Close on route change
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
-
-  // Lock body scroll & focus management
+  // Include query/hash navigation, and release the mobile focus trap on resize.
+  useEffect(() => { setMenuOpen(false); }, [location.key]);
   useEffect(() => {
-    if (menuOpen) {
-      const prev = document.body.style.overflow;
-      const hamburger = hamburgerRef.current;
-      document.body.style.overflow = 'hidden';
-      closeBtnRef.current?.focus();
-      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
-      window.addEventListener('keydown', onKey);
-      return () => {
-        document.body.style.overflow = prev;
-        window.removeEventListener('keydown', onKey);
-        hamburger?.focus();
-      };
-    }
-  }, [menuOpen]);
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = () => { if (desktop.matches) setMenuOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
+
+  const navigateFromMenu = () => {
+    navigatingRef.current = true;
+    setMenuOpen(false);
+  };
 
   // Manager-only pending leave badge. Live via realtime + initial fetch.
   useEffect(() => {
@@ -107,7 +104,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   });
 
   const renderNav = (onClick?: () => void) => (
-    <nav className={s.nav}>
+    <nav className={s.nav} aria-label="Primary navigation">
       {items.map(n => {
         const Icon = n.icon;
         return (
@@ -118,7 +115,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
             className={({isActive}) => `${s.link} ${isActive ? s.active : ''}`}
           >
             <div className={s.linkInner}>
-              <Icon size={ICON_SIZE} className={s.linkIcon} />
+              <Icon size={ICON_SIZE} className={s.linkIcon} aria-hidden="true" />
               <span>{n.label}</span>
             </div>
             {n.to === '/leave' && canManageLeave && pendingLeave > 0 && (
@@ -135,7 +132,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       <Avatar name={fullName} />
       <div className={s.userInfo}>
         <div className={s.userName}>{fullName ?? 'You'}</div>
-        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch (error) { toast.error(errorMessage(error, 'Could not sign out. Please try again.')); } }} className={s.signout}>Sign out</button>
+        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch (error) { toast.error(errorMessage(error, 'Could not sign out. Please try again.')); } }} type="button" className={s.signout}>Sign out</button>
       </div>
     </div>
   );
@@ -148,20 +145,19 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   );
 
   return (
+    <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
     <div className={`${s.shell} tenantTheme`} style={buildThemeStyle(theme)}>
+      <a className={s.skipLink} href="#main-content" onClick={() => mainRef.current?.focus()}>Skip to content</a>
       {/* Mobile top bar */}
       <header className={s.topbar}>
-        <button
+        <Dialog.Trigger asChild><button
           ref={hamburgerRef}
           type="button"
           className={s.hamburger}
           aria-label="Open menu"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-drawer"
-          onClick={() => setMenuOpen(true)}
         >
-          <Menu size={22} />
-        </button>
+          <Menu size={22} aria-hidden="true" />
+        </button></Dialog.Trigger>
         <div className={s.topbarBrand}><Logo to="/dashboard" size="sm" useBusinessLogo /></div>
         <NotificationsBell variant="mobile" />
       </header>
@@ -177,37 +173,37 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         {renderUser()}
       </aside>
 
-      {/* Mobile drawer */}
-      <div
-        className={`${s.backdrop} ${menuOpen ? s.backdropOpen : ''}`}
-        onClick={() => setMenuOpen(false)}
-        aria-hidden="true"
-      />
-      <aside
-        id="mobile-drawer"
-        className={`${s.drawer} ${menuOpen ? s.drawerOpen : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Main navigation"
-      >
-        <div className={s.drawerHead}>
-          <Logo to="/dashboard" size="sm" useBusinessLogo />
-          <button
-            ref={closeBtnRef}
-            type="button"
-            className={s.closeBtn}
-            aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
-          >
-            <X size={22} />
-          </button>
-        </div>
-        {renderBiz()}
-        {renderNav(() => setMenuOpen(false))}
-        {renderUser()}
-      </aside>
+      {/* Radix handles focus trapping, background accessibility and scroll locking. */}
+      <Dialog.Portal>
+        <Dialog.Overlay className={`${s.backdrop} ${s.backdropOpen}`} />
+        <Dialog.Content asChild aria-describedby={undefined}
+          onOpenAutoFocus={event => { event.preventDefault(); navigatingRef.current = false; closeBtnRef.current?.focus(); }}
+          onCloseAutoFocus={event => {
+            if (navigatingRef.current || window.matchMedia('(min-width: 768px)').matches) {
+              event.preventDefault();
+              mainRef.current?.focus();
+            }
+            navigatingRef.current = false;
+          }}>
+          <aside className={`${s.drawer} ${s.drawerOpen} tenantTheme`} style={buildThemeStyle(theme)}>
+            <Dialog.Title className={s.srOnly}>Main navigation</Dialog.Title>
+            <div className={s.drawerHead}>
+              <div onClick={navigateFromMenu}><Logo to="/dashboard" size="sm" useBusinessLogo /></div>
+              <Dialog.Close asChild>
+                <button ref={closeBtnRef} type="button" className={s.closeBtn} aria-label="Close menu">
+                  <X size={22} aria-hidden="true" />
+                </button>
+              </Dialog.Close>
+            </div>
+            {renderBiz()}
+            {renderNav(navigateFromMenu)}
+            {renderUser()}
+          </aside>
+        </Dialog.Content>
+      </Dialog.Portal>
 
-      <main className={s.main}><PageBoundary>{children ?? <Outlet />}</PageBoundary></main>
+      <main id="main-content" ref={mainRef} tabIndex={-1} className={s.main}><PageBoundary>{children ?? <Outlet />}</PageBoundary></main>
     </div>
+    </Dialog.Root>
   );
 }
