@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { estimateSsp, linkedSicknessStart } from './ssp';
+import { SSP_POLICIES, policiesForPeriod, policyForDate } from './sspPolicies';
 const base = { startDate: '2026-10-05', endDate: '2026-10-11', firstLinkedDate: '2026-10-05', averageWeeklyEarnings: 185, qualifyingDays: [1,2,3,4,5], priorPaidDays: 0 };
 describe('SSP 2026/27 estimates', () => {
   it('uses the weekly cap and pays the first qualifying day without waiting days', () => {
@@ -99,5 +100,43 @@ describe('SSP boundary regressions', () => {
     ];
     expect(linkedSicknessStart(current, history)).toBe('2026-08-10');
     expect(linkedSicknessStart(current, [...history].reverse())).toBe('2026-08-10');
+  });
+});
+
+// Fictional next-year rules exercise the engine; these are NEVER shipped policies.
+const futureFixture = { ...SSP_POLICIES[0], id: 'test-only', label: 'Test only', start: '2027-04-06', end: '2028-04-05', weeklyCap: 130 };
+const fixturePolicies = [...SSP_POLICIES, futureFixture];
+describe('versioned SSP policies', () => {
+  const crossing = { ...base, startDate: '2027-04-05', endDate: '2027-04-09', firstLinkedDate: '2027-04-05' };
+  it('selects the policy on each side of 5/6 April and reports both rates', () => {
+    expect(policyForDate('2027-04-05', fixturePolicies).id).toBe('2026-27');
+    expect(policyForDate('2027-04-06', fixturePolicies).id).toBe('test-only');
+    const result = estimateSsp(crossing, fixturePolicies);
+    expect(result.estimateGbp).toBe(128.65);
+    expect(result.policies.map(p => p.weeklyRate)).toEqual([123.25, 130]);
+    expect(result.weeks).toEqual([{ weekStart: '2027-04-04', payableDays: 5, amountGbp: 128.65 }]);
+  });
+  it('retains linked earnings across years and rounds a mixed week once', () => {
+    const result = estimateSsp({ ...crossing, averageWeeklyEarnings: 100.01 }, fixturePolicies);
+    expect(result.estimateGbp).toBe(80.01);
+    expect(result.policies.every(p => Math.abs(p.weeklyRate - 80.008) < 1e-8)).toBe(true);
+  });
+  it('does not reset the 28-week entitlement at the new year', () => {
+    const result = estimateSsp({ ...crossing, firstLinkedDate: '2026-04-06', priorPaidDays: 139 }, fixturePolicies);
+    expect(result.payableDays).toBe(1);
+    expect(result.excludedDays).toBe(4);
+    expect(result.estimateGbp).toBe(24.65);
+  });
+  it('rejects policy gaps even on non-qualifying days and overlapping policies', () => {
+    expect(() => estimateSsp(crossing, [...SSP_POLICIES, { ...futureFixture, start: '2027-04-07' }])).toThrow('No reviewed');
+    expect(() => policyForDate('2027-04-05', [...SSP_POLICIES, { ...futureFixture, start: '2027-04-05' }])).toThrow('No reviewed');
+  });
+  it('requires a transition implementation for changed calculation rules', () => {
+    expect(() => estimateSsp(crossing, [...SSP_POLICIES, { ...futureFixture, ruleVersion: 'different-rules' }])).toThrow('transition');
+    expect(() => estimateSsp(crossing, [...SSP_POLICIES, { ...futureFixture, earningsFraction: 0.9 }])).toThrow('transition');
+  });
+  it('never makes fictional future policies available to real estimates', () => {
+    expect(() => estimateSsp(crossing)).toThrow('No reviewed');
+    expect(policiesForPeriod(base.startDate, base.endDate).map(p => p.label)).toEqual(['2026/27']);
   });
 });

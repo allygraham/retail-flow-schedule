@@ -67,3 +67,17 @@ it('overlapping sickness history blocks calculation instead of double counting',
   fill(); expect(screen.getByRole('alert')).toHaveTextContent('overlaps');
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
+
+it('labels the reviewed policy and includes its year beside the weekly rate', () => {
+  show();
+  expect(screen.getByText('SSP estimate · 2026/27')).toBeInTheDocument();
+  fill();
+  expect(screen.getByRole('status')).toHaveTextContent('2026/27: £80.00');
+});
+it('labels unsupported future dates and explains the missing policy', () => {
+  render(<SspPanel startDate="2027-04-06" endDate="2027-04-07" history={[]} workingDays={[1,3,5]} />);
+  expect(screen.getByText('SSP estimate · Unsupported dates')).toBeInTheDocument();
+  fill();
+  expect(screen.getByRole('alert')).toHaveTextContent('No reviewed SSP policy for 2027-04-06');
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});

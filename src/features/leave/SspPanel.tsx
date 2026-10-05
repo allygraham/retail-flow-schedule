@@ -4,6 +4,7 @@ import { Button } from '@/components/common/Button';
 import { WEEKDAYS } from './leaveDays';
 import { estimateSsp, linkedSicknessStart, type SicknessPeriod } from './ssp';
 import s from './SspPanel.module.scss';
+import { policiesForPeriod } from './sspPolicies';
 interface Props {
   startDate: string; endDate: string; requestId?: string;
   history: SicknessPeriod[]; workingDays?: number[] | null;
@@ -29,9 +30,11 @@ export function SspPanel({ startDate, endDate, requestId, history, workingDays }
       result = estimateSsp({ startDate, endDate, firstLinkedDate: firstDate, averageWeeklyEarnings: Number(earnings), qualifyingDays: days, priorPaidDays: Number(paidDays) });
     } catch (failure) { error = (failure as Error).message; }
   }
+  let policyLabel = 'Unsupported dates';
+  try { policyLabel = policiesForPeriod(startDate, endDate).map(policy => policy.label).join(' · '); } catch { /* Calculation displays the actionable error. */ }
   const invalidate = () => setCalculated(false);
   return <div className={s.panel}>
-    <div className={s.head}><span className={s.eyebrow}>SSP estimate · 2026/27</span></div>
+    <div className={s.head}><span className={s.eyebrow}>SSP estimate · {policyLabel}</span></div>
     <p className={s.summary}>For full days of sickness with the same agreed qualifying weekdays throughout the linked series. Earnings must relate to the first absence, including any earlier absences not recorded in Lavoro.</p>
     <Field label={<label htmlFor="ssp-first">First full sick day in the linked series</label>}>
       <Input id="ssp-first" type="date" value={firstDate} onChange={e => { setFirstDate(e.target.value); invalidate(); }} />
@@ -51,7 +54,7 @@ export function SspPanel({ startDate, endDate, requestId, history, workingDays }
     {result && <div role="status">
       <dl className={s.grid}>
         <div><dt>Estimated SSP for this absence</dt><dd>£{result.estimateGbp.toFixed(2)}</dd></div>
-        <div><dt>Weekly rate</dt><dd>£{result.weeklyRate.toFixed(2)}</dd></div>
+        <div><dt>Weekly rate</dt><dd>{result.policies.map(policy => `${policy.label}: £${policy.weeklyRate.toFixed(2)}`).join(' / ')}</dd></div>
         <div><dt>Payable qualifying days</dt><dd>{result.payableDays}</dd></div>
         <div><dt>Payable from</dt><dd>{result.eligibleFrom ?? 'No payable days'}</dd></div>
       </dl>

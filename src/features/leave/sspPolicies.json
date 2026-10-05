@@ -1,0 +1,14 @@
+[
+  {
+    "id": "2026-27",
+    "label": "2026/27",
+    "start": "2026-04-06",
+    "end": "2027-04-05",
+    "weeklyCap": 123.25,
+    "maximumWeeks": 28,
+    "earningsFraction": 0.8,
+    "ruleVersion": "first-day-percentage-v1",
+    "source": "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027",
+    "reviewedOn": "2026-10-05"
+  }
+]

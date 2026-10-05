@@ -1,8 +1,7 @@
 import { workingDates } from './leaveDays';
 
-// HMRC 2026/27: https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
-// Partial-week amounts use the unrounded daily rate and round UP to whole pence.
-export const SSP_POLICY = { start: '2026-04-06', end: '2027-04-05', weeklyCap: 123.25, maximumWeeks: 28 } as const;
+import { SSP_POLICIES, policiesForPeriod, policyForDate, type SspPolicy } from './sspPolicies';
+
 const DAY = 86_400_000;
 function dateTime(value: string): number {
   const time = Date.parse(`${value}T00:00:00Z`);
@@ -32,29 +31,36 @@ export interface SspInput {
   averageWeeklyEarnings: number; qualifyingDays: readonly number[]; priorPaidDays: number;
 }
 export interface SspEstimate {
+  policies: { id: string; label: string; weeklyRate: number }[];
   weeklyRate: number; qualifyingDays: number; payableDays: number; excludedDays: number;
   eligibleFrom: string | null; estimateGbp: number; weeks: { weekStart: string; payableDays: number; amountGbp: number }[];
 }
-export function estimateSsp(input: SspInput): SspEstimate {
+export function estimateSsp(input: SspInput, policies: readonly SspPolicy[] = SSP_POLICIES): SspEstimate {
   const start = dateTime(input.startDate), end = dateTime(input.endDate), first = dateTime(input.firstLinkedDate);
   if (end < start || first > start) throw new Error('Check the sickness and linked-period dates.');
-  if (input.firstLinkedDate < SSP_POLICY.start || input.startDate < SSP_POLICY.start || input.endDate > SSP_POLICY.end) throw new Error('This absence needs a different tax-year or transition calculation. Check payroll before estimating SSP.');
+  const linkedPolicy = policyForDate(input.firstLinkedDate, policies);
+  const applicable = policiesForPeriod(input.firstLinkedDate, input.endDate, policies);
+  if (applicable.some(policy => policy.ruleVersion !== 'first-day-percentage-v1' || policy.maximumWeeks !== linkedPolicy.maximumWeeks || policy.earningsFraction !== linkedPolicy.earningsFraction)) throw new Error('This linked absence needs a reviewed transition calculation. Check payroll before estimating SSP.');
   if (!Number.isFinite(input.averageWeeklyEarnings) || input.averageWeeklyEarnings < 0) throw new Error('Enter valid average weekly earnings.');
   const q = input.qualifyingDays;
   if (!q.length || q.length > 7 || new Set(q).size !== q.length || q.some(d => !Number.isInteger(d) || d < 0 || d > 6)) throw new Error('Select the agreed qualifying weekdays.');
-  if (!Number.isInteger(input.priorPaidDays) || input.priorPaidDays < 0 || input.priorPaidDays > SSP_POLICY.maximumWeeks * q.length) throw new Error('Check the SSP qualifying days already paid in this linked series.');
+  if (!Number.isInteger(input.priorPaidDays) || input.priorPaidDays < 0 || input.priorPaidDays > linkedPolicy.maximumWeeks * q.length) throw new Error('Check the SSP qualifying days already paid in this linked series.');
   if (input.priorPaidDays > workingDates(input.firstLinkedDate, new Date(start - DAY).toISOString().slice(0, 10), q).length) throw new Error('Paid days cannot exceed the qualifying dates before this absence.');
-  const weeklyRate = Math.min(SSP_POLICY.weeklyCap, input.averageWeeklyEarnings * 0.8);
+  const rateFor = (policy: SspPolicy) => Math.min(policy.weeklyCap, input.averageWeeklyEarnings * linkedPolicy.earningsFraction);
+  const weeklyRate = rateFor(policyForDate(input.startDate, policies));
   const dates = workingDates(input.startDate, input.endDate, q);
-  const payable = dates.slice(0, SSP_POLICY.maximumWeeks * q.length - input.priorPaidDays);
-  const byWeek = new Map<string, number>();
+  const payable = dates.slice(0, linkedPolicy.maximumWeeks * q.length - input.priorPaidDays);
+  const byWeek = new Map<string, { payableDays: number; unroundedPence: number }>();
   for (const date of payable) {
     const day = new Date(`${date}T00:00:00Z`);
     const sunday = new Date(day.getTime() - day.getUTCDay() * DAY).toISOString().slice(0, 10);
-    byWeek.set(sunday, (byWeek.get(sunday) ?? 0) + 1);
+    const week = byWeek.get(sunday) ?? { payableDays: 0, unroundedPence: 0 };
+    week.payableDays++;
+    week.unroundedPence += rateFor(policyForDate(date, policies)) * 100 / q.length;
+    byWeek.set(sunday, week);
   }
-  const weeks = [...byWeek].map(([weekStart, payableDays]) => ({ weekStart, payableDays,
-    amountGbp: Math.ceil(weeklyRate * 100 * payableDays / q.length - 1e-8) / 100 }));
-  return { weeklyRate, qualifyingDays: dates.length, payableDays: payable.length, excludedDays: dates.length - payable.length,
+  const weeks = [...byWeek].map(([weekStart, week]) => ({ weekStart, payableDays: week.payableDays,
+    amountGbp: Math.ceil(week.unroundedPence - 1e-8) / 100 }));
+  return { policies: policiesForPeriod(input.startDate, input.endDate, policies).map(policy => ({ id: policy.id, label: policy.label, weeklyRate: rateFor(policy) })), weeklyRate, qualifyingDays: dates.length, payableDays: payable.length, excludedDays: dates.length - payable.length,
     eligibleFrom: payable[0] ?? null, estimateGbp: weeks.reduce((p, w) => p + Math.round(w.amountGbp * 100), 0) / 100, weeks };
 }
