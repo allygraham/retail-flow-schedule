@@ -66,3 +66,38 @@ describe('linked sickness history', () => {
     expect(() => linkedSicknessStart(current, [{ ...current, id: 'other', leave_type: 'sick', status: 'approved' }])).toThrow('overlaps');
   });
 });
+
+describe('SSP boundary regressions', () => {
+  it.each([[1, [1], 3451], [3, [1,3,5], 3451], [7, [0,1,2,3,4,5,6], 3451.01]])('caps a %i-day pattern at exactly 28 paid weeks', (count, pattern, amount) => {
+    const result = estimateSsp({ ...base, startDate: '2026-04-06', firstLinkedDate: '2026-04-06', endDate: '2027-04-05', qualifyingDays: pattern });
+    expect(result.payableDays).toBe(28 * count);
+    expect(result.excludedDays).toBe(result.qualifyingDays - 28 * count);
+    // Seven-day sickness starts midweek: the two partial weeks round up independently.
+    expect(result.estimateGbp).toBe(amount);
+  });
+  it('accepts the first supported day and rejects a series starting one day earlier', () => {
+    expect(estimateSsp({ ...base, startDate: '2026-04-06', endDate: '2026-04-06', firstLinkedDate: '2026-04-06' }).estimateGbp).toBe(24.65);
+    expect(() => estimateSsp({ ...base, firstLinkedDate: '2026-04-05' })).toThrow('transition');
+  });
+  it('retains unrounded low earnings until the partial-week amount is rounded to pence', () => {
+    const result = estimateSsp({ ...base, averageWeeklyEarnings: 100.01, qualifyingDays: [1,3,5], endDate: '2026-10-05' });
+    expect(result.weeklyRate).toBeCloseTo(80.008);
+    expect(result.estimateGbp).toBe(26.67);
+  });
+  it('does not consume entitlement for non-qualifying days before the next payable day', () => {
+    const result = estimateSsp({ ...base, startDate: '2026-11-07', endDate: '2026-11-09', firstLinkedDate: '2026-04-06', priorPaidDays: 139 });
+    expect(result.payableDays).toBe(1); expect(result.eligibleFrom).toBe('2026-11-09'); expect(result.estimateGbp).toBe(24.65);
+  });
+  it('links unsorted prior absences without including future, non-sick or pending records', () => {
+    const current = { id: 'current', start_date: '2026-11-27', end_date: '2026-11-28' };
+    const history = [
+      { start_date: '2026-10-01', end_date: '2026-10-01', leave_type: 'sick', status: 'approved' },
+      { start_date: '2026-12-01', end_date: '2026-12-02', leave_type: 'sick', status: 'approved' },
+      { start_date: '2026-08-10', end_date: '2026-08-12', leave_type: 'sick', status: 'approved' },
+      { start_date: '2026-07-01', end_date: '2026-07-02', leave_type: 'sick', status: 'pending' },
+      { start_date: '2026-07-01', end_date: '2026-07-02', leave_type: 'annual', status: 'approved' },
+    ];
+    expect(linkedSicknessStart(current, history)).toBe('2026-08-10');
+    expect(linkedSicknessStart(current, [...history].reverse())).toBe('2026-08-10');
+  });
+});

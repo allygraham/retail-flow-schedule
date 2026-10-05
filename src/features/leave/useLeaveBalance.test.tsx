@@ -79,3 +79,37 @@ describe('annual leave balance integration', () => {
   });
 
 });
+
+it('allocates approved leave across calendar years and reloads after year rollover', async () => {
+  mocks.profile = { data: { annual_leave_entitlement: 28, working_days: [1,2,3,4,5] }, error: null };
+  mocks.leaves = { data: [{ start_date: '2026-12-28', end_date: '2027-01-03', leave_type: 'annual', status: 'approved', charged_working_days: [1,2,3,4,5] }], error: null };
+  const { result, rerender } = renderHook(() => useLeaveBalance());
+  await waitFor(() => expect(result.current.balance?.taken).toBe(4));
+  vi.setSystemTime(new Date('2027-01-01T12:00:00Z')); rerender();
+  await waitFor(() => expect(result.current.balance).toEqual({ entitlement: 28, taken: 1, pending: 0, remaining: 27, year: 2027 }));
+});
+
+it('cancelling approved leave restores entitlement while pending cancellation removes only pending days', async () => {
+  const { result } = renderHook(() => useLeaveBalance());
+  await waitFor(() => expect(result.current.balance?.remaining).toBe(17));
+  mocks.leaves = { data: [
+    { start_date: '2026-10-05', end_date: '2026-10-11', leave_type: 'annual', status: 'cancelled', charged_working_days: [1,3,5] },
+    { start_date: '2026-10-12', end_date: '2026-10-18', leave_type: 'annual', status: 'pending' },
+  ], error: null };
+  await act(async () => { await result.current.reload(); });
+  expect(result.current.balance).toMatchObject({ taken: 0, remaining: 20, pending: 3 });
+  mocks.leaves = { data: [], error: null };
+  await act(async () => { await result.current.reload(); });
+  expect(result.current.balance).toMatchObject({ taken: 0, remaining: 20, pending: 0 });
+});
+
+it('clears a previously valid balance on reload failure and recovers on retry', async () => {
+  const { result } = renderHook(() => useLeaveBalance());
+  await waitFor(() => expect(result.current.balance?.taken).toBe(3));
+  mocks.leaves = { data: null, error: { message: 'Offline' } };
+  await act(async () => { await result.current.reload(); });
+  expect(result.current.balance).toBeNull(); expect(result.current.error).toBeTruthy();
+  mocks.leaves = { data: [], error: null };
+  await act(async () => { await result.current.reload(); });
+  expect(result.current.balance?.remaining).toBe(20); expect(result.current.error).toBeNull();
+});
