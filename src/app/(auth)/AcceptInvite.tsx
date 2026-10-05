@@ -1,5 +1,5 @@
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
@@ -26,6 +26,7 @@ export default function AcceptInvite() {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
 
+  const submitting = useRef(false);
   const [invite, setInvite] = useState<InviteRow | null>(null);
   const [lookupErr, setLookupErr] = useState<string | null>(null);
   const [lookupDone, setLookupDone] = useState(false);
@@ -39,6 +40,12 @@ export default function AcceptInvite() {
 
   useEffect(() => {
     let cancelled = false;
+    setLookupDone(false);
+    setLookupErr(null);
+    setInvite(null);
+    setErr(null);
+    setConfirmationPending(false);
+    setPassword('');
     (async () => {
       if (!token) { setLookupErr('Missing invite token'); setLookupDone(true); return; }
       const { data, error } = await supabase.rpc('get_invitation_by_token', { _token: token });
@@ -54,17 +61,18 @@ export default function AcceptInvite() {
   }, [token]);
 
   const expired = invite && (invite.status === 'expired' || new Date(invite.expires_at) < new Date());
-  const usable = invite && invite.status === 'pending' && !expired;
+  const usable = invite && ((invite.status === 'pending' && !expired) || invite.status === 'accepted');
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErr(null);
     if (!invite) return;
-    if (authLoading || !usable) return;
+    if (authLoading || !usable || submitting.current) return;
     if (user && user.email?.toLowerCase() !== invite.email.toLowerCase()) {
       setErr(`Sign in with ${invite.email} to accept this invitation.`);
       return;
     }
+    submitting.current = true;
     setLoading(true);
     try {
       if (!user) {
@@ -90,7 +98,7 @@ export default function AcceptInvite() {
       nav('/dashboard', { replace: true });
     } catch {
       setErr('Could not accept your invitation. Please try again.');
-    } finally { setLoading(false); }
+    } finally { submitting.current = false; setLoading(false); }
   };
 
   if (!lookupDone || authLoading) {
@@ -118,7 +126,10 @@ export default function AcceptInvite() {
           <>
             <h1 className={s.title}>Already accepted</h1>
             <p className={s.sub}>This invite has already been used. Sign in with your email and password.</p>
-            <div className={s.foot}><Link to="/login">Sign in</Link></div>
+            {user && user.email?.toLowerCase() === invite.email.toLowerCase() ? <form onSubmit={onSubmit}>
+              {err && <div className={s.err} role="alert">{err}</div>}
+              <Button type="submit" full loading={loading}>Open workspace</Button>
+            </form> : <div className={s.foot}><Link to={loginUrl}>Sign in</Link></div>}
           </>
         ) : invite.status === 'revoked' ? (
           <>
@@ -135,8 +146,14 @@ export default function AcceptInvite() {
             <h1 className={s.title}>Join {invite.business_name}</h1>
             <p className={s.sub}>You're being added as a <strong>{invite.role}</strong>. Confirm your account to join the team.</p>
             {confirmationPending && !user ? <p className={s.sub} role="status">Check your email for a confirmation link, then return here to join the team. If you already have an account, sign in below.</p> : user && user.email?.toLowerCase() !== invite.email.toLowerCase() ? <>
+              {err && <div className={s.err} role="alert">{err}</div>}
               <p className={s.err}>This invitation is for {invite.email}. You are signed in as {user.email}.</p>
-              <Button full onClick={async () => { await signOut(); nav(loginUrl); }}>Sign in with invited email</Button>
+              <Button full loading={loading} onClick={async () => {
+                setErr(null); setLoading(true);
+                try { await signOut(); nav(loginUrl); }
+                catch (error) { setErr(error instanceof Error ? error.message : 'Could not sign out. Please try again.'); }
+                finally { setLoading(false); }
+              }}>Sign in with invited email</Button>
             </> : <form onSubmit={onSubmit} className={s.form}>
               <Field label="Email">
                 <Input type="email" value={invite.email} disabled readOnly />
@@ -148,7 +165,7 @@ export default function AcceptInvite() {
                 <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
               </Field>
               </>}
-              {err && <div className={s.err}>{err}</div>}
+              {err && <div className={s.err} role="alert">{err}</div>}
               <Button type="submit" full loading={loading}>{user ? 'Join team' : 'Activate account'}</Button>
             </form>}
             <div className={s.foot}>

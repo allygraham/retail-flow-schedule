@@ -69,7 +69,7 @@ describe('employee invitation onboarding', () => {
     mocks.rpc.mockResolvedValue({ data: [{ ...invitation, status: 'accepted' }], error: null });
     render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
     await screen.findByRole('heading', { name: 'Already accepted' });
-    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', expect.stringContaining('/login?next='));
   });
   it('shows acceptance failures without redirecting or hiding them', async () => {
     mocks.auth.user = { id: 'confirmed', email: invitation.email };
@@ -80,4 +80,63 @@ describe('employee invitation onboarding', () => {
     expect(mocks.nav).not.toHaveBeenCalled();
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
+});
+
+describe('invitation edge cases', () => {
+  it.each(['revoked', 'expired'])('blocks %s invitations before account creation', async (status) => {
+    mocks.rpc.mockResolvedValue({ data: [{ ...invitation, status }], error: null });
+    render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
+    await screen.findByRole('heading', { name: status === 'revoked' ? 'Invite revoked' : 'Invite expired' });
+    expect(screen.queryByRole('button', { name: 'Activate account' })).toBeNull();
+    expect(mocks.signUp).not.toHaveBeenCalled();
+  });
+  it('blocks a pending invitation whose expiry has passed', async () => {
+    mocks.rpc.mockResolvedValue({ data: [{ ...invitation, expires_at: '2000-01-01' }], error: null });
+    render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Invite expired' });
+  });
+  it('reports failed account switching and retains the invitation', async () => {
+    mocks.auth.user = { id: 'wrong', email: 'other@example.com' };
+    mocks.signOut.mockRejectedValue(new Error('Could not sign out. Please try again.'));
+    await showInvite();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with invited email' }));
+    await screen.findByRole('alert');
+    expect(mocks.nav).not.toHaveBeenCalled();
+    mocks.signOut.mockResolvedValue(undefined);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with invited email' }));
+    await waitFor(() => expect(mocks.nav).toHaveBeenCalledWith(expect.stringContaining('/login?next=')));
+  });
+  it('resumes after email confirmation in the same page without another signup', async () => {
+    mocks.signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const view = render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Join Test shop' });
+    signup(); await screen.findByRole('status');
+    mocks.auth.user = { id: 'confirmed', email: 'EMPLOYEE@example.com' };
+    view.rerender(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Join team' }));
+    await waitFor(() => expect(mocks.nav).toHaveBeenCalledWith('/dashboard', { replace: true }));
+    expect(mocks.signUp).toHaveBeenCalledTimes(1);
+  });
+  it('can retry acceptance after a failed response', async () => {
+    mocks.auth.user = { id: 'confirmed', email: invitation.email };
+    let attempts = 0;
+    mocks.rpc.mockImplementation((name: string) => Promise.resolve(name === 'get_invitation_by_token'
+      ? { data: [invitation], error: null }
+      : ++attempts === 1 ? { data: null, error: { message: 'Network failed' } } : { data: 'business', error: null }));
+    await showInvite();
+    fireEvent.click(screen.getByRole('button', { name: 'Join team' }));
+    await screen.findByRole('alert');
+    fireEvent.click(screen.getByRole('button', { name: 'Join team' }));
+    await waitFor(() => expect(mocks.nav).toHaveBeenCalled());
+    expect(attempts).toBe(2);
+  });
+});
+
+it('opens the invited workspace from an already accepted link for the signed-in recipient', async () => {
+  mocks.auth.user = { id: 'confirmed', email: invitation.email };
+  mocks.rpc.mockImplementation((name: string) => Promise.resolve({ data: name === 'get_invitation_by_token' ? [{ ...invitation, status: 'accepted' }] : 'business', error: null }));
+  render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Open workspace' }));
+  await waitFor(() => expect(mocks.refresh).toHaveBeenCalledWith('business'));
+  expect(mocks.nav).toHaveBeenCalledWith('/dashboard', { replace: true });
 });
