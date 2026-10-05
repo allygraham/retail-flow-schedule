@@ -1,4 +1,3 @@
-import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AccountLoadError } from '@/features/auth/AccountLoadError';
@@ -63,15 +62,14 @@ export default function Signup() {
     nav('/dashboard', { replace: true });
   };
 
-  if (authLoading) return <div className={s.page}><div className={s.card}><LoadingSkeleton layout="form" label="Loading account" /></div></div>;
-  if (accountError) return <div className={s.page}><div className={s.card}><AccountLoadError /></div></div>;
-  if (user && business) return <Navigate to="/dashboard" replace />;
+  if (!authLoading && !accountError && user && business) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className={s.page}>
       <div className={s.card}>
         <Logo />
         <h1 className={s.title}>{confirmationPending && !user ? 'Check your email' : user ? 'Finish creating your workspace' : 'Create your workspace'}</h1>
+        {accountError && <AccountLoadError />}
         {confirmationPending && !user ? (
           <p className={s.sub} role="status">Check {email} for a confirmation link. Confirm your email, then sign in to finish creating your workspace.</p>
         ) : <>
@@ -82,7 +80,7 @@ export default function Signup() {
           {!user && <Field label="Work email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>}
           {!user && <Field label="Password" hint="At least 8 characters"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>}
           {err && <div className={s.err}>{err}</div>}
-          <Button type="submit" full loading={loading}>Create workspace</Button>
+          <Button type="submit" full loading={loading} disabled={authLoading || !!accountError}>Create workspace</Button>
         </form>
         </>}
         <div className={s.foot}>

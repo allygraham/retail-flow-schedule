@@ -106,6 +106,8 @@ export default function AcceptInvite() {
       <div className={s.page}>
         <div className={s.card}>
           <Logo />
+          <h1 className={s.title}>{invite ? `Join ${invite.business_name}` : 'Join your team'}</h1>
+          <p className={s.sub}>Confirm your account to join the team.</p>
           <LoadingSkeleton layout="form" label="Loading invitation" />
         </div>
       </div>

@@ -55,3 +55,15 @@ describe('workspace onboarding', () => {
     expect(mocks.refresh).toHaveBeenCalled();
   });
 });
+
+it('keeps the signup template visible while checking the account', () => {
+  mocks.auth.loading = true;
+  renderSignup();
+  expect(screen.getByRole('heading', { name: 'Create your workspace' })).toBeVisible();
+  expect(screen.getAllByRole('textbox')).toHaveLength(3);
+  expect(screen.getByRole('button', { name: 'Create workspace' })).toBeDisabled();
+  expect(screen.queryByRole('status', { name: 'Loading account' })).toBeNull();
+  fireEvent.submit(screen.getByRole('button', { name: 'Create workspace' }).closest('form')!);
+  expect(mocks.signUp).not.toHaveBeenCalled();
+  expect(mocks.rpc).not.toHaveBeenCalled();
+});
