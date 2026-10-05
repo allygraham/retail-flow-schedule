@@ -21,6 +21,12 @@ test('form dialog is named, traps focus and restores the opener on Escape', asyn
   await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(dialog.getByRole('button', { name: 'Create invite' })).toBeFocused();
+  for (const key of ['Tab', 'Shift+Tab']) {
+    for (let step = 0; step < 24; step++) {
+      await page.keyboard.press(key);
+      expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
+    }
+  }
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(opener).toBeFocused();
@@ -48,6 +54,11 @@ test('date-picker portal remains interactive and Escape closes only the calendar
   const calendar = page.getByRole('dialog', { name: 'Choose date', exact: true });
   await expect(calendar).toBeVisible();
   expect(await calendar.evaluate(el => el.parentElement === document.body)).toBe(true);
+  await expect(calendar).toBeInViewport();
+  expect(await calendar.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+  })).toBe(true);
   expect(await calendar.evaluate(el => el.contains(document.activeElement))).toBe(true);
   await calendar.getByRole('button', { name: /next month/i }).click();
   await page.keyboard.press('Escape');
@@ -76,8 +87,21 @@ test('short mobile dialogs scroll their fields while keeping the footer accessib
   expect(bounds!.height).toBeLessThanOrEqual(480);
   await expect(dialog.getByRole('button', { name: 'Create invite' })).toBeInViewport();
   const fields = dialog.locator('textarea');
+  const pageScroll = await page.evaluate(() => window.scrollY);
   await fields.scrollIntoViewIfNeeded();
   await expect(fields).toBeInViewport();
+  expect(await fields.evaluate(el => {
+    let parent = el.parentElement;
+    while (parent && parent.getAttribute('role') !== 'dialog') {
+      if (parent.scrollHeight > parent.clientHeight && parent.scrollTop > 0) return true;
+      parent = parent.parentElement;
+    }
+    return false;
+  })).toBe(true);
+  await fields.fill('Mobile scroll check');
+  await expect(fields).toHaveValue('Mobile scroll check');
+  await expect(dialog.getByRole('button', { name: 'Create invite' })).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(pageScroll);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   expect(await dialog.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
   await page.screenshot({ path: test.info().outputPath('short-dialog.png') });

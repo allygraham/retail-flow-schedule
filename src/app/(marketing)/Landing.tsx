@@ -25,11 +25,6 @@ export default function Landing() {
         </p>
         <div className={s.cta}>
           <Link to="/signup"><Button size="lg">Start free trial</Button></Link>
-          <Link to="/login"><Button size="lg" variant="outline">Try the demo</Button></Link>
-        </div>
-        <div className={s.demoHint}>
-          Demo logins: <code>owner@lavoro.demo</code> · <code>manager@lavoro.demo</code> · <code>employee@lavoro.demo</code>
-          <br/>Password: <code>LavoroDemo123!</code>
         </div>
       </section>
 

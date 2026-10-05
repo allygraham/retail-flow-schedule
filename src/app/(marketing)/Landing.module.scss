@@ -27,11 +27,6 @@
 .lead { color: $text-soft; font-size: $fs-lg; line-height: $lh-normal; max-width: 640px; margin: 0 auto; }
 .cta { display: flex; gap: $sp-3; justify-content: center; margin-top: $sp-7; flex-wrap: wrap; }
 
-.demoHint {
-  margin-top: $sp-6; font-size: $fs-xs; color: $text-muted;
-  code { background: $ink-100; padding: 2px 6px; border-radius: 4px; font-family: $font-mono; }
-}
-
 .features {
   max-width: $container; margin: 0 auto;
   padding: $sp-9 $sp-6;
