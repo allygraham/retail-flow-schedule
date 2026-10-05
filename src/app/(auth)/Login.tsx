@@ -43,7 +43,6 @@ export default function Login() {
         </form>
         <div className={s.foot}>
           <Link to="/forgot-password">Forgot password?</Link>
-          <span>New here? <Link to="/signup">Create an account</Link></span>
         </div>
       </div>
     </div>
