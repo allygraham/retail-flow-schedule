@@ -1,0 +1,49 @@
+@use '@/styles/tokens' as *;
+
+.error {
+  display: grid;
+  place-items: center;
+  min-height: 70svh;
+  padding: clamp(32px, 8vw, 96px) 20px;
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba($brand-500, .28), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba($accent-500, .12), transparent 50%),
+    $ink-950;
+  color: $ink-50;
+  border-radius: $r-xl;
+}
+.fullPage { min-height: 100svh; border-radius: 0; }
+.content {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  h1 {
+    margin: 12px 0 16px;
+    font-family: $font-display;
+    font-size: clamp(26px, 5vw, 36px);
+    font-weight: $fw-bold;
+    line-height: 1.2;
+    letter-spacing: -.025em;
+  }
+  button { min-height: 48px; margin-top: 28px; }
+}
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 24px;
+  border-radius: 24px;
+  background: rgba($brand-400, .15);
+  border: 1px solid rgba($brand-300, .25);
+  color: $brand-200;
+}
+.eyebrow {
+  margin: 0;
+  color: $brand-200;
+  font-size: $fs-xs;
+  font-weight: $fw-semibold;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.message { margin: 0; color: $ink-300; line-height: 1.65; }

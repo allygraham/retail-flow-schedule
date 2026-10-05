@@ -39,7 +39,7 @@ const App = () => (
         <AuthProvider>
           <BrandingProvider>
           <PageMetadata />
-          <PageBoundary>
+          <PageBoundary fullPage>
           <Routes>
             {/* Public marketing */}
             <Route path="/" element={<Landing />} />
