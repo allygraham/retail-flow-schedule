@@ -1,4 +1,4 @@
-import { signOutChecked } from './signOut';
+import { signOutChecked, SignOutError } from './signOut';
 import { Ctx } from './authContext';
 import { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
@@ -7,6 +7,7 @@ import type { AppRole, Business } from '@/types/domain';
 import { hasPermission, type AppPermission } from './permissions';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [signOutNotice, setSignOutNotice] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const applySession = (s: Session | null) => {
       if (disposed) return;
       setSession(s); setUser(s?.user ?? null);
+      if (s?.user) setSignOutNotice(null);
       // Invalidate earlier account requests immediately, before the deferred load.
       const request = ++tenancyRequest.current;
       setBusiness(null); setRole(null); setFullName(null); setError(null);
@@ -93,10 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { disposed = true; requests.current++; sub.subscription.unsubscribe(); };
   }, [loadTenancy]);
 
-  const signOut = signOutChecked;
+  const signOut = async () => {
+    setSignOutNotice(null);
+    try { await signOutChecked(); }
+    catch (error) {
+      if (error instanceof SignOutError && error.localSignedOut) setSignOutNotice(error.message);
+      throw error;
+    }
+  };
 
   return (
-    <Ctx.Provider value={{ loading, error, session, user, fullName, business, role, hasPermission: can, signOut, refresh }}>
+    <Ctx.Provider value={{ loading, error, session, user, fullName, business, role, hasPermission: can, signOut, signOutNotice, refresh }}>
       {children}
     </Ctx.Provider>
   );

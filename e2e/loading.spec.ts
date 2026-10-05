@@ -56,9 +56,11 @@ test('public login defers the signed-in shell until entering the app', async ({ 
   await page.goto('/login');
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   expect(shellRequests).toHaveLength(0);
+  await expect(page.getByRole('region', { name: /Notifications/ })).toHaveCount(0);
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: /Good/ })).toBeVisible();
   expect(shellRequests.length).toBeGreaterThan(0);
+  await expect(page.getByRole('region', { name: /Notifications/ })).toHaveCount(1);
 });
 
 test('loading a new page module preserves the existing navigation', async ({ page }) => {

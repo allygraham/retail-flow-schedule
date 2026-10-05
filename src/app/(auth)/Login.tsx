@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/features/auth/authContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/common/Button';
@@ -8,6 +9,7 @@ import s from './Auth.module.scss';
 
 export default function Login() {
   const nav = useNavigate();
+  const { signOutNotice } = useAuth();
   const [params] = useSearchParams();
   const next = params.get('next');
   const destination = next?.startsWith('/accept-invite?') ? next : '/dashboard';
@@ -42,6 +44,7 @@ export default function Login() {
         <Logo /> 
         <h1 className={s.title}>Welcome back</h1>
         <p className={s.sub}>Sign in to manage your rotas.</p>
+        {signOutNotice && <div className={s.err} role="alert">{signOutNotice}</div>}
         <form onSubmit={onSubmit} className={s.form}>
           <Field label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>
           <Field label="Password"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>

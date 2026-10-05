@@ -39,7 +39,7 @@ test('remote logout failure reports local logout accurately and returns to login
   await authenticate(page); const state = await stubApi(page); state.logoutFailure = true;
   await page.goto('/rota');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByText(/You are signed out on this device, but other sessions/)).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('You are signed out on this device, but other sessions');
   await expect(page).toHaveURL(/\/login$/);
 });
 test('successful app logout returns directly to login', async ({ page }) => {

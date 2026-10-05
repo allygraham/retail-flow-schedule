@@ -1,5 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { errorMessage } from '@/lib/errors';
+import { SignOutError } from '@/features/auth/signOut';
+import { Toaster as Sonner } from '@/components/ui/sonner';
 import { PageBoundary } from "@/components/common/PageBoundary";
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -132,7 +134,12 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       <Avatar name={fullName} />
       <div className={s.userInfo}>
         <div className={s.userName}>{fullName ?? 'You'}</div>
-        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch (error) { toast.error(errorMessage(error, 'Could not sign out. Please try again.')); } }} type="button" className={s.signout}>Sign out</button>
+        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch (error) {
+          const message = errorMessage(error, 'Could not sign out. Please try again.');
+          if (error instanceof SignOutError && error.localSignedOut) {
+            nav('/login', { replace: true });
+          } else { toast.error(message); }
+        } }} type="button" className={s.signout}>Sign out</button>
       </div>
     </div>
   );
@@ -146,6 +153,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
 
   return (
     <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
+    <Sonner />
     <div className={`${s.shell} tenantTheme`} style={buildThemeStyle(theme)}>
       <a className={s.skipLink} href="#main-content" onClick={() => mainRef.current?.focus()}>Skip to content</a>
       {/* Mobile top bar */}

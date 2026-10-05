@@ -13,6 +13,7 @@ interface TenancyState {
   role: AppRole | null;
   hasPermission: (permission: AppPermission) => boolean;
   signOut: () => Promise<void>;
+  signOutNotice?: string | null;
   refresh: (businessId?: string) => Promise<void>;
 }
 
