@@ -23,6 +23,8 @@
     "vitest.config.ts",
     "tailwind.config.ts",
     "playwright.config.ts",
-    "e2e/**/*.ts"
+    "e2e/**/*.ts",
+    "playwright.performance.config.ts",
+    "performance/**/*.ts"
   ]
 }

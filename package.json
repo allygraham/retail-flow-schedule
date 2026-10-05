@@ -19,7 +19,8 @@
     "check:deploy": "npm run check:ssp && npm run audit:security && npm run lint && npm run test && npm run test:db && npm run typecheck && npm run build",
     "audit:security": "node scripts/audit-security.mjs",
     "test:e2e": "playwright test",
-    "check:ssp": "node --test scripts/check-ssp-policies.test.mjs && node scripts/check-ssp-policies.mjs"
+    "check:ssp": "node --test scripts/check-ssp-policies.test.mjs && node scripts/check-ssp-policies.mjs",
+    "test:performance": "VITE_SUPABASE_URL=https://example.supabase.co VITE_SUPABASE_ANON_KEY=browser-test-key npm run build && playwright test --config playwright.performance.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

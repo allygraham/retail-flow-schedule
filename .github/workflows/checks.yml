@@ -31,6 +31,13 @@ jobs:
       - run: npm run check:deploy
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm run test:performance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-performance-results
+          path: performance-results/
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
