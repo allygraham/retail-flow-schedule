@@ -8,7 +8,7 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
 import { BrandingProvider } from "@/features/branding/BrandingProvider";
 import { PageMetadata } from "@/features/branding/PageMetadata";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
-import AppShell from "@/app/(app)/AppShell";
+const AppShell = lazy(() => import("@/app/(app)/AppShell"));
 import Signup from "@/app/(auth)/Signup";
 import ForgotPassword from "@/app/(auth)/ForgotPassword";
 import ResetPassword from "@/app/(auth)/ResetPassword";

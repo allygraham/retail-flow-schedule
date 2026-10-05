@@ -45,3 +45,43 @@ test('app navigation stays mounted while account and page data load', async ({ p
   await expect(page.getByRole('heading', { name: 'Your people' })).toBeVisible();
   expect(await shell?.evaluate(el => el.isConnected)).toBe(true);
 });
+
+
+test('public login defers the signed-in shell until entering the app', async ({ page }) => {
+  await authenticate(page); await stubApi(page);
+  const shellRequests: string[] = [];
+  page.on('request', request => {
+    if (decodeURIComponent(request.url()).includes('/AppShell.tsx')) shellRequests.push(request.url());
+  });
+  await page.goto('/login');
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  expect(shellRequests).toHaveLength(0);
+  await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { name: /Good/ })).toBeVisible();
+  expect(shellRequests.length).toBeGreaterThan(0);
+});
+
+test('loading a new page module preserves the existing navigation', async ({ page }) => {
+  await authenticate(page); await stubApi(page);
+  await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { name: /Good/ })).toBeVisible();
+  const navigation = page.getByRole('navigation').filter({ visible: true });
+  const shell = await navigation.elementHandle();
+  let release!: () => void;
+  const ready = new Promise<void>(resolve => { release = resolve; });
+  let requested!: () => void;
+  const moduleRequested = new Promise<void>(resolve => { requested = resolve; });
+  await page.route(url => decodeURIComponent(url.pathname).endsWith('/Team.tsx'), async route => {
+    requested();
+    await ready; await route.continue();
+  });
+  await navigation.getByRole('link', { name: 'Team', exact: true }).click();
+  try {
+    await moduleRequested;
+    await expect(page.getByRole('heading', { name: /Good/ })).toBeVisible();
+    await expect(navigation.getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
+    expect(await shell?.evaluate(el => el.isConnected)).toBe(true);
+  } finally { release(); }
+  await expect(page.getByRole('heading', { name: 'Your people' })).toBeVisible();
+  expect(await shell?.evaluate(el => el.isConnected)).toBe(true);
+});
