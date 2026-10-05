@@ -89,6 +89,15 @@ export async function stubApi(page: Page, shared?: StubState) {
       const actual = String(shift[key]);
       return op === 'eq' ? actual === value : op === 'neq' ? actual !== value : op === 'gte' ? actual >= value : actual <= value;
     }));
+    if (endpoint === 'release_coverage_shifts') {
+      const versions = body?._shifts as { id: string; updated_at: string }[];
+      const current = versions.map(version => state.shifts.find(shift => shift.id === version.id));
+      if (current.some((shift, index) => !shift || shift.updated_at !== versions[index].updated_at || shift.status === 'cancelled')) {
+        return reply({ message: 'Coverage has changed. Refresh coverage and try again.' }, 400);
+      }
+      current.forEach(shift => Object.assign(shift!, { assigned_user_id: null, status: 'unassigned', updated_at: '2026-10-05T14:00:00Z' }));
+      return reply(current.length);
+    }
     if (endpoint === 'move_rota_shift') {
       if (state.shiftFailure) return reply({ message: state.shiftFailure }, 400);
       const source = state.shifts.find(shift => shift.id === body?._shift_id)!;

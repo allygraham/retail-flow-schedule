@@ -869,6 +869,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      release_coverage_shifts: {
+        Args: { _business_id: string; _shifts: Json }
+        Returns: number
+      }
+      has_active_team_email: {
+        Args: { _business_id: string; _email: string }
+        Returns: boolean
+      }
+
       notify_coverage_staff: {
         Args: { _business_id: string; _notifications: Json }
         Returns: { sent_count: number; already_sent_count: number }[]

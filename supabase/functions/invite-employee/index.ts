@@ -84,31 +84,23 @@ Deno.serve(async (req) => {
       return json({ error: 'Only the owner can invite another owner' }, 403);
     }
 
-    // Block: already a member of this business with this email.
-    const { data: existingUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const existingUser = existingUsers?.users.find(
-      (u) => (u.email ?? '').toLowerCase() === email,
-    );
-    if (existingUser) {
-      const { data: mem } = await admin
-        .from('memberships')
-        .select('id')
-        .eq('business_id', body.business_id)
-        .eq('user_id', existingUser.id)
-        .maybeSingle();
-      if (mem) {
-        return json({ error: 'This person is already a member of your team.' }, 409);
-      }
-    }
+    // Inactive members may receive a fresh invite. Exact server lookup handles
+    // every Auth user without fetching or paging through unrelated accounts.
+    const { data: activeMember, error: memberLookupError } = await admin.rpc('has_active_team_email', {
+      _business_id: body.business_id, _email: email,
+    });
+    if (memberLookupError || typeof activeMember !== 'boolean') return json({ error: 'Could not check team membership. Please try again.' }, 500);
+    if (activeMember) return json({ error: 'This person is already a member of your team.' }, 409);
 
     // Block: an open invite already exists.
-    const { data: openInvite } = await admin
+    const { data: openInvite, error: inviteLookupError } = await admin
       .from('invitations')
       .select('id')
       .eq('business_id', body.business_id)
       .eq('email', email)
       .eq('status', 'pending')
       .maybeSingle();
+    if (inviteLookupError) return json({ error: 'Could not check pending invitations. Please try again.' }, 500);
     if (openInvite) {
       return json({ error: 'An invite is already pending for this email.' }, 409);
     }

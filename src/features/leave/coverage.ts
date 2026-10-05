@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface AffectedShift {
   id: string;
+  updated_at: string;
   shift_date: string;
   start_time: string;
   end_time: string;
@@ -36,7 +37,7 @@ export async function fetchAffectedShifts(
   // open coverage opportunities.
   const assignedResult = await supabase
     .from('shifts')
-    .select('id, shift_date, start_time, end_time, store_id, role_id, break_minutes')
+    .select('id, updated_at, shift_date, start_time, end_time, store_id, role_id, break_minutes')
     .eq('business_id', businessId)
     .eq('assigned_user_id', userId)
     .neq('status', 'cancelled')
@@ -45,7 +46,7 @@ export async function fetchAffectedShifts(
 
   const openResult = await supabase
     .from('shifts')
-    .select('id, shift_date, start_time, end_time, store_id, role_id, break_minutes')
+    .select('id, updated_at, shift_date, start_time, end_time, store_id, role_id, break_minutes')
     .eq('business_id', businessId)
     .eq('status', 'unassigned')
     .is('assigned_user_id', null)
@@ -156,15 +157,12 @@ export async function suggestReplacements(
 /**
  * Assign a candidate to a shift and mark scheduled. Caller handles toasts.
  */
-export async function assignReplacement(shiftId: string, userId: string) {
-  const { data, error } = await supabase
-    .from('shifts')
-    .update({ assigned_user_id: userId, status: 'scheduled' })
-    .eq('id', shiftId)
-    .neq('status', 'cancelled')
-    .select('id');
+export async function assignReplacement(businessId: string, shift: AffectedShift, userId: string) {
+  const { error } = await supabase.rpc('move_rota_shift', {
+    _business_id: businessId, _shift_id: shift.id, _assigned_user_id: userId,
+    _shift_date: shift.shift_date, _expected_updated_at: shift.updated_at,
+  });
   if (error) throw error;
-  if (!data?.length) throw new Error('This shift is no longer available. Reload coverage.');
 }
 
 /** Notify each active employee only about shifts they can actually cover. */
@@ -190,16 +188,12 @@ export async function notifyAvailableStaff(businessId: string, shifts: AffectedS
   return { sent: data[0].sent_count, alreadySent: data[0].already_sent_count };
 }
 
-/**
- * Ensure all affected shifts are released for open coverage (status 'unassigned',
- * no assignee). Idempotent — safe to call even if shifts already open.
- */
-export async function openShiftsForPickup(shiftIds: string[]) {
-  if (!shiftIds.length) return;
-  const { error } = await supabase
-    .from('shifts')
-    .update({ assigned_user_id: null, status: 'unassigned' })
-    .in('id', shiftIds)
-    .neq('status', 'cancelled');
+/** Release the selection atomically using the versions the manager reviewed. */
+export async function openShiftsForPickup(businessId: string, shifts: AffectedShift[]) {
+  if (!shifts.length) return;
+  const { error } = await supabase.rpc('release_coverage_shifts', {
+    _business_id: businessId,
+    _shifts: shifts.map(shift => ({ id: shift.id, updated_at: shift.updated_at })),
+  });
   if (error) throw error;
 }

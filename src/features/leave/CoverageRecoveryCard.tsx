@@ -36,7 +36,8 @@ interface Props {
  */
 export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, onChanged }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const notificationLock = useRef(false);
+  const actionLock = useRef(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [notificationError, setNotificationError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fetchCoverage = useCallback(() => fetchAffectedShifts(businessId, userId, startDate, endDate), [businessId, userId, startDate, endDate]);
@@ -54,31 +55,34 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
   }, 0);
 
   const assign = async (shift: AffectedShift, cand: ReplacementCandidate) => {
+    if (actionLock.current) return;
+    actionLock.current = true; setMutationError(null);
     setBusy(true);
     try {
-      await assignReplacement(shift.id, cand.user_id);
+      await assignReplacement(businessId, shift, cand.user_id);
       toast.success(`${cand.full_name} assigned to cover`);
       await load();
       onChanged?.();
-    } catch (e) { toast.error(errorMessage(e, 'Could not assign')); }
-    finally { setBusy(false); }
+    } catch (e) { setMutationError(errorMessage(e, 'Could not assign')); }
+    finally { actionLock.current = false; setBusy(false); }
   };
 
   const openAll = async () => {
-    if (!shifts.length) return;
+    if (!shifts.length || actionLock.current) return;
+    actionLock.current = true; setMutationError(null);
     setBusy(true);
     try {
-      await openShiftsForPickup(shifts.map(s => s.id));
+      await openShiftsForPickup(businessId, shifts);
       toast.success('Shifts opened for pickup');
       await load();
       onChanged?.();
-    } catch (e) { toast.error(errorMessage(e, 'Could not release shifts')); }
-    finally { setBusy(false); }
+    } catch (e) { setMutationError(errorMessage(e, 'Could not release shifts')); }
+    finally { actionLock.current = false; setBusy(false); }
   };
 
   const notifyAll = async () => {
-    if (!shifts.length || notificationLock.current) return;
-    notificationLock.current = true;
+    if (!shifts.length || actionLock.current) return;
+    actionLock.current = true;
     setNotificationError(null);
     setBusy(true);
     try {
@@ -87,7 +91,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
         ? `${result.sent} staff notified in the app${result.alreadySent ? ` · ${result.alreadySent} already notified` : ''}`
         : result.alreadySent ? 'Staff have already been notified in the app' : 'No available staff to notify');
     } catch (e) { setNotificationError(errorMessage(e, 'Could not confirm notifications. Retry safely without sending duplicates.')); }
-    finally { notificationLock.current = false; setBusy(false); }
+    finally { actionLock.current = false; setBusy(false); }
   };
 
   if (error) return <div className={s.card}><DataLoadError message={error} retry={load} /></div>;
@@ -119,6 +123,7 @@ export function CoverageRecoveryCard({ businessId, userId, startDate, endDate, o
           <Button size="sm" onClick={notifyAll} disabled={busy}>Notify available staff</Button>
         </div>
       </header>
+      {mutationError && <DataLoadError message={mutationError} retry={async () => { setMutationError(null); await load(); }} />}
       {notificationError && <DataLoadError message={notificationError} retry={notifyAll} />}
       <ul className={s.shiftList}>
         {shifts.map(shift => {

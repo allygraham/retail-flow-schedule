@@ -1,11 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { CoverageRecoveryCard } from './CoverageRecoveryCard';
-const api = vi.hoisted(() => ({ notify: vi.fn(), toast: vi.fn(), fetch: vi.fn() }));
+const api = vi.hoisted(() => ({ notify: vi.fn(), toast: vi.fn(), fetch: vi.fn(), release: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: api.toast, error: vi.fn() } }));
 vi.mock('./coverage', () => ({
   fetchAffectedShifts: api.fetch, notifyAvailableStaff: api.notify,
-  suggestReplacements: vi.fn().mockResolvedValue([]), assignReplacement: vi.fn(), openShiftsForPickup: vi.fn(),
+  suggestReplacements: vi.fn().mockResolvedValue([]), assignReplacement: vi.fn(), openShiftsForPickup: api.release,
 }));
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,4 +41,16 @@ it('does not claim employees were notified when none were available', async () =
   api.notify.mockResolvedValue({ sent: 0, alreadySent: 0 });
   fireEvent.click(await show());
   await waitFor(() => expect(api.toast).toHaveBeenCalledWith('No available staff to notify'));
+});
+
+it('shows stale coverage errors and refreshes without claiming or repeating a successful release', async () => {
+  api.release.mockRejectedValueOnce(new Error('Coverage has changed. Refresh coverage and try again.'));
+  await show();
+  fireEvent.click(screen.getByRole('button', { name: 'Open for pickup' }));
+  await screen.findByRole('alert');
+  expect(api.toast).not.toHaveBeenCalled();
+  api.fetch.mockResolvedValueOnce([]);
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  await screen.findByText(/nothing to recover/);
+  expect(api.release).toHaveBeenCalledTimes(1);
 });

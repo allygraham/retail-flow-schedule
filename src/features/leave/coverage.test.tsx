@@ -4,7 +4,7 @@ import { fetchAffectedShifts, suggestReplacements, assignReplacement, openShifts
 import { OperationalImpactCard } from './OperationalImpactCard';
 const mocks = vi.hoisted(() => ({
   rows: {} as Record<string, Record<string, unknown>[]>, count: 0, failure: null as number | null,
-  business: { id: 'shop' }, notify: vi.fn(),
+  business: { id: 'shop' }, notify: vi.fn(), action: vi.fn(),
 }));
 vi.mock('@/features/auth/authContext', () => ({ useAuth: () => ({ business: mocks.business }) }));
 vi.mock('@/integrations/supabase/client', () => {
@@ -33,12 +33,13 @@ vi.mock('@/integrations/supabase/client', () => {
     };
     return chain;
   };
-  return { supabase: { from: query, rpc: (name: string, args: unknown) => name === 'notify_coverage_staff' ? mocks.notify(args) : query(name) } };
+  return { supabase: { from: query, rpc: (name: string, args: unknown) => name === 'notify_coverage_staff' ? mocks.notify(args) : ['move_rota_shift', 'release_coverage_shifts'].includes(name) ? mocks.action(name, args) : query(name) } };
 });
-const target = { id: 'target', store_id: 'store', role_id: null, shift_date: '2026-10-05', start_time: '09:00', end_time: '17:00', break_minutes: 30 };
+const target = { updated_at: '2026-10-05T12:00:00Z', id: 'target', store_id: 'store', role_id: null, shift_date: '2026-10-05', start_time: '09:00', end_time: '17:00', break_minutes: 30 };
 const shift = (id: string, assigned_user_id: string | null, status: string, patch = {}) => ({ ...target, id, business_id: 'shop', assigned_user_id, status, ...patch });
 beforeEach(() => {
   mocks.count = 0; mocks.failure = null;
+  mocks.action.mockReset().mockResolvedValue({ data: null, error: null });
   mocks.notify.mockReset().mockResolvedValue({ data: [{ sent_count: 2, already_sent_count: 0 }], error: null });
   mocks.rows = {
     shifts: [shift('cancelled', 'absent', 'cancelled'), shift('assigned', 'absent', 'scheduled'), shift('open', null, 'unassigned'), shift('other-shop', 'absent', 'scheduled', { business_id: 'another' })],
@@ -92,14 +93,29 @@ describe('coverage impact shown to managers', () => {
 });
 
 describe('coverage actions', () => {
-  it('cannot revive a cancelled shift through assignment', async () => {
-    await expect(assignReplacement('cancelled', 'cover')).rejects.toThrow('no longer available');
-    expect(mocks.rows.shifts.find(row => row.id === 'cancelled')?.status).toBe('cancelled');
+  it('assigns only the displayed shift version in the current business', async () => {
+    await assignReplacement('shop', target, 'cover');
+    expect(mocks.action).toHaveBeenCalledWith('move_rota_shift', {
+      _business_id: 'shop', _shift_id: 'target', _assigned_user_id: 'cover',
+      _shift_date: target.shift_date, _expected_updated_at: target.updated_at,
+    });
   });
-  it('releases active shifts without reviving cancelled shifts', async () => {
-    await openShiftsForPickup(['assigned', 'cancelled']);
-    expect(mocks.rows.shifts.find(row => row.id === 'assigned')).toMatchObject({ status: 'unassigned', assigned_user_id: null });
-    expect(mocks.rows.shifts.find(row => row.id === 'cancelled')?.status).toBe('cancelled');
+  it('passes every reviewed version to one atomic release operation', async () => {
+    const next = { ...target, id: 'next', updated_at: '2026-10-05T13:00:00Z' };
+    await openShiftsForPickup('shop', [target, next]);
+    expect(mocks.action).toHaveBeenCalledWith('release_coverage_shifts', {
+      _business_id: 'shop', _shifts: [{ id: target.id, updated_at: target.updated_at }, { id: next.id, updated_at: next.updated_at }],
+    });
+  });
+  it('propagates stale-version errors and does not fall back to an unconditional update', async () => {
+    mocks.action.mockResolvedValue({ data: null, error: new Error('Coverage has changed') });
+    await expect(assignReplacement('shop', target, 'cover')).rejects.toThrow('Coverage has changed');
+    await expect(openShiftsForPickup('shop', [target])).rejects.toThrow('Coverage has changed');
+    expect(mocks.rows.shifts.find(row => row.id === 'assigned')?.assigned_user_id).toBe('absent');
+  });
+  it('makes no request for an empty release selection', async () => {
+    await openShiftsForPickup('shop', []);
+    expect(mocks.action).not.toHaveBeenCalled();
   });
   it('checks every shift date and notifies each person only about their eligible shifts', async () => {
     mocks.rows.get_rota_people = ['first-day', 'second-day'].map(user_id => ({ user_id, full_name: user_id, primary_store_id: 'store', primary_role_id: null }));
