@@ -43,30 +43,33 @@ export default function Signup() {
     }
     setLoading(true);
     try {
-      const { signupSchema } = await import('@/lib/validation');
-      const parsed = signupSchema.safeParse({ fullName, businessName, email, password });
-      if (!parsed.success) { setLoading(false); setErr(parsed.error.issues[0].message); return; }
+      try {
+        const { signupSchema } = await import('@/lib/validation');
+        const parsed = signupSchema.safeParse({ fullName, businessName, email, password });
+        if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
+      } catch {
+        setErr('Could not load form validation. Please try again.');
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: fullName, role: 'owner', business_name: businessName }, emailRedirectTo: window.location.origin + '/dashboard' }
+      });
+      if (error) { setErr(error.message); return; }
+      if (!data.session) {
+        setConfirmationPending(true);
+        setPassword('');
+        return;
+      }
+      const { error: bErr } = await supabase.rpc('bootstrap_business', { _name: businessName, _slug: businessName });
+      if (bErr) { setErr(bErr.message); return; }
+      await refresh();
+      nav('/dashboard', { replace: true });
     } catch {
-      setErr('Could not load form validation. Please try again.');
+      setErr('Could not create your workspace. Please try again.');
+    } finally {
       setLoading(false);
-      return;
     }
-    const { data, error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName, role: 'owner', business_name: businessName }, emailRedirectTo: window.location.origin + '/dashboard' }
-    });
-    if (error) { setErr(error.message); setLoading(false); return; }
-    if (!data.session) {
-      setConfirmationPending(true);
-      setPassword('');
-      setLoading(false);
-      return;
-    }
-    const { error: bErr } = await supabase.rpc('bootstrap_business', { _name: businessName, _slug: businessName });
-    setLoading(false);
-    if (bErr) { setErr(bErr.message); return; }
-    await refresh();
-    nav('/dashboard', { replace: true });
   };
 
   if (!authLoading && !accountError && user && business) return <Navigate to="/dashboard" replace />;
@@ -86,7 +89,7 @@ export default function Signup() {
           <Field label="Business name"><Input value={businessName} onChange={e => setBusinessName(e.target.value)} required /></Field>
           {!user && <Field label="Work email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>}
           {!user && <Field label="Password" hint="At least 8 characters"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>}
-          {err && <div className={s.err}>{err}</div>}
+          {err && <div className={s.err} role="alert">{err}</div>}
           <Button type="submit" full loading={loading} disabled={loading || authLoading || !!accountError}>Create workspace</Button>
         </form>
         </>}

@@ -24,18 +24,22 @@ export default function Login() {
     setErr(null);
     setLoading(true);
     try {
-      const { loginSchema } = await import('@/lib/validation');
-      const parsed = loginSchema.safeParse({ email, password });
-      if (!parsed.success) { setLoading(false); setErr(parsed.error.issues[0].message); return; }
+      try {
+        const { loginSchema } = await import('@/lib/validation');
+        const parsed = loginSchema.safeParse({ email, password });
+        if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
+      } catch {
+        setErr('Could not load form validation. Please try again.');
+        return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { setErr(error.message); return; }
+      nav(destination, { replace: true });
     } catch {
-      setErr('Could not load form validation. Please try again.');
+      setErr('Could not sign in. Please try again.');
+    } finally {
       setLoading(false);
-      return;
     }
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) { setErr(error.message); return; }
-    nav(destination, { replace: true });
   };
 
   return (
@@ -48,7 +52,7 @@ export default function Login() {
         <form onSubmit={onSubmit} className={s.form}>
           <Field label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></Field>
           <Field label="Password"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></Field>
-          {err && <div className={s.err}>{err}</div>}
+          {err && <div className={s.err} role="alert">{err}</div>}
           <Button type="submit" full loading={loading}>Sign in</Button>
         </form>
         <div className={s.foot}>
