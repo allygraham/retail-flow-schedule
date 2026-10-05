@@ -17,7 +17,6 @@ import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
 import { fmtDate, fmtTime, hoursBetween, minutesBetween, isoDate, weekDays, weekStartFor, overlap, inRange } from '@/lib/datetime';
 import { addDays, format } from 'date-fns';
-import { shiftSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import { useHolidays } from '@/features/holidays/useHolidays';
 import s from './Rota.module.scss';
@@ -150,28 +149,31 @@ export default function Rota() {
   const save = async () => {
     setErr(null);
     if (!isMgr || !business || saving) return;
-    const parsed = shiftSchema.safeParse({
-      ...form, role_id: form.role_id || null, assigned_user_id: form.assigned_user_id || null,
-    });
-    if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
-
-    // Database validation applies to every write, including direct API calls.
-    // Holiday lookup here gives immediate feedback while the form is open.
-    // Block scheduling on a company holiday flagged as blocking (custom only).
-    if (parsed.data.assigned_user_id) {
-      const blocking = holidays.getBlocking(parsed.data.shift_date);
-      if (blocking) {
-        setErr(`Scheduling is blocked on ${blocking.name} (${parsed.data.shift_date}). Remove or unblock this company holiday in Settings to assign a shift.`);
-        return;
-      }
-    }
-
-    const payload = { ...parsed.data,
-      business_id: business!.id,
-      status: (parsed.data.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
-    };
     setSaving(true);
     try {
+      let shiftSchema: typeof import('@/lib/validation')['shiftSchema'];
+      try { ({ shiftSchema } = await import('@/lib/validation')); }
+      catch { setErr('Could not load shift validation. Please try again.'); return; }
+      const parsed = shiftSchema.safeParse({
+        ...form, role_id: form.role_id || null, assigned_user_id: form.assigned_user_id || null,
+      });
+      if (!parsed.success) { setErr(parsed.error.issues[0].message); return; }
+
+      // Database validation applies to every write, including direct API calls.
+      // Holiday lookup here gives immediate feedback while the form is open.
+      // Block scheduling on a company holiday flagged as blocking (custom only).
+      if (parsed.data.assigned_user_id) {
+        const blocking = holidays.getBlocking(parsed.data.shift_date);
+        if (blocking) {
+          setErr(`Scheduling is blocked on ${blocking.name} (${parsed.data.shift_date}). Remove or unblock this company holiday in Settings to assign a shift.`);
+          return;
+        }
+      }
+
+      const payload = { ...parsed.data,
+        business_id: business!.id,
+        status: (parsed.data.assigned_user_id ? 'scheduled' : 'unassigned') as 'scheduled' | 'unassigned',
+      };
       if (modal.shift) {
         const { data, error } = await supabase.from('shifts').update(payload)
           .eq('business_id', business.id).eq('id', modal.shift.id)
@@ -182,15 +184,15 @@ export default function Rota() {
         const { error } = await supabase.from('shifts').insert({ ...payload, created_by: user?.id });
         if (error) { setErr(error.message); return; }
       }
+      // Informational warning when scheduling on a public holiday (custom is blocked above)
+      const hol = parsed.data.assigned_user_id ? holidays.get(parsed.data.shift_date) : undefined;
+      if (hol && hol.kind !== 'custom') {
+        toast.warning(`Heads up: ${parsed.data.shift_date} is ${hol.name} (public holiday).`);
+      }
+      setModal({ open: false }); load();
     } catch {
-      setErr('Could not save the shift. Please try again.'); return;
+      setErr('Could not save the shift. Please try again.');
     } finally { setSaving(false); }
-    // Informational warning when scheduling on a public holiday (custom is blocked above)
-    const hol = parsed.data.assigned_user_id ? holidays.get(parsed.data.shift_date) : undefined;
-    if (hol && hol.kind !== 'custom') {
-      toast.warning(`Heads up: ${parsed.data.shift_date} is ${hol.name} (public holiday).`);
-    }
-    setModal({ open: false }); load();
   };
 
   const remove = async () => {

@@ -134,3 +134,51 @@ test('employees without shifts show zero weekly hours', async ({ page }) => {
   await open(page); await page.goto('/rota');
   await expect(page.getByLabel('Test Employee weekly hours')).toHaveText('0h');
 });
+
+
+test('rota loads without validation and saving waits for it before checking shift times', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift()];
+  let requests = 0;
+  let release!: () => void;
+  let requested!: () => void;
+  const ready = new Promise<void>(resolve => { release = resolve; });
+  const requestStarted = new Promise<void>(resolve => { requested = resolve; });
+  await page.route('**/src/lib/validation.ts*', async route => {
+    requests++; requested(); await ready; await route.continue();
+  });
+  await page.goto('/rota');
+  await page.getByText('09:00–17:00', { exact: true }).click();
+  expect(requests).toBe(0);
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('input[type=time]').nth(1).fill('08:00');
+  const save = dialog.getByRole('button', { name: 'Save', exact: true });
+  await save.click();
+  try {
+    await requestStarted;
+    await expect(save).toBeDisabled();
+    expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(0);
+    await expect(dialog).toBeVisible();
+  } finally { release(); }
+  await expect(dialog.getByText('Shift end time must be after start time')).toBeVisible();
+  await expect(save).toBeEnabled();
+  expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(0);
+  await dialog.locator('input[type=time]').nth(1).fill('17:00');
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(1);
+  expect(requests).toBe(1);
+});
+
+test('failed validation download keeps the shift editor open and performs no writes', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift()];
+  await page.route('**/src/lib/validation.ts*', route => route.abort());
+  await page.goto('/rota');
+  await page.getByText('09:00–17:00', { exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  const save = dialog.getByRole('button', { name: 'Save', exact: true });
+  await save.click();
+  await expect(dialog.getByText('Could not load shift validation. Please try again.')).toBeVisible();
+  await expect(save).toBeEnabled();
+  expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(0);
+  await expect(dialog.locator('input[type=time]').nth(1)).toHaveValue('17:00:00');
+});
