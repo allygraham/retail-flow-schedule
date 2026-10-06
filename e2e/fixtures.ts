@@ -137,8 +137,8 @@ export async function stubApi(page: Page, shared?: StubState) {
       return reply([{ published_count: state.shifts.length, notified_count: 1 }]);
     }
     if (endpoint === 'review_employee_leave') {
-      state.leaves = state.leaves.map(leave => ({ ...leave, status: 'approved' }));
-      return reply([{ id: state.leaves[0]?.id }]);
+      state.leaves = state.leaves.map(leave => leave.id === body?._leave_id ? { ...leave, status: body?._status } : leave);
+      return reply([{ leave_id: body?._leave_id, released_shift_count: 0 }]);
     }
     if (endpoint === 'get_invitation_by_token') return reply([{ id: 'invite-1', business_id: businessId, business_name: 'Test Shop', email: user.email, full_name: 'Test Owner', role: 'employee', status: 'pending', expires_at: '2099-01-01' }]);
     if (endpoint === 'accept_invitation') { state.role = 'employee'; return reply(businessId); }

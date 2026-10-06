@@ -34,20 +34,28 @@ export default function ResetPassword() {
 
   useEffect(() => {
     let mounted = true;
+    let authEvent = 0;
     setChecked(false); setReady(false); setVerificationError(false);
     const linkError = new URLSearchParams(window.location.search).has('error')
       || new URLSearchParams(window.location.hash.slice(1)).has('error');
     const { data: sub } = supabase.auth.onAuthStateChange((evt, session) => {
       if (!mounted || linkError) return;
-      if ((evt === 'PASSWORD_RECOVERY' || evt === 'SIGNED_IN') && session) setReady(true);
-      if (evt === 'SIGNED_OUT') setReady(false);
+      if ((evt === 'PASSWORD_RECOVERY' || evt === 'SIGNED_IN') && session) {
+        authEvent++;
+        setReady(true); setChecked(true); setVerificationError(false);
+      }
+      if (evt === 'SIGNED_OUT') {
+        authEvent++;
+        setReady(false); setChecked(true); setVerificationError(false);
+      }
     });
+    const initialEvent = authEvent;
     supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) return;
+      if (!mounted || initialEvent !== authEvent) return;
       if (error && !linkError) setVerificationError(true);
       if (!linkError && !error && data.session) setReady(true);
       setChecked(true);
-    }).catch(() => { if (mounted) { setVerificationError(true); setChecked(true); } });
+    }).catch(() => { if (mounted && initialEvent === authEvent) { if (!linkError) setVerificationError(true); setChecked(true); } });
     return () => { mounted = false; sub.subscription.unsubscribe(); };
   }, [verificationAttempt]);
 
@@ -140,7 +148,7 @@ export default function ResetPassword() {
                   disabled={!ready || loading}
                 />
               </Field>
-              {err && <div className={s.err}>{err}</div>}
+              {err && <div className={s.err} role="alert">{err}</div>}
               <Button type="submit" full loading={loading} disabled={!ready || loading}>
                 Update password
               </Button>
