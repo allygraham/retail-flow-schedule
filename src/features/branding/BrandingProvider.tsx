@@ -1,8 +1,10 @@
 import { Ctx, type BrandingState } from './brandingContext';
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
 import { BrandingTheme, DEFAULT_THEME, ThemePresetKey } from './types';
+import { useLocation } from 'react-router-dom';
+import { applyRootTheme, isWorkspacePath, readThemeCache, saveThemeCache } from './themeCache';
 
 const toTheme = (data: Record<string, unknown> | null | undefined): BrandingTheme => ({
   displayName: (data?.display_name as string | null | undefined) ?? null,
@@ -15,26 +17,39 @@ const toTheme = (data: Record<string, unknown> | null | undefined): BrandingThem
 });
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
-  const { business } = useAuth();
-  const [savedTheme, setSavedTheme] = useState<BrandingTheme>(DEFAULT_THEME);
-  const [preview, setPreview] = useState<BrandingTheme | null>(null);
+  const { business, user, loading: accountLoading } = useAuth();
+  const { pathname } = useLocation();
+  const [saved, setSaved] = useState(() => readThemeCache());
+  const [preview, setPreview] = useState<{ identity: string; theme: BrandingTheme } | null>(null);
   const [loading, setLoading] = useState(false);
+  const identity = `${user?.id ?? ''}:${business?.id ?? ''}`;
+  const currentIdentity = useRef(identity);
+  currentIdentity.current = identity;
+  const requestId = useRef(0);
+  const cacheMatches = saved && (user ? saved.userId === user.id : accountLoading) && (business ? saved.businessId === business.id : accountLoading);
+  const savedTheme = cacheMatches ? saved.theme : DEFAULT_THEME;
+
+  useLayoutEffect(() => {
+    if (!business || !user) return;
+    const cached = readThemeCache(user.id);
+    if (cached?.businessId === business.id) setSaved(previous => previous?.userId === user.id && previous.businessId === business.id ? previous : cached);
+  }, [business, user]);
 
   const load = useCallback(async () => {
-    if (!business) {
-      setSavedTheme(DEFAULT_THEME);
-      setPreview(null);
-      return;
-    }
+    const request = ++requestId.current;
+    if (!business || !user) { setLoading(false); return; }
+    const expectedIdentity = `${user.id}:${business.id}`;
     setLoading(true);
-    const { data } = await supabase
-      .from('business_branding')
-      .select('*')
-      .eq('business_id', business.id)
-      .maybeSingle();
-    setSavedTheme(toTheme(data as Record<string, unknown> | null | undefined));
-    setLoading(false);
-  }, [business]);
+    try {
+      const { data, error } = await supabase.from('business_branding').select('*').eq('business_id', business.id).maybeSingle();
+      if (request !== requestId.current || currentIdentity.current !== expectedIdentity) return;
+      if (error) return; // Keep the last saved palette during a failed refresh.
+      const theme = toTheme(data as Record<string, unknown> | null | undefined);
+      setSaved({ userId: user.id, businessId: business.id, theme });
+      saveThemeCache(user.id, business.id, theme);
+    } catch { /* Keep the cached palette when the request unexpectedly fails. */ }
+    finally { if (request === requestId.current) setLoading(false); }
+  }, [business, user]);
 
   useEffect(() => {
     void load();
@@ -59,9 +74,12 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     };
   }, [business, load]);
 
-  const previewTheme = useCallback((next: BrandingTheme | null) => setPreview(next), []);
+  const previewTheme = useCallback((next: BrandingTheme | null) => setPreview(next && business ? { identity, theme: next } : null), [business, identity]);
   const clearPreviewTheme = useCallback(() => setPreview(null), []);
-  const theme = preview ?? savedTheme;
+  const theme = preview?.identity === identity ? preview?.theme ?? savedTheme : savedTheme;
+  useLayoutEffect(() => {
+    applyRootTheme(isWorkspacePath(pathname) ? theme : null);
+  }, [pathname, theme]);
 
   const value = useMemo<BrandingState>(() => ({
     theme,
