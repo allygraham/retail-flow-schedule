@@ -114,11 +114,11 @@ test('one click requests 28 November and approval preserves that date', async ({
   await request.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect(request.getByText('Choose the dates for your leave.')).toBeVisible();
   expect(state.leaves).toHaveLength(0);
-  await request.getByRole('button', { name: 'Pick a date range', exact: true }).click();
+  await request.getByRole('button', { name: 'Dates', exact: true }).click();
   await page.getByRole('button', { name: /next month/i }).click();
   await page.getByRole('button', { name: /Saturday, November 28th, 2026/i }).click();
   await request.getByText('Request time off', { exact: true }).click(); // Closing the picker must preserve the clicked day.
-  await expect(request.getByRole('button', { name: 'Pick a date range' })).toContainText('28 Nov 2026');
+  await expect(request.getByRole('button', { name: 'Dates' })).toContainText('28 Nov 2026');
   await request.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect(request).toHaveCount(0);
   expect(state.leaves[0].start_date).toBe('2026-11-28');

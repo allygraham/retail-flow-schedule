@@ -5,6 +5,7 @@ import 'react-day-picker/style.css';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
 import { format, isBefore, isSameDay } from 'date-fns';
 import s from './DatePicker.module.scss';
+import { useFieldControl } from '../fieldContext';
 
 export type DateValue = Date | null;
 export type DateRangeValue = { from: Date | null; to: Date | null };
@@ -45,6 +46,7 @@ export function DatePicker(props: DatePickerProps) {
     required, disabled, id, name, ariaLabel,
     displayFormat = 'd MMM yyyy', className, allowClear = true,
   } = props;
+  const field = useFieldControl(id);
   const isRange = props.mode === 'range';
 
   const [open, setOpen] = useState(false);
@@ -158,10 +160,13 @@ export function DatePicker(props: DatePickerProps) {
         <Dialog.Trigger asChild><button
           ref={triggerRef}
           type="button"
-          id={id}
+          id={field.id}
           name={name}
           disabled={disabled}
-          aria-label={ariaLabel ?? placeholder}
+          aria-label={ariaLabel ?? (field['aria-labelledby'] ? undefined : placeholder)}
+          aria-labelledby={ariaLabel ? undefined : field['aria-labelledby']}
+          aria-describedby={field['aria-describedby']}
+          aria-invalid={field['aria-invalid']}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-required={required || undefined}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { MockResponse, MockResult } from '@/test/types';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -135,4 +136,62 @@ describe('account role and session race regressions', () => {
     expect(screen.getByText('Login screen')).toBeInTheDocument();
     expect(mocks.queries).not.toHaveBeenCalled();
   });
+});
+
+
+describe('background authentication refresh', () => {
+  function Draft() {
+    const [value, setValue] = useState('');
+    const { role } = useAuth();
+    return <><input aria-label="Draft" value={value} onChange={event => setValue(event.target.value)} /><span>Access: {role}</span></>;
+  }
+  const showDraft = () => render(<MemoryRouter><AuthProvider><ProtectedRoute><Draft /></ProtectedRoute></AuthProvider></MemoryRouter>);
+  it.each(['TOKEN_REFRESHED', 'SIGNED_IN', 'USER_UPDATED'])('preserves an open draft on same-user %s', async event => {
+    showDraft(); const input = await screen.findByRole('textbox', { name: 'Draft' });
+    fireEvent.change(input, { target: { value: 'Unsaved changes' } });
+    await act(async () => mocks.listener(event, { user: { id: 'self' } }));
+    await waitFor(() => expect(mocks.queries.mock.calls.filter(call => call[0] === 'user_roles')).toHaveLength(2));
+    expect(screen.getByRole('textbox', { name: 'Draft' })).toBe(input);
+    expect(input).toHaveValue('Unsaved changes');
+  });
+  it('keeps the draft during a failed background account check', async () => {
+    showDraft(); const input = await screen.findByRole('textbox', { name: 'Draft' });
+    fireEvent.change(input, { target: { value: 'Unsaved changes' } });
+    mocks.responses.memberships = { data: null, error: { message: 'Offline' } };
+    await act(async () => mocks.listener('TOKEN_REFRESHED', mocks.session));
+    await waitFor(() => expect(mocks.queries.mock.calls.filter(call => call[0] === 'memberships')).toHaveLength(2));
+    expect(input).toHaveValue('Unsaved changes'); expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+  it('refreshes changed permissions without discarding a draft', async () => {
+    showDraft(); const input = await screen.findByRole('textbox', { name: 'Draft' });
+    fireEvent.change(input, { target: { value: 'Unsaved changes' } });
+    mocks.responses.user_roles = { data: [{ role: 'employee' }], error: null };
+    await act(async () => mocks.listener('TOKEN_REFRESHED', mocks.session));
+    await screen.findByText('Access: employee'); expect(input).toHaveValue('Unsaved changes');
+  });
+  it('removes protected content when background checks confirm deactivation', async () => {
+    showDraft(); await screen.findByRole('textbox', { name: 'Draft' });
+    mocks.responses.memberships = { data: null, error: null };
+    await act(async () => mocks.listener('TOKEN_REFRESHED', mocks.session));
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Draft' })).not.toBeInTheDocument());
+  });
+  it('removes protected content when background checks confirm missing roles', async () => {
+    showDraft(); await screen.findByRole('textbox', { name: 'Draft' });
+    mocks.responses.user_roles = { data: [], error: null };
+    await act(async () => mocks.listener('TOKEN_REFRESHED', mocks.session));
+    await screen.findByRole('alert');
+    expect(screen.queryByRole('textbox', { name: 'Draft' })).not.toBeInTheDocument();
+  });
+  it('cannot restore access from a late background response after logout', async () => {
+    showDraft(); await screen.findByRole('textbox', { name: 'Draft' });
+    let finish!: (value: MockResponse) => void;
+    mocks.responses.memberships = new Promise(resolve => { finish = resolve; });
+    await act(async () => mocks.listener('TOKEN_REFRESHED', mocks.session));
+    await waitFor(() => expect(mocks.queries.mock.calls.filter(call => call[0] === 'memberships')).toHaveLength(2));
+    await act(async () => mocks.listener('SIGNED_OUT', null));
+    await act(async () => finish({ data: { businesses: { id: 'shop', name: 'Shop' } }, error: null }));
+    expect(screen.queryByRole('textbox', { name: 'Draft' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Access: owner')).not.toBeInTheDocument();
+  });
+
 });

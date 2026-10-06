@@ -1,6 +1,6 @@
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { DataLoadError } from '@/components/common/DataLoadError';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { Card } from '@/components/common/Card';
 import { Field, Input, Select } from '@/components/common/Field';
@@ -9,6 +9,7 @@ import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { useAuth } from '@/features/auth/authContext';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { HOLIDAY_REGIONS, type HolidayRegion } from './types';
@@ -24,6 +25,8 @@ export function HolidaySettings() {
     (business?.public_holidays_region as HolidayRegion) ?? 'england',
   );
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const customRef = useRef(false);
 
   // Custom holiday form state
   const { rows: customs, loading, error: loadError, reload, add, remove } = useCustomHolidays(business?.id ?? null);
@@ -35,32 +38,29 @@ export function HolidaySettings() {
   if (!business) return null;
 
   const persist = async (next: { enabled?: boolean; region?: HolidayRegion }) => {
-    if (!canEdit) return;
-    setSaving(true);
-    const payload: { public_holidays_enabled?: boolean; public_holidays_region?: string } = {};
-    if (next.enabled !== undefined) payload.public_holidays_enabled = next.enabled;
-    if (next.region !== undefined) payload.public_holidays_region = next.region;
-    const { data, error } = await supabase
-      .from('businesses')
-      .update(payload)
-      .eq('id', business.id)
-      .select('id');
-    setSaving(false);
-    if (error || !data || data.length === 0) {
-      toast.error(error?.message ?? 'You do not have permission to change these settings.');
+    if (!canEdit || savingRef.current) return;
+    savingRef.current = true; setSaving(true);
+    try {
+      const payload: { public_holidays_enabled?: boolean; public_holidays_region?: string } = {};
+      if (next.enabled !== undefined) payload.public_holidays_enabled = next.enabled;
+      if (next.region !== undefined) payload.public_holidays_region = next.region;
+      const { data, error } = await supabase.from('businesses').update(payload).eq('id', business.id).select('id');
+      if (error) throw error;
+      if (data?.length !== 1) throw new Error('Holiday settings were not saved. Your access may have changed.');
+      toast.success('Public holiday settings saved');
+      await refresh();
+    } catch (err) {
+      toast.error(errorMessage(err, 'Could not save public holiday settings. Please try again.'));
       setEnabled(!!business.public_holidays_enabled);
       setRegion((business.public_holidays_region as HolidayRegion) ?? 'england');
-      return;
-    }
-    toast.success('Public holiday settings saved');
-    await refresh();
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
-  const onToggle = (val: boolean) => { setEnabled(val); persist({ enabled: val }); };
-  const onRegion = (val: HolidayRegion) => { setRegion(val); persist({ region: val }); };
+  const onToggle = (val: boolean) => { if (savingRef.current) return; setEnabled(val); void persist({ enabled: val }); };
+  const onRegion = (val: HolidayRegion) => { if (savingRef.current) return; setRegion(val); void persist({ region: val }); };
 
   const onAddCustom = async () => {
-    if (!canEdit) return;
+    if (!canEdit || customRef.current || loading || loadError) return;
     const name = newName.trim();
     if (!newDate || !name) {
       toast.error('Date and name are required.');
@@ -74,22 +74,25 @@ export function HolidaySettings() {
       toast.error('A custom holiday already exists for that date.');
       return;
     }
-    setAdding(true);
-    const { error } = await add({ date: newDate, name, blocks_scheduling: newBlocks });
-    setAdding(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success('Custom holiday added');
-    setNewDate(''); setNewName(''); setNewBlocks(true);
+    customRef.current = true; setAdding(true);
+    try {
+      const { error } = await add({ date: newDate, name, blocks_scheduling: newBlocks });
+      if (error) throw error;
+      toast.success('Custom holiday added');
+      setNewDate(''); setNewName(''); setNewBlocks(true);
+    } catch (err) { toast.error(errorMessage(err, 'Could not add company holiday. Please try again.')); }
+    finally { customRef.current = false; setAdding(false); }
   };
 
   const onRemoveCustom = async (id: string) => {
-    if (!canEdit) return;
-    const { error } = await remove(id);
-    if (error) toast.error(error.message);
-    else toast.success('Custom holiday removed');
+    if (!canEdit || customRef.current || loading || loadError) return;
+    customRef.current = true; setAdding(true);
+    try {
+      const { error } = await remove(id);
+      if (error) throw error;
+      toast.success('Custom holiday removed');
+    } catch (err) { toast.error(errorMessage(err, 'Could not remove company holiday. Please try again.')); }
+    finally { customRef.current = false; setAdding(false); }
   };
 
   const today = isoDate(new Date());
@@ -124,6 +127,7 @@ export function HolidaySettings() {
             <div className={s.regionSelect}>
               <Field>
                 <Select
+                  aria-label="Holiday region"
                   value={region}
                   disabled={!canEdit || saving}
                   onChange={(e) => onRegion(e.target.value as HolidayRegion)}
@@ -216,6 +220,7 @@ export function HolidaySettings() {
                   <button
                     type="button"
                     className={s.removeBtn}
+                    disabled={adding || loading || !!loadError}
                     onClick={() => onRemoveCustom(c.id)}
                     aria-label={`Remove ${c.name}`}
                   >

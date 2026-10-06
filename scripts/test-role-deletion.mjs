@@ -1,0 +1,58 @@
+// Isolated PostgreSQL regression: never connects to a production database.
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import assert from 'node:assert/strict';
+const require = createRequire(process.env.SECURITY_TEST_PACKAGE_JSON || import.meta.url);
+const { PGlite } = require('@electric-sql/pglite');
+const db = new PGlite();
+const root = new URL('../supabase/migrations/', import.meta.url);
+const load = name => db.exec(readFileSync(new URL(name, root), 'utf8'));
+await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE SCHEMA auth;
+CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,raw_user_meta_data jsonb DEFAULT '{}');
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+GRANT USAGE ON SCHEMA auth,public TO authenticated;
+GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;`);
+await load('20260418145239_9fbc6b74-99f1-441b-b3ea-9021aa1665ab.sql');
+await load('20260418145257_7dd19197-291d-41f6-9d1a-4a3ff270e351.sql');
+await load('20260419145756_0c1fc3d6-28a4-47d9-b54a-14fb9842fb54.sql');
+await db.exec('GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated');
+const uid = n => `00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const owner=uid(1), business=uid(2), employee=uid(3), store=uid(4), role=uid(5);
+await db.query('INSERT INTO auth.users(id,email) VALUES ($1,$2),($3,$4)',[owner,'owner@test.invalid',employee,'employee@test.invalid']);
+await db.query("INSERT INTO businesses(id,name,slug) VALUES($1,'Test','role-test')",[business]);
+await db.query('INSERT INTO memberships(user_id,business_id) VALUES($1,$2)',[owner,business]);
+await db.query("INSERT INTO user_roles(user_id,business_id,role) VALUES($1,$2,'owner')",[owner,business]);
+await db.query("INSERT INTO store_locations(id,business_id,name) VALUES($1,$2,'Main')",[store,business]);
+await load('20261006180000_protect_job_role_references.sql');
+await load('20261006180000_protect_job_role_references.sql');
+const makeRole = () => db.query("INSERT INTO roles_catalog(id,business_id,name) VALUES($1,$2,'Cashier')",[role,business]);
+const deleteRole = async () => {
+ await db.exec('SET ROLE authenticated');
+ try { await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[owner]); return await db.query('DELETE FROM roles_catalog WHERE id=$1 RETURNING id',[role]); }
+ finally { await db.exec('RESET ROLE'); }
+};
+await makeRole();
+await db.query('INSERT INTO employee_profiles(user_id,business_id,primary_role_id) VALUES($1,$2,$3)',[employee,business,role]);
+await assert.rejects(deleteRole(),error=>error.code==='23503');
+assert.equal((await db.query('SELECT primary_role_id FROM employee_profiles WHERE user_id=$1',[employee])).rows[0].primary_role_id,role);
+console.log('PASS: stale/direct role deletion cannot erase employee assignments');
+await db.query('UPDATE employee_profiles SET primary_role_id=NULL WHERE user_id=$1',[employee]);
+await db.query("INSERT INTO shifts(business_id,store_id,role_id,shift_date,start_time,end_time) VALUES($1,$2,$3,'2026-11-01','09:00','17:00')",[business,store,role]);
+await assert.rejects(deleteRole(),error=>error.code==='23503');
+assert.equal((await db.query('SELECT role_id FROM shifts')).rows[0].role_id,role);
+console.log('PASS: stale/direct role deletion cannot erase shift roles');
+await db.query('DELETE FROM shifts WHERE business_id=$1',[business]);
+await db.query("INSERT INTO invitations(business_id,email,role,primary_role_id,token) VALUES($1,'invite@test.invalid','employee',$2,'test-token')",[business,role]);
+await assert.rejects(deleteRole(),error=>error.code==='23503');
+assert.equal((await db.query('SELECT primary_role_id FROM invitations')).rows[0].primary_role_id,role);
+console.log('PASS: stale/direct role deletion cannot erase invitation assignments');
+await db.query('DELETE FROM invitations WHERE business_id=$1',[business]);
+assert.equal((await deleteRole()).rows.length,1);
+console.log('PASS: unused job roles can still be deleted');
+await makeRole();
+await db.query('UPDATE employee_profiles SET primary_role_id=$1 WHERE user_id=$2',[role,employee]);
+await db.query('DELETE FROM businesses WHERE id=$1',[business]);
+assert.equal((await db.query('SELECT id FROM roles_catalog')).rows.length,0);
+assert.equal((await db.query('SELECT id FROM employee_profiles')).rows.length,0);
+console.log('PASS: constraints preserve whole-business cascade deletion and migration reapplication');
+await db.close();

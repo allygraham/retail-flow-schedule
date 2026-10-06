@@ -48,7 +48,7 @@ test('close button and backdrop restore focus and release scroll locking', async
 test('date-picker portal remains interactive and Escape closes only the calendar', async ({ page }) => {
   await page.getByRole('button', { name: 'Add employee', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Add employee', exact: true });
-  const trigger = dialog.getByRole('button', { name: 'Pick start date', exact: true });
+  const trigger = dialog.getByRole('button', { name: 'Start date', exact: true });
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
   const calendar = page.getByRole('dialog', { name: 'Choose date', exact: true });

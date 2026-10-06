@@ -1,5 +1,5 @@
 import { errorMessage } from '@/lib/errors';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Lock, Upload, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,8 @@ export function BrandingSettings() {
 
   const [draft, setDraft] = useState<BrandingTheme>(savedTheme);
   const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
+  const uploadSubmitting = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +55,7 @@ export function BrandingSettings() {
   };
 
   const onFile = async (file: File) => {
-    if (!business || !canEdit) return;
+    if (!business || !canEdit || submitting.current || uploadSubmitting.current) return;
     setError(null);
     if (!ALLOWED_TYPES.includes(file.type)) {
       setError('Use PNG, JPG, SVG or WEBP.');
@@ -64,6 +66,7 @@ export function BrandingSettings() {
       return;
     }
 
+    uploadSubmitting.current = true;
     setUploading(true);
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
@@ -80,35 +83,30 @@ export function BrandingSettings() {
     } catch (e) {
       setError(errorMessage(e, 'Upload failed'));
     } finally {
+      uploadSubmitting.current = false;
       setUploading(false);
     }
   };
 
   const save = async () => {
-    if (!business || !user || !canEdit) return;
+    if (!business || !user || !canEdit || submitting.current || uploadSubmitting.current) return;
+    submitting.current = true;
     setSaving(true);
     setError(null);
-
-    const { error: dbErr } = await supabase.from('business_branding').upsert({
-      business_id: business.id,
-      display_name: draft.displayName,
-      theme_key: draft.themeKey,
-      primary_color: draft.primaryColor,
-      secondary_color: draft.secondaryColor,
-      accent_color: draft.accentColor,
-      surface_color: draft.surfaceColor,
-      logo_url: draft.logoUrl,
-      updated_by: user.id,
-    }, { onConflict: 'business_id' });
-
-    setSaving(false);
-    if (dbErr) {
-      setError(dbErr.message);
-      return;
-    }
-
-    toast.success('Theme saved');
-    await refresh();
+    try {
+      const { data, error: dbErr } = await supabase.from('business_branding').upsert({
+        business_id: business.id, display_name: draft.displayName, theme_key: draft.themeKey,
+        primary_color: draft.primaryColor, secondary_color: draft.secondaryColor,
+        accent_color: draft.accentColor, surface_color: draft.surfaceColor,
+        logo_url: draft.logoUrl, updated_by: user.id,
+      }, { onConflict: 'business_id' }).select('business_id');
+      if (dbErr) throw dbErr;
+      if (data?.length !== 1) throw new Error('Theme was not saved. Please try again.');
+      toast.success('Theme saved');
+      await refresh();
+    } catch (err) {
+      setError(errorMessage(err, 'Could not save theme. Please try again.'));
+    } finally { submitting.current = false; setSaving(false); }
   };
 
   return (
@@ -134,7 +132,7 @@ export function BrandingSettings() {
                 type="button"
                 className={`${s.themeCard} ${selected ? s.themeCardActive : ''}`}
                 onClick={() => applyPreset(preset.key)}
-                disabled={!canEdit}
+                disabled={!canEdit || saving || uploading}
                 aria-pressed={selected}
               >
                 <div className={s.themePreview} style={buildThemeStyle(themeFromPreset(preset.key))}>
@@ -203,7 +201,7 @@ export function BrandingSettings() {
               <div className={s.logoActions}>
                 <span className={s.uploadBtn}><Upload size={14} /> {uploading ? 'Uploading…' : 'Upload logo'}</span>
                 {draft.logoUrl && canEdit && (
-                  <button type="button" className={s.removeBtn} onClick={(e) => { e.preventDefault(); setDraft((current) => ({ ...current, logoUrl: null })); }}>
+                  <button type="button" className={s.removeBtn} disabled={saving || uploading} onClick={(e) => { e.preventDefault(); setDraft((current) => ({ ...current, logoUrl: null })); }}>
                     <Trash2 size={14} /> Remove
                   </button>
                 )}
@@ -211,7 +209,7 @@ export function BrandingSettings() {
               <input
                 type="file"
                 accept={ALLOWED_TYPES.join(',')}
-                disabled={!canEdit || uploading}
+                disabled={!canEdit || uploading || saving}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) void onFile(file);
@@ -257,8 +255,8 @@ export function BrandingSettings() {
         {canEdit && (
           <div className={s.footer}>
             {dirty && <span className={s.dirty}>Theme preview is live locally until you save or reset.</span>}
-            <Button variant="ghost" onClick={reset} disabled={saving}>Reset</Button>
-            <Button variant="primary" onClick={save} disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save theme'}</Button>
+            <Button variant="ghost" onClick={reset} disabled={saving || uploading}>Reset</Button>
+            <Button variant="primary" onClick={save} disabled={!dirty || saving || uploading}>{saving ? 'Saving…' : 'Save theme'}</Button>
           </div>
         )}
       </div>

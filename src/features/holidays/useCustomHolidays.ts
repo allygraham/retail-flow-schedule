@@ -20,12 +20,13 @@ export function useCustomHolidays(businessId: string | null) {
   const add = useCallback(
     async (input: { date: string; name: string; blocks_scheduling?: boolean }) => {
       if (!businessId) return { error: new Error('No business') };
-      const { error } = await supabase.from('custom_holidays').insert({
+      const { data, error } = await supabase.from('custom_holidays').insert({
         business_id: businessId,
         date: input.date,
         name: input.name.trim(),
         blocks_scheduling: input.blocks_scheduling ?? true,
-      });
+      }).select('id');
+      if (!error && data?.length !== 1) return { error: new Error('Company holiday was not added. Please try again.') };
       if (!error) await reload();
       return { error };
     },
@@ -34,23 +35,27 @@ export function useCustomHolidays(businessId: string | null) {
 
   const update = useCallback(
     async (id: string, patch: { name?: string; blocks_scheduling?: boolean }) => {
+      if (!businessId) return { error: new Error('No business') };
       const cleaned: { name?: string; blocks_scheduling?: boolean } = {};
       if (patch.name !== undefined) cleaned.name = patch.name.trim();
       if (patch.blocks_scheduling !== undefined) cleaned.blocks_scheduling = patch.blocks_scheduling;
-      const { error } = await supabase.from('custom_holidays').update(cleaned).eq('id', id);
+      const { data, error } = await supabase.from('custom_holidays').update(cleaned).eq('id', id).eq('business_id', businessId!).select('id');
+      if (!error && data?.length !== 1) return { error: new Error('Company holiday was not updated. Your access may have changed.') };
       if (!error) await reload();
       return { error };
     },
-    [reload],
+    [businessId, reload],
   );
 
   const remove = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from('custom_holidays').delete().eq('id', id);
+      if (!businessId) return { error: new Error('No business') };
+      const { data, error } = await supabase.from('custom_holidays').delete().eq('id', id).eq('business_id', businessId!).select('id');
+      if (!error && data?.length !== 1) return { error: new Error('Company holiday was not removed. Your access may have changed.') };
       if (!error) await reload();
       return { error };
     },
-    [reload],
+    [businessId, reload],
   );
 
   return { rows, loading, error, reload, add, update, remove };

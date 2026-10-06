@@ -19,15 +19,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const preferredBusiness = useRef<string | undefined>();
   const tenancyRequest = useRef(0);
-  const loadTenancy = useCallback(async (uid: string) => {
+  const activeUser = useRef<string | null>(null);
+  const currentBusiness = useRef<string | undefined>();
+  currentBusiness.current = business?.id;
+  const accountReady = useRef(false);
+  accountReady.current = !loading && !error;
+  const loadTenancy = useCallback(async (uid: string, background = false) => {
     const request = ++tenancyRequest.current;
-    setLoading(true); setError(null); setBusiness(null); setRole(null); setFullName(null);
+    if (!background) { setLoading(true); setError(null); setBusiness(null); setRole(null); setFullName(null); }
     try {
       const [profileResult, membershipResult] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', uid).maybeSingle(),
         (() => {
           let query = supabase.from('memberships').select('business_id, businesses(*)').eq('user_id', uid).eq('is_active', true);
-          if (preferredBusiness.current) query = query.eq('business_id', preferredBusiness.current);
+          const selected = preferredBusiness.current ?? (background ? currentBusiness.current : undefined);
+          if (selected) query = query.eq('business_id', selected);
           return query.order('created_at', { ascending: true }).limit(1).maybeSingle();
         })(),
       ]);
@@ -43,11 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (roleError) throw roleError;
         const roles = (roleRows ?? []).map(r => r.role as AppRole);
         best = roles.includes('owner') ? 'owner' : roles.includes('manager') ? 'manager' : roles.includes('employee') ? 'employee' : null;
-        if (!best) throw new Error('Workspace role unavailable');
+        if (!best) {
+          if (background) { setRole(null); setError('Workspace role unavailable. Please reload your account.'); }
+          throw new Error('Workspace role unavailable');
+        }
       }
-      setFullName(profileResult.data?.full_name ?? null); setBusiness(biz ?? null); setRole(best);
+      setFullName(profileResult.data?.full_name ?? null); setBusiness(previous => JSON.stringify(previous) === JSON.stringify(biz ?? null) ? previous : biz ?? null); setRole(best);
     } catch {
-      if (request === tenancyRequest.current) setError('Could not load your account. Please try again.');
+      if (request === tenancyRequest.current && !background) setError('Could not load your account. Please try again.');
     } finally {
       if (request === tenancyRequest.current) setLoading(false);
     }
@@ -61,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
       if (request !== tenancyRequest.current) return;
       if (sessionError) throw sessionError;
+      activeUser.current = currentSession?.user.id ?? null;
       setSession(currentSession); setUser(currentSession?.user ?? null);
       if (currentSession?.user) await loadTenancy(currentSession.user.id);
       else { tenancyRequest.current++; setBusiness(null); setRole(null); setFullName(null); setLoading(false); }
@@ -73,7 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let authEvent = 0;
     const applySession = (s: Session | null) => {
       if (disposed) return;
-      setSession(s); setUser(s?.user ?? null);
+      const sameUser = !!s?.user && activeUser.current === s.user.id;
+      if (activeUser.current && !sameUser) preferredBusiness.current = undefined;
+      activeUser.current = s?.user.id ?? null;
+      setSession(s);
+      // Retain the user identity object so data hooks do not restart on token refresh.
+      setUser(previous => sameUser ? previous : s?.user ?? null);
+      if (sameUser && accountReady.current) {
+        const request = ++tenancyRequest.current;
+        setTimeout(() => { if (!disposed && request === tenancyRequest.current) void loadTenancy(s!.user.id, true); }, 0);
+        return;
+      }
       if (s?.user) setSignOutNotice(null);
       // Invalidate earlier account requests immediately, before the deferred load.
       const request = ++tenancyRequest.current;
