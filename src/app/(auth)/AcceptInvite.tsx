@@ -47,14 +47,19 @@ export default function AcceptInvite() {
     setPassword('');
     (async () => {
       if (!token) { setLookupErr('Missing invite token'); setLookupDone(true); return; }
-      const { data, error } = await supabase.rpc('get_invitation_by_token', { _token: token });
-      if (cancelled) return;
-      if (error) { setLookupErr(error.message); setLookupDone(true); return; }
-      const row = data?.[0] as InviteRow | undefined;
-      if (!row) { setLookupErr('Invite not found.'); setLookupDone(true); return; }
-      setInvite(row);
-      setFullName(row.full_name ?? '');
-      setLookupDone(true);
+      try {
+        const { data, error } = await supabase.rpc('get_invitation_by_token', { _token: token });
+        if (cancelled) return;
+        if (error) { setLookupErr(error.message); return; }
+        const row = data?.[0] as InviteRow | undefined;
+        if (!row) { setLookupErr('Invite not found.'); return; }
+        setInvite(row);
+        setFullName(row.full_name ?? '');
+      } catch {
+        if (!cancelled) setLookupErr('Could not load your invitation. Please try again.');
+      } finally {
+        if (!cancelled) setLookupDone(true);
+      }
     })();
     return () => { cancelled = true; };
   }, [token]);

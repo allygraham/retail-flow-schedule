@@ -1,6 +1,6 @@
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type Notification = {
@@ -18,7 +18,11 @@ export type Notification = {
 };
 
 export function useNotifications(userId: string | undefined) {
-  const [saving, setSaving] = useState(false);
+  const [savingUser, setSavingUser] = useState<string | null>(null);
+  const saving = !!userId && savingUser === userId;
+  const currentUser = useRef(userId);
+  currentUser.current = userId;
+  const pendingWrite = useRef<{ userId: string } | null>(null);
   const [writeError, setWriteError] = useState<{ userId: string; message: string } | null>(null);
   const fetchItems = useCallback(async () => {
     if (!userId) return [];
@@ -63,21 +67,29 @@ export function useNotifications(userId: string | undefined) {
   const unreadCount = items.filter(n => !n.read_at).length;
 
   const saveRead = async (ids: string[]) => {
-    if (!userId || saving) return false;
+    if (!userId || currentUser.current !== userId || pendingWrite.current?.userId === userId) return false;
     if (!ids.length) return true;
-    setSaving(true);
+    const request = { userId };
+    pendingWrite.current = request;
+    setSavingUser(userId);
     setWriteError(null);
     try {
       const result = await supabase.from('notifications')
         .update({ read_at: new Date().toISOString() }).eq('user_id', userId).in('id', ids).select('id');
+      if (currentUser.current !== userId) return false;
       assertQueryResults(result);
       if (result.data?.length !== ids.length) throw new Error('Notifications were not updated');
       await load();
-      return true;
+      return currentUser.current === userId;
     } catch {
-      setWriteError({ userId, message: 'Could not mark notifications as read. Please try again.' });
+      if (currentUser.current === userId) setWriteError({ userId, message: 'Could not mark notifications as read. Please try again.' });
       return false;
-    } finally { setSaving(false); }
+    } finally {
+      if (pendingWrite.current === request) {
+        pendingWrite.current = null;
+        setSavingUser(null);
+      }
+    }
   };
   const markRead = (id: string) => saveRead([id]);
   const markAllRead = () => saveRead(items.filter(n => !n.read_at).map(n => n.id));
