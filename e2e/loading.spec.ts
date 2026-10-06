@@ -4,7 +4,7 @@ import { authenticate, stubApi } from './fixtures';
 for (const scenario of [
   { path: '/profile', endpoint: 'shifts', label: 'Loading profile', heading: 'Your details' },
   { path: '/stores', endpoint: 'store_locations', label: 'Loading stores', heading: 'Your locations' },
-  { path: '/dashboard', endpoint: 'shifts', label: 'Loading dashboard', heading: /Good/ },
+  { path: '/dashboard', endpoint: 'shifts', label: 'Loading today’s shifts', heading: /Good/ },
   { path: '/rota', endpoint: 'get_rota_people', label: 'Loading rota', heading: /Week of/ },
   { path: '/team', endpoint: 'employee_profiles', label: 'Loading team', heading: 'Your people' },
 ]) test(`${scenario.path} shows a skeleton until its data is ready`, async ({ page }) => {

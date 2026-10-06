@@ -157,3 +157,12 @@
   font-size: $fs-lg; line-height: 1;
   color: var(--color-primary, #{$brand-700});
 }
+
+.dynamicContent { min-height: 180px; }
+.statSkeleton {
+  display: inline-block;
+  width: 48px;
+  height: 1em;
+  border-radius: $r-sm;
+  background: var(--color-surface-muted, $ink-100);
+}

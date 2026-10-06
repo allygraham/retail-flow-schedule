@@ -2,7 +2,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Plane, ArrowRight, BellRing } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +82,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         leaves: leaveRows.data ?? [],
       };
   }, [userId, businessId]);
-  const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
+  const { data: result, loading, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
   const pageHeader = (
@@ -98,8 +98,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         </div>
       </header>
   );
-  if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
-  if (!data) return <div className={s.page}>{pageHeader}<LoadingSkeleton layout="dashboard-content" label="Loading dashboard" /></div>;
+  const data = result ?? { upcoming: [], weekShifts: [], leaves: [] };
 
 
   const next = data.upcoming[0];
@@ -138,10 +137,18 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   return (
     <div className={s.page}>
       {pageHeader}
+      {loadError && <DataLoadError message={loadError} retry={load} />}
 
       {/* HERO: Next shift */}
       <section className={s.heroWrap}>
-        {next ? (
+        {loading || loadError ? (
+          <article className={s.hero}>
+            <div className={s.heroLeft}>
+              <span className={s.heroEye}>Your next shift</span>
+              <DashboardContent loading={loading} error={loadError} label="Loading next shift"><></></DashboardContent>
+            </div>
+          </article>
+        ) : next ? (
           <article className={s.hero}>
             <div className={s.heroLeft}>
               <span className={s.heroEye}>{next.shift_date === today ? 'Your shift today' : 'Your next shift'}</span>
@@ -196,7 +203,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
                     <div className={s.wNum}>{fmtDate(d, 'd')}</div>
                   </div>
                   <div className={s.weekBody}>
-                    {dayShifts.length > 0 ? (
+                    {loading ? <LoadingSkeleton layout="inline" label={`Loading ${fmtDate(d, 'EEEE')} shifts`} /> : loadError ? <span className={s.weekOff}>Unavailable</span> : dayShifts.length > 0 ? (
                       dayShifts.map(sh => (
                         <div key={sh.id} className={s.weekShift}>
                           <span className={s.weekTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</span>
@@ -209,11 +216,11 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
                       <span className={s.weekOff}>Day off</span>
                     )}
                   </div>
-                  {dayShifts.length > 0
+                  {!loading && !loadError && (dayShifts.length > 0
                     ? <Badge tone="working" dot>Working</Badge>
                     : onLeave
                       ? <Badge tone="leave" dot>Leave</Badge>
-                      : <Badge tone="dayoff">Off</Badge>}
+                      : <Badge tone="dayoff">Off</Badge>)}
                 </li>
               );
             })}
@@ -223,6 +230,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         {/* Upcoming time off */}
         <Card title="Time off" subtitle="Your leave at a glance"
           action={<Button variant="ghost" size="sm" trailing={<ArrowRight size={14} />} onClick={() => nav('/leave')}>Manage</Button>}>
+          <DashboardContent loading={loading} error={loadError} label="Loading time off">
           {!nextApproved && pendingLeave.length === 0 && recentDecisions.length === 0 ? (
             <EmptyState
               title="No leave on record"
@@ -266,6 +274,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
                 ))}
             </ul>
           )}
+          </DashboardContent>
         </Card>
 
         {/* Activity / alerts */}
@@ -303,10 +312,10 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         </Card>
 
         {/* Upcoming shifts (compact list, after next) */}
-        {restUpcoming.length > 0 && (
           <Card title="Then after that" subtitle="Your next shifts"
             action={<Button variant="ghost" size="sm" trailing={<ArrowRight size={14} />} onClick={() => nav('/rota')}>Full rota</Button>}>
-            <ul className={s.list}>
+            <DashboardContent loading={loading} error={loadError} label="Loading upcoming shifts">
+            {restUpcoming.length === 0 ? <EmptyState title="No further shifts" description="Your next published shifts will appear here." /> : <ul className={s.list}>
               {restUpcoming.map((sh) => {
                 const hol = holidays.get(sh.shift_date);
                 return (
@@ -325,9 +334,9 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
                   </li>
                 );
               })}
-            </ul>
+            </ul>}
+            </DashboardContent>
           </Card>
-        )}
       </div>
     </div>
   );
@@ -373,7 +382,7 @@ function ManagerDashboard() {
         profilesById: Object.fromEntries((profiles.data ?? []).map((p) => [p.id, p.full_name])),
       };
   }, [business, role, user?.id]);
-  const { data, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
+  const { data: result, loading, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the dashboard. Please try again.');
 
   if (!business) return null;
   const greeting = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${fullName?.split(' ')[0] ?? 'there'}`;
@@ -386,14 +395,15 @@ function ManagerDashboard() {
         </div>
       </header>
   );
-  if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
-  if (!data) return <div className={s.page}>{pageHeader}<LoadingSkeleton layout="dashboard-content" label="Loading dashboard" /></div>;
+  const data = result ?? { shiftsToday: [], leaveApproved: [], sickToday: [], pendingLeave: [], unassigned: [], profilesById: {} };
+  const statValue = (value: number) => loading ? <span className={s.statSkeleton} aria-label="Loading value" /> : loadError ? '—' : value;
 
 
 
   return (
     <div className={s.page}>
       {pageHeader}
+      {loadError && <DataLoadError message={loadError} retry={load} />}
 
       {weekHolidays.length > 0 && (
         <div className={s.holidayBanner} role="status">
@@ -411,15 +421,16 @@ function ManagerDashboard() {
       )}
 
       <div className={s.stats}>
-        <Stat label="Working today" value={data.shiftsToday.filter((s) => s.assigned_user_id).length} accent="success" hint="Across all stores" />
-        <Stat label="On annual leave" value={data.leaveApproved.length} accent="brand" />
-        <Stat label="Off sick" value={data.sickToday.length} accent="danger" />
-        <Stat label="Unassigned shifts" value={data.unassigned.length} accent="warn" hint="Need cover" />
-        <Stat label="Pending requests" value={data.pendingLeave.length} accent="warn" />
+        <Stat label="Working today" value={statValue(data.shiftsToday.filter((s) => s.assigned_user_id).length)} accent="success" hint="Across all stores" />
+        <Stat label="On annual leave" value={statValue(data.leaveApproved.length)} accent="brand" />
+        <Stat label="Off sick" value={statValue(data.sickToday.length)} accent="danger" />
+        <Stat label="Unassigned shifts" value={statValue(data.unassigned.length)} accent="warn" hint="Need cover" />
+        <Stat label="Pending requests" value={statValue(data.pendingLeave.length)} accent="warn" />
       </div>
 
       <div className={s.cols}>
-        <Card title="Today's shifts" subtitle={`${data.shiftsToday.length} scheduled`}>
+        <Card title="Today's shifts" subtitle={loading ? <LoadingSkeleton layout="inline" label="Loading shift count" /> : loadError ? 'Schedule unavailable' : `${data.shiftsToday.length} scheduled`}>
+          <DashboardContent loading={loading} error={loadError} label="Loading today’s shifts">
           {data.shiftsToday.length === 0 ? (
             <EmptyState title="No shifts today" description="Enjoy the quiet day!" />
           ) : (
@@ -436,9 +447,11 @@ function ManagerDashboard() {
               ))}
             </ul>
           )}
+          </DashboardContent>
         </Card>
 
         <Card title="Pending leave requests" subtitle="Awaiting your review">
+          <DashboardContent loading={loading} error={loadError} label="Loading pending leave requests">
           {data.pendingLeave.length === 0 ? (
             <EmptyState title="All caught up" description="No requests need attention." />
           ) : (
@@ -455,9 +468,11 @@ function ManagerDashboard() {
               ))}
             </ul>
           )}
+          </DashboardContent>
         </Card>
 
         <Card title="Coverage gaps" subtitle="Upcoming unassigned shifts">
+          <DashboardContent loading={loading} error={loadError} label="Loading coverage gaps">
           {data.unassigned.length === 0 ? (
             <EmptyState title="Fully covered" description="No gaps in the published rota." />
           ) : (
@@ -473,8 +488,15 @@ function ManagerDashboard() {
               ))}
             </ul>
           )}
+          </DashboardContent>
         </Card>
       </div>
     </div>
   );
+}
+
+function DashboardContent({ loading, error, label, children }: { loading: boolean; error: string | null; label: string; children: ReactNode }) {
+  return <div className={s.dynamicContent} aria-busy={loading}>
+    {loading ? <LoadingSkeleton label={label} rows={3} /> : error ? <p>Unavailable until the dashboard reloads.</p> : children}
+  </div>;
 }
