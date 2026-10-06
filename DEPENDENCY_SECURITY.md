@@ -1,4 +1,4 @@
-# Dependency security review — 4 October 2026
+# Dependency security review — 6 October 2026
 
 Updated Vite, Vitest, React Router, PostCSS and compatible transitive dependencies.
 Removed the development-only Lovable component tagger.
@@ -18,3 +18,10 @@ chain but requires separate styling migration and visual regression work.
 advisories, and fails if the registry cannot return a valid audit. The exception
 matches this exact advisory URL, not a package name or severity. Remove it when
 an upstream patch is available or the affected dependency chain is removed.
+
+The deployment gate caught a newly reported `postcss-selector-parser` advisory
+(GHSA-rj75-hqrm-r3gf). All Tailwind and typography paths now use patched version
+7.1.6 through npm overrides, including an explicit `postcss-nested` override.
+These overrides cross the upstream version-6 ranges; production CSS builds and
+browser regression checks must pass when changing them. Remove the overrides
+when upstream dependencies adopt a patched parser themselves.
