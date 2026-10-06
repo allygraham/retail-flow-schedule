@@ -182,3 +182,42 @@ test('failed validation download keeps the shift editor open and performs no wri
   expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(0);
   await expect(dialog.locator('input[type=time]').nth(1)).toHaveValue('17:00:00');
 });
+
+test('week loading preserves the store, staff rows and seven-day grid', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift()];
+  let storeReads = 0;
+  page.on('request', request => { if (request.url().includes('/rest/v1/store_locations')) storeReads++; });
+  await page.goto('/rota');
+  const grid = page.getByLabel('Weekly rota', { exact: true });
+  await expect(grid).toHaveAttribute('aria-busy', 'false');
+  const store = page.getByRole('button', { name: 'Main Store', exact: true });
+  await expect(store).toBeVisible();
+  const originalGrid = await grid.boundingBox();
+  const originalStore = await store.boundingBox();
+  const reads = storeReads;
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/rest/v1/shifts*', async route => { await pending; await route.fallback(); });
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
+  try {
+    await expect(grid).toHaveAttribute('aria-busy', 'true');
+    await expect(store).toBeVisible();
+    await expect(grid.getByText('Test Employee', { exact: true })).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Loading rota' })).toHaveCount(0);
+    await expect(grid.locator('[data-rota-cell]')).toHaveCount(14);
+    await expect(page.getByRole('button', { name: /Publish/ })).toBeDisabled();
+    await expect(cell(page, employeeId, '2026-10-12').getByText('09:00–17:00')).toHaveCount(0);
+    await cell(page, employeeId, '2026-10-12').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const duringGrid = await grid.boundingBox();
+    const duringStore = await store.boundingBox();
+    expect(duringGrid?.height).toBeCloseTo(originalGrid!.height, 0);
+    expect(duringStore?.x).toBeCloseTo(originalStore!.x, 0);
+    expect(storeReads).toBe(reads);
+    await page.getByRole('button', { name: 'Next week', exact: true }).click();
+    await expect(cell(page, employeeId, '2026-10-19')).toBeVisible();
+  } finally { release(); }
+  await expect(grid).toHaveAttribute('aria-busy', 'false');
+  await expect(store).toBeVisible();
+  await expect(cell(page, employeeId, '2026-10-12')).toHaveCount(0);
+});

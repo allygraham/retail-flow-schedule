@@ -3,7 +3,7 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import type { ShiftRow } from '@/types/rows';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -45,18 +45,14 @@ export default function Rota() {
   const days = weekDays(weekStart);
   const visibleDays = isMobile ? [days[selectedDay]] : days;
 
-  const fetchData = useCallback(async () => {
+  const fetchReferenceData = useCallback(async () => {
     if (!business) throw new Error('No workspace');
-    const [st, rl, epRaw, sh, lv] = await Promise.all([
+    const [st, rl, epRaw] = await Promise.all([
       supabase.from('store_locations').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
       supabase.from('roles_catalog').select('*').eq('business_id', business.id).order('name'),
       supabase.rpc('get_rota_people', { _business_id: business.id }),
-      (isMgr
-        ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')
-        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')),
-      supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(addDays(weekStart, 6))).gte('end_date', isoDate(weekStart)),
     ]);
-    assertQueryResults(st, rl, epRaw, sh, lv);
+    assertQueryResults(st, rl, epRaw);
     const ep = { data: epRaw.data ?? [] };
     const nameById = Object.fromEntries(ep.data.map(e => [e.user_id, e.full_name ?? 'Employee']));
     const storesByProfile = Object.fromEntries(ep.data.map(e => [e.id, new Set(e.store_ids)]));
@@ -71,10 +67,38 @@ export default function Rota() {
         store_ids: Array.from(ids),
       };
     });
-    return { stores: st.data ?? [], roles: rl.data ?? [], people, shifts: sh.data ?? [], leave: lv.data ?? [] };
+    return { stores: st.data ?? [], roles: rl.data ?? [], people };
+  }, [business]);
+  const reference = useAsyncData(fetchReferenceData, 'Could not load the rota. Please try again.');
+  const fetchWeekData = useCallback(async () => {
+    if (!business) throw new Error('No workspace');
+    const [sh, lv] = await Promise.all([
+      (isMgr
+        ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')
+        : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')),
+      supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(addDays(weekStart, 6))).gte('end_date', isoDate(weekStart)),
+    ]);
+    assertQueryResults(sh, lv);
+    return { shifts: sh.data ?? [], leave: lv.data ?? [] };
   }, [business, weekStart, isMgr]);
-  const { data, loading, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the rota. Please try again.');
-  const { stores, roles, people, shifts, leave } = useMemo(() => data ?? { stores: [], roles: [], people: [], shifts: [], leave: [] }, [data]);
+  const week = useAsyncData(fetchWeekData, 'Could not load the rota. Please try again.');
+  const loading = reference.loading || week.loading;
+  const loadError = reference.error || week.error;
+  const load = async () => { await Promise.all([reference.reload(), week.reload()]); };
+  const { stores, roles, people } = reference.data ?? { stores: [], roles: [], people: [] };
+  const { shifts, leave } = useMemo(() => week.data ?? { shifts: [], leave: [] }, [week.data]);
+  const gridBusy = loading || holidays.loading;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const gridHeight = useRef(0);
+  const gridContext = `${business?.id}:${isMgr}:${isMobile}:${storeFilter}`;
+  const previousGridContext = useRef(gridContext);
+  if (previousGridContext.current !== gridContext) {
+    previousGridContext.current = gridContext;
+    gridHeight.current = 0;
+  }
+  useLayoutEffect(() => {
+    if (!gridBusy && gridRef.current) gridHeight.current = gridRef.current.getBoundingClientRect().height;
+  });
 
   const filteredShifts = useMemo(() =>
     shifts.filter(x => storeFilter === 'all' || x.store_id === storeFilter)
@@ -95,13 +119,20 @@ export default function Rota() {
   const roleById = useMemo(() => Object.fromEntries(roles.map(r => [r.id, r])), [roles]);
 
   // People shown as rows: filtered by selected store (membership OR a shift in that store this week).
-  const visiblePeople = useMemo(() => {
+  const matchingPeople = useMemo(() => {
     if (storeFilter === 'all') return people;
     const assignedHere = new Set(
       shifts.filter(sh => sh.store_id === storeFilter && sh.assigned_user_id).map(sh => sh.assigned_user_id),
     );
     return people.filter(p => p.store_ids?.includes(storeFilter) || assignedHere.has(p.user_id));
   }, [people, shifts, storeFilter]);
+  // Keep shift-only staff rows present while changing weeks, scoped to this view.
+  const previousPeople = useRef<{ context: string; people: typeof matchingPeople } | null>(null);
+  const visiblePeople = gridBusy && previousPeople.current?.context === gridContext
+    ? previousPeople.current.people : matchingPeople;
+  useLayoutEffect(() => {
+    if (!gridBusy) previousPeople.current = { context: gridContext, people: matchingPeople };
+  }, [gridBusy, gridContext, matchingPeople]);
 
   const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published && x.status !== 'cancelled').length, [filteredShifts]);
 
@@ -329,7 +360,7 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
         <div className={s.controls}>
-          {isMgr && !loading && !holidays.loading && filteredShifts.length === 0 && <Button variant="outline" onClick={copyPreviousWeek} loading={copying}>Copy previous week</Button>}
+          {isMgr && <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={gridBusy || !!loadError || !!holidays.error}>Copy previous week</Button>}
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>Current week</button>
@@ -356,7 +387,7 @@ export default function Rota() {
       </Field>);
   if (holidays.error) return <div className={s.page}>{pageHeader}<DataLoadError message={holidays.error} retry={holidays.reload} /></div>;
   if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
-  if (loading || !data || holidays.loading) return <div className={s.page}>{pageHeader}{dayControl}<Card padded={false}><LoadingSkeleton layout="rota-content" label="Loading rota" /></Card></div>;
+  if (!reference.data) return <div className={s.page}>{pageHeader}{dayControl}<Card padded={false}><LoadingSkeleton layout="rota-content" label="Loading rota" /></Card></div>;
 
   return (
     <div className={s.page}>
@@ -366,7 +397,7 @@ export default function Rota() {
       {dayControl}
       <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className={`${s.grid} ${!isMgr ? s.gridEmployee : ''} ${isMobile ? s.gridMobile : ''}`}>
+          <div ref={gridRef} aria-label="Weekly rota" aria-busy={gridBusy} style={{ minHeight: gridBusy ? gridHeight.current : undefined }} className={`${s.grid} ${!isMgr ? s.gridEmployee : ''} ${isMobile ? s.gridMobile : ''}`}>
             {isMgr && <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>}
             {visibleDays.map(d => {
               const dStr = isoDate(d);
@@ -393,7 +424,7 @@ export default function Rota() {
                     <div>
                       <div className={s.staffName}>{p.name}</div>
                       <div className={s.staffRole}>{roleById[p.primary_role_id ?? '']?.name ?? '—'}</div>
-                      {isMobile && <div className={s.staffRole} aria-label={`${p.name} weekly hours`}>{weeklyHours[p.user_id] ?? 0}h this week</div>}
+                      {isMobile && <div className={s.staffRole} aria-label={`${p.name} weekly hours`}>{gridBusy ? '…' : `${weeklyHours[p.user_id] ?? 0}h this week`}</div>}
                     </div>
                   </div>
                 )}
@@ -403,15 +434,16 @@ export default function Rota() {
                   const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
                   const hol = holidays.get(dStr);
                   return (
-                    <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={!isMgr || !!onLeave}
+                    <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={gridBusy || !isMgr || !!onLeave}
                       className={hol ? s.cellHoliday : ''}
-                      onClick={() => isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
-                      {onLeave && (
+                      onClick={() => !gridBusy && isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
+                      {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
+                      {!gridBusy && onLeave && (
                         <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
                           <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
                         </div>
                       )}
-                      {cell.map(sh => (
+                      {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
                             onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}
@@ -428,7 +460,7 @@ export default function Rota() {
                   );
                 })}
                 {isMgr && <div className={s.totalCell} aria-label={`${p.name} weekly hours`} title="Scheduled hours this week, excluding breaks and cancelled shifts">
-                  {weeklyHours[p.user_id] ?? 0}<span className={s.totalUnit}>h</span>
+                  {gridBusy ? <div className={s.totalSkeleton} aria-hidden="true" /> : <>{weeklyHours[p.user_id] ?? 0}<span className={s.totalUnit}>h</span></>}
                 </div>}
               </div>
             ))}
@@ -444,10 +476,11 @@ export default function Rota() {
                   const cell = filteredShifts.filter(sh => !sh.assigned_user_id && sh.shift_date === dStr);
                   const hol = holidays.get(dStr);
                   return (
-                    <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={!isMgr}
+                    <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={gridBusy || !isMgr}
                       className={hol ? s.cellHoliday : ''}
-                      onClick={() => isMgr && openCreate(dStr)}>
-                      {cell.map(sh => (
+                      onClick={() => !gridBusy && isMgr && openCreate(dStr)}>
+                      {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
+                      {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
@@ -474,7 +507,7 @@ export default function Rota() {
         </DndContext>
       </Card>
 
-      {filteredShifts.length === 0 && (
+      {!gridBusy && filteredShifts.length === 0 && (
         <div className={s.emptyBanner}>
           <span className={s.emptyIcon}>ℹ️</span>
           <span className={s.emptyText}>{isMgr ? 'No shifts this week — click any cell to add one.' : 'Your manager hasn\'t published this week yet.'}</span>

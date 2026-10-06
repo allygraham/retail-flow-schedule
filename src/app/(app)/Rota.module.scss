@@ -148,3 +148,11 @@
   .shiftTime { overflow-wrap: anywhere; }
   &.gridEmployee { grid-template-columns: minmax(0, 1fr); }
 }
+
+.cellSkeleton, .totalSkeleton {
+  border-radius: $r-sm;
+  background: var(--color-surface-muted, $ink-100);
+  border: 1px solid var(--color-border, $border);
+}
+.cellSkeleton { height: 60px; width: 100%; }
+.totalSkeleton { height: 18px; width: 36px; }
