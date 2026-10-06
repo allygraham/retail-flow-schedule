@@ -5,7 +5,7 @@ import { DataLoadError } from '@/components/common/DataLoadError';
 import { errorMessage } from '@/lib/errors';
 import type { AppRole } from '@/types/domain';
 import { WEEKDAYS } from '@/features/leave/leaveDays';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -106,6 +106,7 @@ export default function Team() {
   // edit member modal
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [editBusy, setEditBusy] = useState(false);
+  const editSubmitting = useRef(false);
   const [editErr, setEditErr] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     role: 'employee' as 'owner' | 'manager' | 'employee',
@@ -387,7 +388,7 @@ export default function Team() {
 
   const submitEdit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    if (!business || !editRow?.user_id) return;
+    if (editSubmitting.current || !business || !editRow?.user_id) return;
     setEditErr(null);
 
     const hours = editForm.contracted_hours === '' ? null : Number(editForm.contracted_hours);
@@ -397,15 +398,14 @@ export default function Team() {
     if (!editForm.working_days.length) { setEditErr('Select at least one normal working day for leave calculations'); return; }
     if (!editForm.primary_store_id) { setEditErr('Pick a primary store'); return; }
 
-    setEditBusy(true);
-
     // Role change: only owners can change roles or assign owner
     const roleChanged = editForm.role !== editRow.role;
     if (roleChanged && !isOwner) {
-      setEditBusy(false);
       setEditErr('Only owners can change roles'); return;
     }
 
+    editSubmitting.current = true;
+    setEditBusy(true);
     try {
       const { error } = await supabase.rpc('update_team_member', {
         _business_id: business.id, _user_id: editRow.user_id,
@@ -421,6 +421,7 @@ export default function Team() {
     } catch (err) {
       setEditErr(errorMessage(err, 'Update failed'));
     } finally {
+      editSubmitting.current = false;
       setEditBusy(false);
     }
   };
