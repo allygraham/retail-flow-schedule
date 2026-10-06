@@ -28,7 +28,7 @@ export const NAV_PERMISSIONS: Partial<Record<AppNavItem, AppPermission>> = {
 };
 
 export function hasPermission(role: AppRole | null | undefined, permission: AppPermission) {
-  if (!role) return false;
+  if (!role || !Object.prototype.hasOwnProperty.call(PERMISSIONS, permission)) return false;
   return PERMISSIONS[permission].includes(role);
 }
 

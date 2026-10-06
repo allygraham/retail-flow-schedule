@@ -7,7 +7,7 @@ import { useAuth } from './authContext';
 import { ProtectedRoute } from './ProtectedRoute';
 const mocks = vi.hoisted(() => ({
   session: { user: { id: 'self' } }, responses: {} as Record<string, MockResult>, listener: (() => {}) as (event: string, session: unknown) => void,
-  getSession: vi.fn(), signOut: vi.fn(),
+  getSession: vi.fn(), signOut: vi.fn(), queries: vi.fn(),
 }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
   auth: {
@@ -15,6 +15,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: {
     onAuthStateChange: (listener: typeof mocks.listener) => { mocks.listener = listener; return { data: { subscription: { unsubscribe: vi.fn() } } }; },
   },
   from: (table: string) => {
+    mocks.queries(table);
     const response = mocks.responses[table];
     const query = { select: () => query, eq: () => query, order: () => query, limit: () => query, maybeSingle: () => query,
       then: Promise.resolve(response).then.bind(Promise.resolve(response)) };
@@ -38,7 +39,7 @@ const ready = () => {
   };
 };
 beforeEach(() => {
-  ready(); mocks.getSession.mockReset(); mocks.signOut.mockReset();
+  ready(); mocks.queries.mockClear(); mocks.getSession.mockReset(); mocks.signOut.mockReset();
   mocks.getSession.mockResolvedValue({ data: { session: mocks.session }, error: null });
   mocks.signOut.mockImplementation(async () => { mocks.listener('SIGNED_OUT', null); return { error: null }; });
 });
@@ -92,4 +93,46 @@ describe('account loading and protected routing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' })); await screen.findByText('Login screen');
   });
 
+});
+
+
+describe('account role and session race regressions', () => {
+  it.each([
+    { roles: ['employee', 'manager', 'owner'], expected: 'owner' },
+    { roles: ['owner', 'employee', 'manager'], expected: 'owner' },
+    { roles: ['employee', 'manager'], expected: 'manager' },
+    { roles: ['employee'], expected: 'employee' },
+  ])('uses $expected access for role rows $roles', async ({ roles, expected }) => {
+    mocks.responses.user_roles = { data: roles.map(role => ({ role })), error: null };
+    show();
+    await screen.findByText(`Workspace: Shop / ${expected}`);
+  });
+  it('does not accept unrecognised server roles as management access', async () => {
+    mocks.responses.user_roles = { data: [{ role: 'administrator' }], error: null };
+    show(); await screen.findByRole('alert');
+    expect(screen.queryByText(/Workspace: Shop/)).not.toBeInTheDocument();
+  });
+  it('ignores old owner role responses after another user signs in', async () => {
+    let completeOldRoles!: (value: MockResponse) => void;
+    mocks.responses.user_roles = new Promise(resolve => { completeOldRoles = resolve; });
+    show();
+    await waitFor(() => expect(mocks.queries).toHaveBeenCalledWith('user_roles'));
+    mocks.responses.memberships = { data: { businesses: { id: 'second-shop', name: 'Second Shop' } }, error: null };
+    mocks.responses.user_roles = { data: [{ role: 'employee' }], error: null };
+    await act(async () => mocks.listener('SIGNED_IN', { user: { id: 'second-user' } }));
+    await screen.findByText('Workspace: Second Shop / employee');
+    await act(async () => completeOldRoles({ data: [{ role: 'owner' }], error: null }));
+    expect(screen.getByText('Workspace: Second Shop / employee')).toBeInTheDocument();
+    expect(screen.queryByText('Workspace: Shop / owner')).not.toBeInTheDocument();
+  });
+  it('ignores an initial session lookup that finishes after a sign-out event', async () => {
+    let complete!: (value: { data: { session: typeof mocks.session }; error: null }) => void;
+    mocks.getSession.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    show();
+    await act(async () => mocks.listener('SIGNED_OUT', null));
+    await screen.findByText('Login screen');
+    await act(async () => complete({ data: { session: mocks.session }, error: null }));
+    expect(screen.getByText('Login screen')).toBeInTheDocument();
+    expect(mocks.queries).not.toHaveBeenCalled();
+  });
 });
