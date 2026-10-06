@@ -2,7 +2,7 @@ import { lazy } from "react";
 import { PageBoundary } from "@/components/common/PageBoundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { BrandingProvider } from "@/features/branding/BrandingProvider";
 import { PageMetadata } from "@/features/branding/PageMetadata";
@@ -13,7 +13,6 @@ import ForgotPassword from "@/app/(auth)/ForgotPassword";
 import ResetPassword from "@/app/(auth)/ResetPassword";
 import AcceptInvite from "@/app/(auth)/AcceptInvite";
 import Login from "@/app/(auth)/Login";
-const Landing = lazy(() => import("@/app/(marketing)/Landing"));
 const Features = lazy(() => import("@/app/(marketing)/Features"));
 const Pricing = lazy(() => import("@/app/(marketing)/Pricing"));
 const Dashboard = lazy(() => import("@/app/(app)/Dashboard"));
@@ -41,8 +40,8 @@ const App = () => (
           <PageMetadata />
           <PageBoundary fullPage>
           <Routes>
-            {/* Public marketing */}
-            <Route path="/" element={<Landing />} />
+            {/* Home resolves through the same account checks as protected pages. */}
+            <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
             <Route path="/features" element={<Features />} />
             <Route path="/pricing" element={<Pricing />} />
 
