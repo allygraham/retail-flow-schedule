@@ -25,6 +25,14 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
   const sicknessDays = await page.getByText('Sickness days', { exact: true }).locator('..').boundingBox();
   const sicknessSpells = await page.getByText('Sickness spells', { exact: true }).locator('..').boundingBox();
   expect(sicknessDays?.y).toBe(sicknessSpells?.y);
+  if (width === 1280) {
+    const annualSummary = await page.locator('section[aria-labelledby="leave-summary-title"]').boundingBox();
+    const annualRecord = await page.getByRole('region', { name: 'Annual leave record', exact: true }).boundingBox();
+    const sickSummary = await page.locator('section[aria-labelledby="sickness-summary-title"]').boundingBox();
+    expect(annualSummary?.x).toBe(annualRecord?.x);
+    expect(annualSummary?.width).toBeCloseTo(annualRecord!.width, 0);
+    expect(annualSummary?.width).toBeCloseTo(sickSummary!.width, 0);
+  }
   await expect(page.getByText('Allowance shown is the current entitlement in working days per leave year.')).toBeVisible();
   await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('2');
   await page.getByLabel('Year', { exact: true }).selectOption('2025');
@@ -63,4 +71,39 @@ for (const width of [1280, 390]) test(`owner opens staff leave details from the 
   await page.getByRole('menuitem', { name: 'View leave details', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/team/${employeeId}$`));
   await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('/ 28');
+});
+
+for (const width of [1280, 390]) test(`owner records leave for this staff member at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 844 });
+  await page.clock.setFixedTime(new Date('2026-10-07T12:00:00Z'));
+  await authenticate(page); const state = await stubApi(page);
+  await page.goto(`/team/${employeeId}`);
+  await page.getByRole('button', { name: 'Add leave', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add leave for Test Employee' });
+  await dialog.getByLabel('Leave type', { exact: true }).selectOption('annual');
+  await dialog.getByLabel('Reason', { exact: true }).fill('Recorded from staff history');
+  await dialog.getByRole('button', { name: 'Save as approved' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByText('Recorded from staff history', { exact: true })).toBeVisible();
+  expect(state.writes.find(write => write.endpoint === 'record_employee_leave')?.body).toMatchObject({ _business_id: businessId, _user_id: employeeId, _leave_type: 'annual', _start_date: '2026-10-07', _end_date: '2026-10-07' });
+  await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('1');
+});
+
+test('failed staff leave save retains the draft and retries without duplicating records', async ({ page }) => {
+  await authenticate(page); const state = await stubApi(page);
+  let fail = true;
+  await page.route('**/rest/v1/rpc/record_employee_leave*', route => fail ? route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'Leave could not be saved' }) }) : route.fallback());
+  await page.goto(`/team/${employeeId}`);
+  await page.getByRole('button', { name: 'Add leave', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add leave for Test Employee' });
+  await dialog.getByLabel('Reason', { exact: true }).fill('Keep this draft');
+  await dialog.getByRole('button', { name: 'Save as approved' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Leave could not be saved');
+  await expect(dialog.getByLabel('Reason', { exact: true })).toHaveValue('Keep this draft');
+  expect(state.leaves).toHaveLength(0);
+  fail = false;
+  await dialog.getByRole('button', { name: 'Save as approved' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByText('Keep this draft', { exact: true })).toBeVisible();
+  expect(state.leaves).toHaveLength(1);
 });

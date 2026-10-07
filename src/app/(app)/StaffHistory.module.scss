@@ -12,7 +12,7 @@
   &:hover { text-decoration: underline; }
   &:focus-visible { outline: 2px solid var(--color-primary, $brand-600); outline-offset: 4px; border-radius: $r-sm; }
 }
-.overview { display: grid; grid-template-columns: 3fr 2fr; gap: $sp-5; }
+.overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $sp-5; }
 .summarySection { min-width: 0; }
 .sectionHead { display: flex; align-items: center; gap: $sp-3; margin-bottom: $sp-3;
   h2 { font-size: $fs-md; font-weight: $fw-semibold; margin: 0; }
@@ -28,10 +28,10 @@
 .recordHeading { display: inline-flex; align-items: center; gap: $sp-2; svg { color: var(--color-primary, $brand-600); flex-shrink: 0; } }
 .dateIcon { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: $r-md; color: var(--color-text-secondary, $text-muted); background: var(--color-surface-muted, $ink-50); }
 .guidance { display: flex; align-items: flex-start; gap: $sp-3; padding: $sp-4; border: 1px solid var(--color-border, $border); border-radius: $r-md; background: var(--color-surface-muted, $ink-50); > svg { flex-shrink: 0; margin-top: 2px; color: var(--color-primary, $brand-600); } }
-@media (max-width: 1050px) { .overview { grid-template-columns: 1fr; } .sicknessStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1050px) { .overview, .records { grid-template-columns: 1fr; } .sicknessStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 540px) { .header { padding: $sp-4; align-items: flex-start; } .yearPicker { width: 100%; } .personIcon { width: 42px; height: 42px; } .identity { gap: $sp-3; } .record { flex-wrap: wrap; } }
 @media (max-width: 380px) { .stats, .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.records { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: $sp-4; align-items: start; }
+.records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $sp-5; align-items: start; }
 .list { list-style: none; margin: 0; padding: 0; }
 .record {
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -48,3 +48,6 @@
 .entitlement { font-family: $font-sans; font-size: $fs-md; font-weight: $fw-medium; letter-spacing: normal; color: var(--color-text-secondary, #{$text-muted}); }
 .allowanceNote { font-size: $fs-xs; line-height: $lh-normal; color: var(--color-text-secondary, #{$text-muted}); margin: $sp-3 0 0; }
 @media (max-width: 540px) { .stats { grid-template-columns: 1fr; } }
+
+.headerActions { display: flex; align-items: flex-end; flex-wrap: wrap; gap: $sp-3; max-width: 100%; }
+@media (max-width: 540px) { .headerActions { width: 100%; > button { width: 100%; } } }

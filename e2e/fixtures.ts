@@ -40,7 +40,7 @@ export async function stubApi(page: Page, shared?: StubState) {
     }
     const single = request.headers().accept?.includes('object+json');
     if (endpoint === 'profiles' && url.searchParams.get('select') === 'phone') return reply(single ? { phone: null } : [{ phone: null }]);
-    if (endpoint === 'profiles') return reply(single ? { full_name: 'Test Owner' } : url.searchParams.has('id') && url.searchParams.get('select') === 'full_name' ? [{ full_name: 'Test Owner' }] : [{ id: ownerId, full_name: 'Test Owner' }, { id: employeeId, full_name: 'Test Employee' }]);
+    if (endpoint === 'profiles') return reply(single ? { full_name: url.searchParams.get('id') === `eq.${employeeId}` ? 'Test Employee' : 'Test Owner' } : url.searchParams.has('id') && url.searchParams.get('select') === 'full_name' ? [{ full_name: url.searchParams.get('id') === `eq.${employeeId}` ? 'Test Employee' : 'Test Owner' }] : [{ id: ownerId, full_name: 'Test Owner' }, { id: employeeId, full_name: 'Test Employee' }]);
     if (endpoint === 'memberships' && method === 'PATCH') {
       if (state.memberFailure) return reply({ message: 'Employee access update failed' }, 400);
       state.employeeActive = body?.is_active === true;
@@ -141,6 +141,11 @@ export async function stubApi(page: Page, shared?: StubState) {
     if (endpoint === 'publish_rota_shifts') {
       state.shifts = state.shifts.map(shift => ({ ...shift, is_published: true }));
       return reply([{ published_count: state.shifts.length, notified_count: 1 }]);
+    }
+    if (endpoint === 'record_employee_leave') {
+      const record = { id: 'recorded-leave', business_id: body?._business_id, user_id: body?._user_id, leave_type: body?._leave_type, start_date: body?._start_date, end_date: body?._end_date, reason: body?._reason, manager_note: body?._manager_note, status: 'approved', source: 'owner_created', charged_working_days: [1,2,3,4,5], sickness_meta: body?._sickness_meta, lifecycle_status: body?._lifecycle_status };
+      state.leaves.push(record);
+      return reply([{ leave_id: record.id, released_shift_count: 0 }]);
     }
     if (endpoint === 'review_employee_leave') {
       state.leaves = state.leaves.map(leave => leave.id === body?._leave_id ? { ...leave, status: body?._status } : leave);

@@ -19,7 +19,7 @@ import { Field, Input, Select, TextArea } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import { EmptyState } from '@/components/common/EmptyState';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useLeaveRequests } from '@/features/leave/useLeaveRequests';
+import { AddStaffLeaveModal } from '@/features/leave/AddStaffLeaveModal';
 import { inviteEmployeeSchema } from '@/lib/validation';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
@@ -76,7 +76,6 @@ const STATUS_LABEL: Record<AccountStatus, string> = {
 
 export default function Team() {
   const { business, user, hasPermission } = useAuth();
-  const { addForEmployee } = useLeaveRequests();
   const canManageStaff = hasPermission('manage_staff');
   const isOwner = hasPermission('manage_settings');
 
@@ -121,15 +120,6 @@ export default function Team() {
   const [confirmRow, setConfirmRow] = useState<Row | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [leaveRow, setLeaveRow] = useState<Row | null>(null);
-  const [leaveBusy, setLeaveBusy] = useState(false);
-  const [leaveErr, setLeaveErr] = useState<string | null>(null);
-  const [leaveForm, setLeaveForm] = useState({
-    leave_type: 'sick' as 'annual' | 'sick' | 'unpaid',
-    start_date: '',
-    end_date: '',
-    reason: '',
-    manager_note: '',
-  });
 
   // filters
   const isCompact = useIsCompact();
@@ -453,46 +443,7 @@ export default function Team() {
     return true;
   };
 
-  const openLeave = (row: Row) => {
-    const today = new Date();
-    const todayISO = toISODate(today) || '';
-    setLeaveErr(null);
-    setLeaveForm({
-      leave_type: 'sick',
-      start_date: todayISO,
-      end_date: todayISO,
-      reason: '',
-      manager_note: '',
-    });
-    setLeaveRow(row);
-  };
-
-  const submitLeave = async () => {
-    if (!leaveRow?.user_id) return;
-    setLeaveErr(null);
-    setLeaveBusy(true);
-    try {
-      const result = await addForEmployee({
-        user_id: leaveRow.user_id,
-        leave_type: leaveForm.leave_type,
-        start_date: leaveForm.start_date,
-        end_date: leaveForm.end_date,
-        reason: leaveForm.reason || null,
-        manager_note: leaveForm.manager_note || null,
-        status: 'approved',
-      });
-      setLeaveRow(null);
-      toast.success(
-        result.conflictingShiftCount > 0
-          ? `Leave saved — ${result.conflictingShiftCount} shift${result.conflictingShiftCount === 1 ? '' : 's'} reopened for cover.`
-          : 'Leave saved'
-      );
-    } catch (err) {
-      setLeaveErr(errorMessage(err, 'Could not save leave'));
-    } finally {
-      setLeaveBusy(false);
-    }
-  };
+  const openLeave = (row: Row) => { setLeaveRow(row); };
 
   const pageHeader = (
 <header className={s.header}>
@@ -1000,52 +951,7 @@ export default function Team() {
         )}
       </Modal>
 
-      <Modal
-        open={!!leaveRow}
-        onClose={() => setLeaveRow(null)}
-        title={leaveRow ? `Add leave for ${leaveRow.full_name}` : 'Add leave'}
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setLeaveRow(null)}>Cancel</Button>
-            <Button onClick={submitLeave} loading={leaveBusy}>Save as approved</Button>
-          </>
-        }
-      >
-        <div className={s.form}>
-          <div className={s.row2}>
-            <Field label="Leave type">
-              <Select value={leaveForm.leave_type} onChange={e => setLeaveForm({ ...leaveForm, leave_type: e.target.value as typeof leaveForm.leave_type })}>
-                <option value="sick">Sick leave</option>
-                <option value="annual">Annual leave</option>
-                <option value="unpaid">Unpaid leave</option>
-              </Select>
-            </Field>
-            <Field label="Status">
-              <Input value="Approved / recorded" disabled readOnly />
-            </Field>
-          </div>
-          <Field label="Dates">
-            <DatePicker
-              mode="range"
-              value={{ from: parseISODate(leaveForm.start_date), to: parseISODate(leaveForm.end_date) }}
-              onChange={(r) => setLeaveForm({
-                ...leaveForm,
-                start_date: toISODate(r.from) || leaveForm.start_date,
-                end_date: toISODate(r.to) || toISODate(r.from) || leaveForm.end_date,
-              })}
-              placeholder="Pick a date range"
-            />
-          </Field>
-          <Field label="Reason" hint="Visible in the employee leave history">
-            <TextArea rows={3} value={leaveForm.reason} onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })} />
-          </Field>
-          <Field label="Manager note" hint="Optional internal context">
-            <TextArea rows={3} value={leaveForm.manager_note} onChange={e => setLeaveForm({ ...leaveForm, manager_note: e.target.value })} />
-          </Field>
-          {leaveErr && <div className={s.err}>{leaveErr}</div>}
-        </div>
-      </Modal>
+      {leaveRow?.user_id && <AddStaffLeaveModal userId={leaveRow.user_id} name={leaveRow.full_name} onClose={() => setLeaveRow(null)} onSaved={load} />}
 
       {/* Edit member modal */}
       <Modal

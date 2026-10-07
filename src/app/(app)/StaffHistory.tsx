@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, HeartPulse, Info, Plane, UserRound } from 'lucide-react';
+import { ArrowLeft, CalendarDays, HeartPulse, Info, Plane, Plus, UserRound } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/authContext';
@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { Card } from '@/components/common/Card';
+import { Button } from '@/components/common/Button';
+import { AddStaffLeaveModal } from '@/features/leave/AddStaffLeaveModal';
 import { Stat } from '@/components/common/Stat';
 import { Field, Select } from '@/components/common/Field';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
@@ -23,6 +25,7 @@ export default function StaffHistory() {
   const { userId } = useParams();
   const { business, role } = useAuth();
   const currentYear = leavePeriodForDate(business, isoDate(new Date())).year;
+  const [addingLeave, setAddingLeave] = useState(false);
   const [year, setYear] = useState(currentYear);
   const period = useMemo(() => leavePeriodForYear(business, year), [business, year]);
   const fetchData = useCallback(async () => {
@@ -57,10 +60,11 @@ export default function StaffHistory() {
   return <div className={s.page}>
     <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to staff</Link>
     <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
-      <div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
+      <div className={s.headerActions}><div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
         {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
-      </Select></Field></div>
+      </Select></Field></div><Button disabled={loading || !!loadError || !data} onClick={() => setAddingLeave(true)}><Plus size={16} aria-hidden /> Add leave</Button></div>
     </header>
+    {addingLeave && userId && data && <AddStaffLeaveModal userId={userId} name={data.name} onClose={() => setAddingLeave(false)} onSaved={reload} />}
     {error && <DataLoadError message={error} retry={reload} />}
     <div className={s.overview}>
       <section className={s.summarySection} aria-labelledby="leave-summary-title">
@@ -81,7 +85,7 @@ export default function StaffHistory() {
       </section>
     </div>
     <div className={s.records}>
-      {(['annual', 'sick'] as const).map(type => <Card key={type} title={<span className={s.recordHeading}>{type === 'annual' ? <Plane size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
+      {(['annual', 'sick'] as const).map(type => <Card key={type} role="region" aria-label={type === 'annual' ? 'Annual leave record' : 'Sickness record'} title={<span className={s.recordHeading}>{type === 'annual' ? <Plane size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
         {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p className={s.note}>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
           <ul className={s.list}>{records.filter(row => row.leave_type === type).map(row => {
             const meta = parseSicknessMeta(row.sickness_meta);
