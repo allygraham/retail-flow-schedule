@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { BrandingSettings } from '@/features/branding/BrandingSettings';
+import { LeaveYearSettings } from '@/features/leave/LeaveYearSettings';
 import { HolidaySettings } from '@/features/holidays/HolidaySettings';
 import { RolesSettings } from '@/features/roles/RolesSettings';
 import s from './Settings.module.scss';
@@ -77,6 +78,7 @@ export default function Settings() {
 
         <div className={s.panel}>
           {active === 'business' && (
+            <>
             <Card title="Business" subtitle="Your workspace identity and your role.">
               <div className={s.bizGrid}>
                 <div><strong>Name:</strong> {business?.name}</div>
@@ -84,6 +86,8 @@ export default function Settings() {
                 <div><strong>Your role:</strong> <Badge tone="brand" dot>{role}</Badge></div>
               </div>
             </Card>
+            <LeaveYearSettings />
+            </>
           )}
           {active === 'roles' && <RolesSettings />}
           {active === 'holidays' && <HolidaySettings />}

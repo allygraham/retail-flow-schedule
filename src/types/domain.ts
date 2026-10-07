@@ -7,6 +7,8 @@ export type LeaveSource = 'employee_request' | 'manager_created' | 'owner_create
 export type EmploymentType = 'full_time' | 'part_time' | 'casual' | 'contractor';
 
 export interface Business {
+  leave_year_mode?: 'calendar' | 'tax' | 'financial';
+  leave_year_start_date?: string | null;
   id: string;
   name: string;
   slug: string;

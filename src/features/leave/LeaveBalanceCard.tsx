@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function LeaveBalanceCard({ balance, loading, patternMissing, error, title = 'Annual leave', subtitle, compact, action }: Props) {
-  const sub = subtitle ?? (balance ? `${balance.year} entitlement` : undefined);
+  const sub = subtitle ?? (balance ? `${balance.period?.label ?? balance.year} entitlement` : undefined);
   return (
     <Card title={title} subtitle={sub}>
       {loading ? (

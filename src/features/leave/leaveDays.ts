@@ -14,9 +14,10 @@ export function daysBetween(startISO: string, endISO: string): number {
   return Math.max(0, Math.round((end - start) / 86_400_000) + 1);
 }
 
-export function workingDates(startISO: string, endISO: string, workingDays: readonly number[], year?: number): string[] {
-  const start = year === undefined ? startISO : startISO < `${year}-01-01` ? `${year}-01-01` : startISO;
-  const end = year === undefined ? endISO : endISO > `${year}-12-31` ? `${year}-12-31` : endISO;
+export function workingDates(startISO: string, endISO: string, workingDays: readonly number[], year?: number | { start: string; end: string }): string[] {
+  const bounds = typeof year === 'number' ? { start: `${year}-01-01`, end: `${year}-12-31` } : year;
+  const start = bounds && startISO < bounds.start ? bounds.start : startISO;
+  const end = bounds && endISO > bounds.end ? bounds.end : endISO;
   const weekdays = new Set(workingDays);
   const result: string[] = [];
   const endTime = Date.parse(`${end}T00:00:00Z`);
@@ -41,7 +42,7 @@ export interface BalanceRequest {
 }
 
 /** Count a working date once even if requests overlap; approved takes precedence. */
-export function calculateLeaveDays(requests: readonly BalanceRequest[], year: number, workingDays: readonly number[]) {
+export function calculateLeaveDays(requests: readonly BalanceRequest[], year: number | { start: string; end: string }, workingDays: readonly number[]) {
   const approved = new Set<string>();
   const pending = new Set<string>();
   for (const request of requests) {

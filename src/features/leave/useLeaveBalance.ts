@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { leavePeriodForDate, type LeavePeriod } from './leavePeriod';
+import { isoDate } from '@/lib/datetime';
 import { calculateLeaveDays } from './leaveDays';
 import { useAuth } from '@/features/auth/authContext';
 export { daysBetween, daysInYear } from './leaveDays';
@@ -10,18 +12,20 @@ export interface LeaveBalance {
   pending: number;
   remaining: number;
   year: number;
+  period?: LeavePeriod;
 }
 
 /**
- * Annual leave balance for a single user in the current calendar year.
+ * Annual leave balance for a single user in the current business leave year.
  * - entitlement: from employee_profiles.annual_leave_entitlement (default 28)
  * - taken: distinct approved working dates in this year
  * - pending: distinct pending working dates, excluding already approved dates (not deducted)
  */
-export function useLeaveBalance(userId?: string | null) {
+export function useLeaveBalance(userId?: string | null, date?: string, enabled = true) {
   const { user, business } = useAuth();
   const targetId = userId ?? user?.id ?? null;
-  const year = new Date().getFullYear();
+  const period = leavePeriodForDate(business, date || isoDate(new Date()));
+  const { year, start: yearStart, end: yearEnd } = period;
 
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,14 +36,12 @@ export function useLeaveBalance(userId?: string | null) {
   const sequence = useRef(0);
   const load = useCallback(async () => {
     const request = ++sequence.current;
-    if (!targetId || !business) {
+    if (!enabled || !targetId || !business) {
       setBalance(null); setWorkingDays(null); setPatternMissing(false); setError(null); setLoading(false);
       return;
     }
     setLoading(true);
     setBalance(null); setWorkingDays(null); setPatternMissing(false); setError(null);
-    const yearStart = `${year}-01-01`;
-    const yearEnd = `${year}-12-31`;
 
     try {
       const [{ data: emp, error: profileError }, { data: leaves, error: leaveError }] = await Promise.all([
@@ -70,7 +72,7 @@ export function useLeaveBalance(userId?: string | null) {
       if (!pattern?.length || (leaves ?? []).some(l => l.status === 'approved' && !l.charged_working_days?.length)) {
         setPatternMissing(true); return;
       }
-      const { taken, pending } = calculateLeaveDays(leaves ?? [], year, pattern);
+      const { taken, pending } = calculateLeaveDays(leaves ?? [], { start: yearStart, end: yearEnd }, pattern);
       const entitlement = Number(emp?.annual_leave_entitlement ?? 28);
       setBalance({
         entitlement,
@@ -78,13 +80,14 @@ export function useLeaveBalance(userId?: string | null) {
         pending,
         remaining: entitlement - taken,
         year,
+        period: leavePeriodForDate(business, yearStart),
       });
     } catch {
       if (request === sequence.current) setError('Could not load annual leave balance. Please try again.');
     } finally {
       if (request === sequence.current) setLoading(false);
     }
-  }, [targetId, business, year]);
+  }, [targetId, business, year, yearStart, yearEnd, enabled]);
 
   useEffect(() => { const requests = sequence; void load(); return () => { requests.current++; }; }, [load]);
 

@@ -24,7 +24,7 @@ describe('annual leave balance integration', () => {
   it('uses stored working days and keeps pending leave separate', async () => {
     const { result } = renderHook(() => useLeaveBalance());
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.balance).toEqual({ entitlement: 20, taken: 3, pending: 3, remaining: 17, year: 2026 });
+    expect(result.current.balance).toMatchObject({ entitlement: 20, taken: 3, pending: 3, remaining: 17, year: 2026 });
   });
   it('reports a missing pattern instead of inventing a balance', async () => {
     ((mocks.profile as MockResponse).data as { working_days: number[] | null }).working_days = null;
@@ -86,7 +86,7 @@ it('allocates approved leave across calendar years and reloads after year rollov
   const { result, rerender } = renderHook(() => useLeaveBalance());
   await waitFor(() => expect(result.current.balance?.taken).toBe(4));
   vi.setSystemTime(new Date('2027-01-01T12:00:00Z')); rerender();
-  await waitFor(() => expect(result.current.balance).toEqual({ entitlement: 28, taken: 1, pending: 0, remaining: 27, year: 2027 }));
+  await waitFor(() => expect(result.current.balance).toMatchObject({ entitlement: 28, taken: 1, pending: 0, remaining: 27, year: 2027 }));
 });
 
 it('cancelling approved leave restores entitlement while pending cancellation removes only pending days', async () => {
@@ -112,4 +112,15 @@ it('clears a previously valid balance on reload failure and recovers on retry', 
   mocks.leaves = { data: [], error: null };
   await act(async () => { await result.current.reload(); });
   expect(result.current.balance?.remaining).toBe(20); expect(result.current.error).toBeNull();
+});
+
+it('calculates balances in the business financial year and updates after a setting change', async () => {
+  Object.assign(mocks.auth.business, { leave_year_mode: 'financial', leave_year_start_date: '2026-07-15' });
+  mocks.leaves = { data: [{ start_date: '2026-07-13', end_date: '2026-07-17', leave_type: 'annual', status: 'approved', charged_working_days: [1,2,3,4,5] }], error: null };
+  const { result, rerender } = renderHook(()=>useLeaveBalance());
+  await waitFor(()=>expect(result.current.balance?.taken).toBe(3));
+  expect(result.current.balance?.period).toMatchObject({ start: '2026-07-15', end: '2027-07-14' });
+  mocks.auth.business = { id: 'shop' };
+  rerender();
+  await waitFor(()=>expect(result.current.balance?.taken).toBe(5));
 });

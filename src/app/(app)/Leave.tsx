@@ -1,6 +1,7 @@
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { errorMessage } from '@/lib/errors';
 import { canCancelLeave } from '@/features/leave/leavePermissions';
+import { daysInPeriod } from '@/features/leave/leavePeriod';
 import { daysBetween, daysInYear, workingDaysBetween } from '@/features/leave/leaveDays';
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/authContext';
@@ -105,6 +106,7 @@ export default function Leave() {
     end_date: '',
     reason: '',
   });
+  const requestBalance = useLeaveBalance(undefined, form.start_date, requestModal && form.leave_type === 'annual');
   const [mgmtForm, setMgmtForm] = useState<{ user_id: string; leave_type: 'annual' | 'unpaid' | 'sick'; start_date: string; end_date: string; reason: string; manager_note: string; status: 'approved'; sickness_meta: SicknessMeta; lifecycle_status: SicknessLifecycleStatus }>({
     user_id: '',
     leave_type: 'sick',
@@ -278,11 +280,13 @@ export default function Leave() {
     if (!form.start_date || !form.end_date) { setFormErr('Choose the dates for your leave.'); return; }
     const parsed = leaveSchema.safeParse(form);
     if (!parsed.success) { setFormErr(parsed.error.issues[0].message); return; }
-    if (parsed.data.leave_type === 'annual' && balance && workingDays) {
-      const days = daysInYear(parsed.data.start_date, parsed.data.end_date, balance.year, workingDays);
-      if (days > balance.remaining) {
+    const { balance: requestEntitlement, workingDays: requestWorkingDays } = requestBalance;
+    if (parsed.data.leave_type === 'annual' && requestBalance.loading) { setFormErr('Please wait for the annual leave balance to load.'); return; }
+    if (parsed.data.leave_type === 'annual' && requestEntitlement && requestWorkingDays) {
+      const days = requestEntitlement.period ? daysInPeriod(parsed.data.start_date, parsed.data.end_date, requestEntitlement.period, requestWorkingDays) : daysInYear(parsed.data.start_date, parsed.data.end_date, requestEntitlement.year, requestWorkingDays);
+      if (days > requestEntitlement.remaining) {
         const ok = window.confirm(
-          `This request uses ${days} working day${days === 1 ? '' : 's'} but you only have ${balance.remaining} day${balance.remaining === 1 ? '' : 's'} of annual leave remaining in ${balance.year}. Submit anyway?`
+          `This request uses ${days} working day${days === 1 ? '' : 's'} but you only have ${requestEntitlement.remaining} day${requestEntitlement.remaining === 1 ? '' : 's'} of annual leave remaining in ${requestEntitlement.period?.label ?? requestEntitlement.year}. Submit anyway?`
         );
         if (!ok) return;
       }
@@ -940,7 +944,7 @@ export default function Leave() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setRequestModal(false)}>Cancel</Button>
-            <Button onClick={submitRequest}>Submit</Button>
+            <Button onClick={submitRequest} disabled={form.leave_type === 'annual' && requestBalance.loading}>Submit</Button>
           </>
         }
       >

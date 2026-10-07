@@ -1,6 +1,6 @@
 import { calculateLeaveDays, workingDates, type BalanceRequest } from './leaveDays';
 
-export function staffYearSummary(records: readonly BalanceRequest[], year: number, workingDays: readonly number[], today: string) {
+export function staffYearSummary(records: readonly BalanceRequest[], year: number | { start: string; end: string }, workingDays: readonly number[], today: string) {
   const annual = calculateLeaveDays(records, year, workingDays);
   const elapsed = records.filter(row => row.start_date <= today).map(row => ({ ...row, end_date: row.end_date > today ? today : row.end_date }));
   const taken = calculateLeaveDays(elapsed, year, workingDays).taken;

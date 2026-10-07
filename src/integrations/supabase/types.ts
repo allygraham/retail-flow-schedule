@@ -154,6 +154,8 @@ export type Database = {
       }
       businesses: {
         Row: {
+          leave_year_mode: 'calendar' | 'tax' | 'financial'
+          leave_year_start_date: string | null
           created_at: string
           id: string
           industry: string | null
@@ -164,6 +166,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          leave_year_mode?: 'calendar' | 'tax' | 'financial'
+          leave_year_start_date?: string | null
           created_at?: string
           id?: string
           industry?: string | null
@@ -174,6 +178,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          leave_year_mode?: 'calendar' | 'tax' | 'financial'
+          leave_year_start_date?: string | null
           created_at?: string
           id?: string
           industry?: string | null

@@ -1,0 +1,5 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+.form { @include col; gap: $sp-4; align-items: stretch; > button { align-self: flex-start; } }
+.note { margin: 0; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; line-height: $lh-normal; }
+.error { margin: 0; padding: $sp-3; border-radius: $r-sm; color: var(--color-danger-text, #991b1b); background: var(--color-danger-bg, #fee2e2); font-size: $fs-sm; }

@@ -11,6 +11,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { Badge } from '@/components/common/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
+import { leavePeriodForDate, leavePeriodForYear } from '@/features/leave/leavePeriod';
 import { staffYearSummary } from '@/features/leave/staffHistory';
 import { STATUS_LABEL, STATUS_TONE } from '@/features/leave/leaveStatus';
 import { parseSicknessMeta, SICKNESS_CATEGORY_LABEL, SICKNESS_LIFECYCLE_LABEL, type SicknessLifecycleStatus } from '@/features/leave/sickness';
@@ -20,8 +21,9 @@ import s from './StaffHistory.module.scss';
 export default function StaffHistory() {
   const { userId } = useParams();
   const { business, role } = useAuth();
-  const currentYear = new Date().getFullYear();
+  const currentYear = leavePeriodForDate(business, isoDate(new Date())).year;
   const [year, setYear] = useState(currentYear);
+  const period = useMemo(() => leavePeriodForYear(business, year), [business, year]);
   const fetchData = useCallback(async () => {
     if (!business || !userId || role !== 'owner') throw new Error('Access denied');
     const member = await supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('user_id', userId).maybeSingle();
@@ -37,22 +39,22 @@ export default function StaffHistory() {
   }, [business, userId, role]);
   const { data, loading, error: loadError, reload } = useAsyncData(fetchData, 'Could not load this staff member’s history. Check they belong to this workspace and try again.');
   const calculation = useMemo(() => {
-    try { return { summary: data ? staffYearSummary(data.records, year, data.workingDays, isoDate(new Date())) : null, error: null }; }
+    try { return { summary: data ? staffYearSummary(data.records, period, data.workingDays, isoDate(new Date())) : null, error: null }; }
     catch { return { summary: null, error: 'Annual leave history is missing a saved working pattern. Please review the affected records.' }; }
-  }, [data, year]);
+  }, [data, period]);
   const summary = calculation.summary;
   const error = loadError || calculation.error;
   const years = new Set([currentYear, year]);
   for (const row of data?.records ?? []) {
-    for (let y = Number(row.start_date.slice(0, 4)); y <= Number(row.end_date.slice(0, 4)); y++) years.add(y);
+    for (let y = leavePeriodForDate(business, row.start_date).year; y <= leavePeriodForDate(business, row.end_date).year; y++) years.add(y);
   }
-  const records = data?.records.filter(row => row.start_date <= `${year}-12-31` && row.end_date >= `${year}-01-01`) ?? [];
+  const records = data?.records.filter(row => row.start_date <= period.end && row.end_date >= period.start) ?? [];
   const value = (count: number | undefined) => loading ? <LoadingSkeleton layout="inline" label="Loading total" /> : count ?? '—';
   return <div className={s.page}>
     <Link className={s.backLink} to="/team">← Back to staff</Link>
-    <header className={s.header}><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by calendar year</p></div>
+    <header className={s.header}><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div>
       <Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
-        {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{y}</option>)}
+        {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
       </Select></Field>
     </header>
     {error && <DataLoadError message={error} retry={reload} />}
@@ -64,7 +66,7 @@ export default function StaffHistory() {
       <Stat label="Sickness spells" value={value(summary?.sickSpells)} hint="Approved absences overlapping this year" />
     </div>
     <div className={s.records}>
-      {(['annual', 'sick'] as const).map(type => <Card key={type} title={type === 'annual' ? 'Annual leave record' : 'Sickness record'} subtitle={String(year)}>
+      {(['annual', 'sick'] as const).map(type => <Card key={type} title={type === 'annual' ? 'Annual leave record' : 'Sickness record'} subtitle={period.label}>
         {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p className={s.note}>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
           <ul className={s.list}>{records.filter(row => row.leave_type === type).map(row => {
             const meta = parseSicknessMeta(row.sickness_meta);
@@ -82,6 +84,6 @@ export default function StaffHistory() {
           })}</ul>}
       </Card>)}
     </div>
-    <p className={s.note}>Annual leave uses the working pattern saved when it was approved. Records spanning two years appear in both years; each year’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p>
+    <p className={s.note}>Annual leave uses the working pattern saved when it was approved. Records spanning two leave years appear in both periods; each period’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p>
   </div>;
 }
