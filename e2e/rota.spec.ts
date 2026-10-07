@@ -281,7 +281,7 @@ for (const width of [1280, 390]) {
   }
 }
 
-test('absence details failure shows a retry and does not reveal stale details', async ({ page }) => {
+test('absence background refresh failure keeps loaded details visible and can retry', async ({ page }) => {
   const state = await open(page);
   state.leaves = [{ id: 'absence-retry', business_id: businessId, user_id: employeeId, start_date: monday, end_date: monday, leave_type: 'annual', status: 'approved', source: 'employee_request', charged_working_days: [1, 2, 3, 4, 5], reason: 'Recovered details' }];
   await page.goto('/rota');
@@ -291,12 +291,14 @@ test('absence details failure shows a retry and does not reveal stale details', 
   await page.route('**/rest/v1/rpc/get_leave_requests*', route => fail ? route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Unavailable' }) }) : route.fallback());
   await entry.click();
   const dialog = page.getByRole('dialog', { name: 'Absence details' });
-  await expect(dialog.getByRole('alert')).toContainText('Could not load leave requests');
-  await expect(dialog.getByText('Recovered details')).not.toBeVisible();
+  await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('status', { name: 'Loading absence details' })).toHaveCount(0);
+  await expect(dialog.getByRole('alert')).toContainText('Could not refresh absence information');
+  await dialog.getByRole('button', { name: 'Notes & history' }).click();
+  await expect(dialog.getByText('Recovered details')).toBeVisible();
   fail = false;
   await dialog.getByRole('button', { name: 'Try again' }).click();
-  await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
-  await dialog.getByRole('button', { name: 'Notes & history' }).click();
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
   await expect(dialog.getByText('Recovered details')).toBeVisible();
 });
 
@@ -320,4 +322,31 @@ test('employee with no visible shifts sees Day off for a published week', async 
   state.shifts.push(shift({ id: 'unpublished-extra', shift_date: '2026-10-06' }));
   await page.reload();
   await expect(cell(page, employeeId, monday).getByText('To be confirmed', { exact: true })).toBeVisible();
+});
+
+for (const type of ['annual', 'sick']) test(`${type} details appear before the background history request finishes`, async ({ page }) => {
+  const state = await open(page);
+  state.leaves = [{ id: 'instant-absence', business_id: businessId, user_id: employeeId, leave_type: type, status: 'approved', source: 'employee_request', start_date: monday, end_date: monday, charged_working_days: [1,2,3,4,5], reason: 'Already loaded on rota', sickness_meta: { category: 'cold_flu' }, lifecycle_status: 'recorded_absence' }];
+  await page.goto('/rota');
+  const entry = cell(page, employeeId, monday).getByRole('button', { name: `View ${type === 'sick' ? 'sickness' : 'leave'} details for Test Employee` });
+  await expect(entry).toBeVisible();
+  let finish!: () => void;
+  const paused = new Promise<void>(resolve => { finish = resolve; });
+  await page.route('**/rest/v1/rpc/get_leave_requests*', async route => { await paused; await route.fallback(); });
+  try {
+    await entry.click();
+    const dialog = page.getByRole('dialog', { name: 'Absence details' });
+    await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
+    await expect(dialog.getByText(type === 'sick' ? '1 calendar day' : '1 working day', { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('status')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Notes & history' }).click();
+    await expect(dialog.getByText('Already loaded on rota')).toBeVisible();
+    if (type === 'sick') {
+      await dialog.getByRole('button', { name: 'SSP estimate' }).click();
+      await expect(dialog.getByText('Sickness history must finish refreshing before calculating SSP.')).toBeVisible();
+      await expect(dialog.getByLabel('Average weekly earnings (£)', { exact: true })).toHaveCount(0);
+    }
+    finish();
+    if (type === 'sick') await expect(dialog.getByLabel('Average weekly earnings (£)', { exact: true })).toBeVisible();
+  } finally { finish(); }
 });

@@ -1,9 +1,12 @@
+import RotaAbsenceDetails from '@/features/leave/RotaAbsenceDetails';
+import { parseSicknessMeta, type SicknessLifecycleStatus } from '@/features/leave/sickness';
+import type { LeaveSource } from '@/types/domain';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import type { ShiftRow } from '@/types/rows';
-import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -23,7 +26,7 @@ import s from './Rota.module.scss';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { planShiftDrop } from '@/features/rota/shiftMoves';
 
-const RotaAbsenceDetails = lazy(() => import('@/features/leave/RotaAbsenceDetails'));
+
 
 export default function Rota() {
   const { business, user, hasPermission } = useAuth();
@@ -122,6 +125,10 @@ export default function Rota() {
   const peopleById = useMemo(() => Object.fromEntries(people.map(p => [p.user_id, p])), [people]);
   const storeById = useMemo(() => Object.fromEntries(stores.map(s => [s.id, s])), [stores]);
   const roleById = useMemo(() => Object.fromEntries(roles.map(r => [r.id, r])), [roles]);
+  const selectedAbsence = useMemo(() => {
+    const row = leave.find(row => row.id === absenceId);
+    return row ? { ...row, source: row.source as LeaveSource, sickness_meta: parseSicknessMeta(row.sickness_meta), lifecycle_status: row.lifecycle_status as SicknessLifecycleStatus | null, profiles: { full_name: people.find(person => person.user_id === row.user_id)?.name ?? 'Employee' } } : null;
+  }, [leave, absenceId, people]);
 
   // People shown as rows: filtered by selected store (membership OR a shift in that store this week).
   const matchingPeople = useMemo(() => {
@@ -522,9 +529,7 @@ export default function Rota() {
         </div>
       )}
 
-      {absenceId && <Suspense fallback={<Modal open returnFocusTo={absenceOpener.current} onClose={() => setAbsenceId(null)} title="Absence details"><LoadingSkeleton layout="form" label="Loading absence details" /></Modal>}>
-        <RotaAbsenceDetails key={`${business?.id}:${absenceId}`} requestId={absenceId} returnFocusTo={absenceOpener.current} onClose={() => setAbsenceId(null)} />
-      </Suspense>}
+      {selectedAbsence && !loadError && <RotaAbsenceDetails key={`${business?.id}:${user?.id}:${isMgr}:${absenceId}`} request={selectedAbsence} returnFocusTo={absenceOpener.current} onClose={() => setAbsenceId(null)} />}
       <Modal open={modal.open} onClose={() => setModal({open: false})}
         title={modal.shift ? 'Edit shift' : 'New shift'}
         footer={

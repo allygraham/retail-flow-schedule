@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import { lazy, Suspense, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { useAuth } from '@/features/auth/authContext';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
@@ -11,12 +11,16 @@ import { fmtDate } from '@/lib/datetime';
 import { SOURCE_LABEL, STATUS_LABEL, TYPE_LABEL } from './leaveStatus';
 import { parseSicknessMeta, SICKNESS_CATEGORY_LABEL, SICKNESS_LIFECYCLE_LABEL, SICKNESS_LIFECYCLE_OPTIONS, type SicknessLifecycleStatus, type SicknessMeta } from './sickness';
 import type { LeaveRequestRow } from './useLeaveRequests';
-import { OperationalImpactCard } from './OperationalImpactCard';
-import { CoverageRecoveryCard } from './CoverageRecoveryCard';
-import { SspPanel } from './SspPanel';
 import s from '@/app/(app)/Leave.module.scss';
 
+const OperationalImpactCard = lazy(() => import('./OperationalImpactCard').then(module => ({ default: module.OperationalImpactCard })));
+const CoverageRecoveryCard = lazy(() => import('./CoverageRecoveryCard').then(module => ({ default: module.CoverageRecoveryCard })));
+const SspPanel = lazy(() => import('./SspPanel').then(module => ({ default: module.SspPanel })));
+
 interface Props {
+  supportingHistoryReady?: boolean;
+  supportingStatus?: ReactNode;
+  deferCoverage?: boolean;
   returnFocusTo?: HTMLElement | null;
   detailsRow: LeaveRequestRow | null;
   setDetailsRow: Dispatch<SetStateAction<LeaveRequestRow | null>>;
@@ -25,7 +29,7 @@ interface Props {
   durationLabel: (request: LeaveRequestRow) => string;
   updateSickness: (id: string, patch: { sickness_meta?: SicknessMeta | null; lifecycle_status?: SicknessLifecycleStatus | null }) => Promise<void>;
 }
-export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, workingDaysByUser, durationLabel, updateSickness, returnFocusTo }: Props) {
+export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, workingDaysByUser, durationLabel, updateSickness, returnFocusTo, supportingHistoryReady = true, supportingStatus, deferCoverage = false }: Props) {
   const { business, hasPermission } = useAuth();
   const isMgr = hasPermission('manage_leave');
   return (
@@ -66,6 +70,7 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
             .map(r => ({ id: r.id, start_date: r.start_date, end_date: r.end_date, leave_type: r.leave_type, status: r.status }));
           return (
             <div className={s.noteViewer}>
+              {supportingStatus}
               <div className={s.detailList}>
                 <div className={s.detailRow}><span>Employee</span><strong>{detailsRow.profiles?.full_name ?? 'Employee'}</strong></div>
                 <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[detailsRow.leave_type]}</strong></div>
@@ -100,14 +105,9 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
                 </div>
               )}
 
-              {isMgr && business && (
-                <CoverageRecoveryCard
-                  businessId={business.id}
-                  userId={detailsRow.user_id}
-                  startDate={detailsRow.start_date}
-                  endDate={detailsRow.end_date}
-                />
-              )}
+              {isMgr && business && (deferCoverage ? <CollapsibleSection title="Shift cover" icon={<Activity size={14} />} tone="subtle" defaultOpen={false}>
+                <Suspense fallback={null}><CoverageRecoveryCard businessId={business.id} userId={detailsRow.user_id} startDate={detailsRow.start_date} endDate={detailsRow.end_date} /></Suspense>
+              </CollapsibleSection> : <Suspense fallback={null}><CoverageRecoveryCard businessId={business.id} userId={detailsRow.user_id} startDate={detailsRow.start_date} endDate={detailsRow.end_date} /></Suspense>)}
 
               {isMgr && (
                 <CollapsibleSection
@@ -117,11 +117,11 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
                   defaultOpen={false}
                   meta="Shifts affected · uncovered hours"
                 >
-                  <OperationalImpactCard
+                  <Suspense fallback={null}><OperationalImpactCard
                     userId={detailsRow.user_id}
                     startDate={detailsRow.start_date}
                     endDate={detailsRow.end_date}
-                  />
+                  /></Suspense>
                 </CollapsibleSection>
               )}
 
@@ -133,7 +133,7 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
                   defaultOpen={false}
                   meta="Operational guidance"
                 >
-                  <SspPanel
+                  {supportingHistoryReady ? <Suspense fallback={null}><SspPanel
                     key={`${detailsRow.id}:${detailsRow.start_date}:${detailsRow.end_date}`}
                     requestId={detailsRow.id}
                     startDate={detailsRow.start_date}
@@ -141,7 +141,7 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
                     history={history}
                     workingDays={workingDaysByUser[detailsRow.user_id]}
                     employeeName={detailsRow.profiles?.full_name ?? undefined}
-                  />
+                  /></Suspense> : <p>Sickness history must finish refreshing before calculating SSP.</p>}
                 </CollapsibleSection>
               )}
 
