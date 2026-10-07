@@ -156,3 +156,7 @@
 }
 .cellSkeleton { height: 60px; width: 100%; }
 .totalSkeleton { height: 18px; width: 36px; }
+
+.absenceButton { width: 100%; text-align: left; font: inherit; min-height: 44px;
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}

@@ -10,9 +10,10 @@ interface Props {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
   bottomSheet?: boolean;
+  returnFocusTo?: HTMLElement | null;
 }
 
-export function Modal({ open, onClose, title, children, footer, size = 'md', bottomSheet = false }: Props) {
+export function Modal({ open, onClose, title, children, footer, size = 'md', bottomSheet = false, returnFocusTo }: Props) {
   const opener = useRef<HTMLElement | null>(null);
   const isOpen = useRef(open);
   isOpen.current = open;
@@ -43,7 +44,8 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', bot
             }}
             onCloseAutoFocus={event => {
               event.preventDefault();
-              if (opener.current?.isConnected) opener.current.focus();
+              const target = returnFocusTo ?? opener.current;
+              if (target?.isConnected) target.focus();
             }}>
             <header className={s.head}>
               {bottomSheet && <div className={s.grabber} aria-hidden />}

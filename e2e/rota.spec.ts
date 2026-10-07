@@ -246,3 +246,52 @@ test('drag refresh keeps the grid visible without skeletons or reloading stores'
   } finally { release(); }
   await expect(cell(page, 'unassigned', '2026-10-06').getByText('09:00–17:00')).toBeVisible();
 });
+
+for (const width of [1280, 390]) {
+  for (const type of ['annual', 'sick']) {
+    test(`${type} entry opens full absence details at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 850 });
+      const state = await open(page);
+      state.leaves = [{ id: 'absence-one', business_id: businessId, user_id: employeeId, start_date: monday, end_date: '2026-10-06', leave_type: type, status: 'approved', source: 'manager_created', charged_working_days: [1, 2, 3, 4, 5], reason: 'Original absence reason', manager_note: 'Manager recorded note', review_notes: 'Approval note', sickness_meta: type === 'sick' ? { category: 'cold_flu', self_certified: true, return_to_work_date: '2026-10-07' } : null, lifecycle_status: 'recorded_absence' }];
+      await page.goto('/rota');
+      const entry = cell(page, employeeId, monday).getByRole('button', { name: `View ${type === 'sick' ? 'sickness' : 'leave'} details for Test Employee` });
+      await entry.focus(); await page.keyboard.press('Enter');
+      const dialog = page.getByRole('dialog', { name: 'Absence details' });
+      await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('5 Oct → 6 Oct 2026')).toBeVisible();
+      await expect(dialog.getByText(type === 'sick' ? '2 calendar days' : '2 working days', { exact: true })).toBeVisible();
+      if (type === 'sick') {
+        await expect(dialog.getByText('Cold / flu', { exact: true })).toBeVisible();
+        await expect(dialog.getByText('Self-certified', { exact: true })).toBeVisible();
+        await expect(dialog.getByText('7 Oct 2026', { exact: true })).toBeVisible();
+      }
+      await dialog.getByRole('button', { name: 'Notes & history' }).click();
+      await expect(dialog.getByText('Original absence reason')).toBeVisible();
+      await expect(dialog.getByText('Manager recorded note')).toBeVisible();
+      await expect(dialog.getByText('Approval note')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(dialog).not.toBeVisible();
+      await expect(entry).toBeFocused();
+      expect(state.writes.filter(write => write.endpoint === 'shifts')).toHaveLength(0);
+    });
+  }
+}
+
+test('absence details failure shows a retry and does not reveal stale details', async ({ page }) => {
+  const state = await open(page);
+  state.leaves = [{ id: 'absence-retry', business_id: businessId, user_id: employeeId, start_date: monday, end_date: monday, leave_type: 'annual', status: 'approved', source: 'employee_request', charged_working_days: [1, 2, 3, 4, 5], reason: 'Recovered details' }];
+  await page.goto('/rota');
+  const entry = cell(page, employeeId, monday).getByRole('button', { name: 'View leave details for Test Employee' });
+  await expect(entry).toBeVisible();
+  let fail = true;
+  await page.route('**/rest/v1/rpc/get_leave_requests*', route => fail ? route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Unavailable' }) }) : route.fallback());
+  await entry.click();
+  const dialog = page.getByRole('dialog', { name: 'Absence details' });
+  await expect(dialog.getByRole('alert')).toContainText('Could not load leave requests');
+  await expect(dialog.getByText('Recovered details')).not.toBeVisible();
+  fail = false;
+  await dialog.getByRole('button', { name: 'Try again' }).click();
+  await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Notes & history' }).click();
+  await expect(dialog.getByText('Recovered details')).toBeVisible();
+});

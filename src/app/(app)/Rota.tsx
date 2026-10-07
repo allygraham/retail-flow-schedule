@@ -3,7 +3,7 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import type { ShiftRow } from '@/types/rows';
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -23,9 +23,13 @@ import s from './Rota.module.scss';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { planShiftDrop } from '@/features/rota/shiftMoves';
 
+const RotaAbsenceDetails = lazy(() => import('@/features/leave/RotaAbsenceDetails'));
+
 export default function Rota() {
   const { business, user, hasPermission } = useAuth();
   const isMobile = useIsMobile();
+  const absenceOpener = useRef<HTMLButtonElement | null>(null);
+  const [absenceId, setAbsenceId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState((new Date().getDay() + 6) % 7);
   const isMgr = hasPermission('manage_schedules');
   const [weekStart, setWeekStart] = useState<Date>(weekStartFor(new Date()));
@@ -439,9 +443,9 @@ export default function Rota() {
                       onClick={() => !gridBusy && isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
                       {!gridBusy && onLeave && (
-                        <div className={`${s.shift} ${s[onLeave.leave_type]}`}>
+                        <button type="button" className={`${s.shift} ${s.absenceButton} ${s[onLeave.leave_type]}`} aria-label={`View ${onLeave.leave_type === 'sick' ? 'sickness' : 'leave'} details for ${p.name}`} onClick={event => { event.stopPropagation(); absenceOpener.current = event.currentTarget; setAbsenceId(onLeave.id); }}>
                           <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
-                        </div>
+                        </button>
                       )}
                       {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
@@ -514,6 +518,9 @@ export default function Rota() {
         </div>
       )}
 
+      {absenceId && <Suspense fallback={<Modal open returnFocusTo={absenceOpener.current} onClose={() => setAbsenceId(null)} title="Absence details"><LoadingSkeleton layout="form" label="Loading absence details" /></Modal>}>
+        <RotaAbsenceDetails key={`${business?.id}:${absenceId}`} requestId={absenceId} returnFocusTo={absenceOpener.current} onClose={() => setAbsenceId(null)} />
+      </Suspense>}
       <Modal open={modal.open} onClose={() => setModal({open: false})}
         title={modal.shift ? 'Edit shift' : 'New shift'}
         footer={
