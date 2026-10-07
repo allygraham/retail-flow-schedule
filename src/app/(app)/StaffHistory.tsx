@@ -49,8 +49,8 @@ export default function StaffHistory() {
   const records = data?.records.filter(row => row.start_date <= `${year}-12-31` && row.end_date >= `${year}-01-01`) ?? [];
   const value = (count: number | undefined) => loading ? <LoadingSkeleton layout="inline" label="Loading total" /> : count ?? '—';
   return <div className={s.page}>
-    <Link to="/team">← Back to staff</Link>
-    <header className={s.header}><div><h1>{data?.name ?? 'Staff history'}</h1><p>Annual leave and sickness by calendar year</p></div>
+    <Link className={s.backLink} to="/team">← Back to staff</Link>
+    <header className={s.header}><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by calendar year</p></div>
       <Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
         {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{y}</option>)}
       </Select></Field>
@@ -65,11 +65,11 @@ export default function StaffHistory() {
     </div>
     <div className={s.records}>
       {(['annual', 'sick'] as const).map(type => <Card key={type} title={type === 'annual' ? 'Annual leave record' : 'Sickness record'} subtitle={String(year)}>
-        {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
+        {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p className={s.note}>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
           <ul className={s.list}>{records.filter(row => row.leave_type === type).map(row => {
             const meta = parseSicknessMeta(row.sickness_meta);
             return <li key={row.id} className={s.record}>
-              <div><strong>{fmtDate(row.start_date)} – {fmtDate(row.end_date)}</strong>
+              <div className={s.recordMain}><strong className={s.recordTitle}>{fmtDate(row.start_date)} – {fmtDate(row.end_date)}</strong>
                 {type === 'sick' && <>
                   {meta.category && <p>{SICKNESS_CATEGORY_LABEL[meta.category] ?? meta.category}</p>}
                   {row.lifecycle_status && <p>{SICKNESS_LIFECYCLE_LABEL[row.lifecycle_status as SicknessLifecycleStatus] ?? row.lifecycle_status}</p>}
@@ -82,6 +82,6 @@ export default function StaffHistory() {
           })}</ul>}
       </Card>)}
     </div>
-    <p>Annual leave uses the working pattern saved when it was approved. Records spanning two years appear in both years; each year’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p>
+    <p className={s.note}>Annual leave uses the working pattern saved when it was approved. Records spanning two years appear in both years; each year’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p>
   </div>;
 }

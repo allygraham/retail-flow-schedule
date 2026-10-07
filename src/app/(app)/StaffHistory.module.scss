@@ -1,8 +1,27 @@
 @use '@/styles/tokens' as *;
-.page { display: flex; flex-direction: column; gap: $sp-5; color: var(--color-text-primary); }
-.header { display: flex; justify-content: space-between; align-items: center; gap: $sp-4; flex-wrap: wrap; }
+@use '@/styles/mixins' as *;
+
+.page { @include col; gap: $sp-5; color: var(--color-text-primary, $text); }
+.header { display: flex; justify-content: space-between; align-items: end; gap: $sp-4; flex-wrap: wrap; }
+.eye { @include eyebrow; }
+.h1 { @include text-h2; margin-top: 6px; color: var(--color-text-primary, $text); }
+.sub { margin-top: 4px; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; line-height: $lh-normal; }
+.backLink {
+  align-self: flex-start; font-size: $fs-sm; font-weight: $fw-medium;
+  color: var(--color-primary, $brand-600); text-decoration: none;
+  &:hover { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid var(--color-primary, $brand-600); outline-offset: 4px; border-radius: $r-sm; }
+}
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: $sp-4; }
-.records { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: $sp-4; }
+.records { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: $sp-4; align-items: start; }
 .list { list-style: none; margin: 0; padding: 0; }
-.record { display: flex; justify-content: space-between; align-items: flex-start; gap: $sp-3; padding: $sp-3 0; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
-.record p { margin: 4px 0; color: var(--color-text-secondary); }
+.record {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: $sp-3; padding: $sp-3 0; border-bottom: 1px solid var(--color-border, $border);
+  overflow-wrap: anywhere;
+  &:last-child { border-bottom: none; }
+}
+.recordMain { flex: 1; min-width: 0; }
+.recordTitle { font-size: $fs-sm; font-weight: $fw-semibold; line-height: $lh-normal; color: var(--color-text-primary, $text); }
+.record p { margin: 4px 0 0; font-size: $fs-xs; line-height: $lh-normal; color: var(--color-text-secondary, $text-muted); }
+.note { margin: 0; font-size: $fs-sm; line-height: $lh-normal; color: var(--color-text-secondary, $text-muted); }
