@@ -221,3 +221,28 @@ test('week loading preserves the store, staff rows and seven-day grid', async ({
   await expect(store).toBeVisible();
   await expect(cell(page, employeeId, '2026-10-12')).toHaveCount(0);
 });
+
+test('drag refresh keeps the grid visible without skeletons or reloading stores', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift()];
+  let storeReads = 0;
+  page.on('request', request => { if (request.url().includes('/rest/v1/store_locations')) storeReads++; });
+  await page.goto('/rota');
+  await expect(page.getByText('09:00–17:00', { exact: true })).toBeVisible();
+  const initialReads = storeReads;
+  let release!: () => void;
+  let readStarted!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { readStarted = resolve; });
+  await page.route('**/rest/v1/shifts*', async route => {
+    readStarted(); await pending; await route.fallback();
+  });
+  await drag(page, shiftId, 'unassigned', '2026-10-06');
+  try {
+    await started;
+    await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByText('09:00–17:00', { exact: true })).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Loading rota' })).toHaveCount(0);
+    expect(storeReads).toBe(initialReads);
+  } finally { release(); }
+  await expect(cell(page, 'unassigned', '2026-10-06').getByText('09:00–17:00')).toBeVisible();
+});

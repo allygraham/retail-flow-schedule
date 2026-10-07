@@ -50,3 +50,23 @@ describe('complete and current page data', () => {
     expect(result.current.data).toEqual(['new workspace']);
   });
 });
+
+it('keeps current data visible during a background refresh and replaces it on success', async () => {
+  const pending = deferred<string[]>();
+  const loader = vi.fn().mockResolvedValueOnce(['first']).mockReturnValueOnce(pending.promise);
+  const { result } = renderHook(() => useAsyncData(loader, 'Could not load'));
+  await waitFor(() => expect(result.current.data).toEqual(['first']));
+  let refresh!: Promise<void>;
+  act(() => { refresh = result.current.reload({ background: true }); });
+  expect(result.current).toMatchObject({ data: ['first'], loading: false, error: null });
+  await act(async () => { pending.resolve(['moved']); await refresh; });
+  expect(result.current).toMatchObject({ data: ['moved'], loading: false, error: null });
+});
+
+it('reports a failed background refresh instead of silently keeping stale data', async () => {
+  const loader = vi.fn().mockResolvedValueOnce(['first']).mockRejectedValueOnce(new Error('Offline'));
+  const { result } = renderHook(() => useAsyncData(loader, 'Could not load'));
+  await waitFor(() => expect(result.current.data).toEqual(['first']));
+  await act(async () => { await result.current.reload({ background: true }); });
+  expect(result.current).toMatchObject({ data: null, loading: false, error: 'Could not load' });
+});

@@ -338,8 +338,8 @@ export default function Rota() {
       if (!plan) return;
       setMoving(true);
       const { error } = await supabase.rpc('move_rota_shift', { _business_id: business.id, ...plan });
-      if (error) { toast.error(error.message); await load(); return; }
-      await load();
+      if (error) { toast.error(error.message); await week.reload({ background: true }); return; }
+      await week.reload({ background: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not move the shift. Please try again.');
       return;
