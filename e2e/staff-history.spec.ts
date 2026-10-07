@@ -16,6 +16,8 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
   await expect(page.getByText('Cold / flu', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   await expect(page.getByText('Returned to work', { exact: true })).toBeVisible();
+  await expect(page.getByText('Annual leave entitlement', { exact: true }).locator('..')).toContainText('28');
+  await expect(page.getByText('Current allowance in working days per leave year')).toBeVisible();
   await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('2');
   await page.getByLabel('Year', { exact: true }).selectOption('2025');
   await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('1');

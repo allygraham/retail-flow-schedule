@@ -31,11 +31,11 @@ export default function StaffHistory() {
     if (!member.data) throw new Error('Staff member not found in this workspace');
     const [profile, employment, leaves] = await Promise.all([
       supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle(),
-      supabase.from('employee_profiles').select('working_days').eq('business_id', business.id).eq('user_id', userId).maybeSingle(),
+      supabase.from('employee_profiles').select('working_days, annual_leave_entitlement').eq('business_id', business.id).eq('user_id', userId).maybeSingle(),
       supabase.rpc('get_leave_requests', { _business_id: business.id }).eq('user_id', userId).order('start_date', { ascending: false }),
     ]);
     assertQueryResults(profile, employment, leaves);
-    return { name: profile.data?.full_name ?? 'Staff member', workingDays: employment.data?.working_days ?? [], records: leaves.data ?? [] };
+    return { name: profile.data?.full_name ?? 'Staff member', workingDays: employment.data?.working_days ?? [], entitlement: employment.data?.annual_leave_entitlement, records: leaves.data ?? [] };
   }, [business, userId, role]);
   const { data, loading, error: loadError, reload } = useAsyncData(fetchData, 'Could not load this staff member’s history. Check they belong to this workspace and try again.');
   const calculation = useMemo(() => {
@@ -59,6 +59,7 @@ export default function StaffHistory() {
     </header>
     {error && <DataLoadError message={error} retry={reload} />}
     <div className={s.stats}>
+      <Stat label="Annual leave entitlement" value={value(data?.entitlement)} hint="Current allowance in working days per leave year" />
       <Stat label="Annual leave taken" value={value(summary?.taken)} hint="Approved working days through today" />
       <Stat label="Annual leave booked" value={value(summary?.booked)} hint="Approved future working days" />
       <Stat label="Annual leave pending" value={value(summary?.pending)} />
