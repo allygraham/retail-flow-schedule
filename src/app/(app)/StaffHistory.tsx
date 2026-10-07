@@ -58,7 +58,7 @@ export default function StaffHistory() {
     <span>{count ?? '—'}</span><span className={s.entitlement}>/ {data?.entitlement ?? '—'}</span>
   </span>;
   return <div className={s.page}>
-    <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to staff</Link>
+    <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to team</Link>
     <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
       <div className={s.headerActions}><div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
         {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
