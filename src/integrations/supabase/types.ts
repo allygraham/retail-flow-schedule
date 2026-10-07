@@ -915,6 +915,10 @@ export type Database = {
         Args: { _business_id: string; _shift_id: string; _assigned_user_id: string | null; _shift_date: string; _expected_updated_at: string; _swap_shift_id?: string; _swap_expected_updated_at?: string }
         Returns: undefined
       }
+      get_rota_week_status: {
+        Args: { _business_id: string; _week_start: string }
+        Returns: { store_id: string; is_published: boolean }[]
+      }
       get_team_member_emails: {
         Args: { _business_id: string }
         Returns: { user_id: string; email: string | null }[]

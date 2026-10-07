@@ -28,7 +28,7 @@ test('dragging changes date and assignment through one versioned request', async
   await page.goto('/rota');
   await drag(page, shiftId, 'unassigned', '2026-10-06');
   await expect(cell(page, 'unassigned', '2026-10-06').getByText('09:00–17:00')).toBeVisible();
-  await expect(cell(page, employeeId, monday).getByText('Day off', { exact: true })).toBeVisible();
+  await expect(cell(page, employeeId, monday).getByText('To be confirmed', { exact: true })).toBeVisible();
   const moves = state.writes.filter(write => write.endpoint === 'move_rota_shift');
   expect(moves).toHaveLength(1);
   expect(moves[0].body).toMatchObject({ _business_id: businessId, _shift_id: shiftId, _assigned_user_id: null, _shift_date: '2026-10-06', _expected_updated_at: version });
@@ -134,8 +134,8 @@ test('weekly employee hours include drafts, deduct breaks, exclude cancellations
 test('employees without shifts show zero weekly hours', async ({ page }) => {
   await open(page); await page.goto('/rota');
   await expect(page.getByLabel('Test Employee weekly hours')).toHaveText('0h');
-  await expect(cell(page, employeeId, monday).getByText('Day off', { exact: true })).toBeVisible();
-  await cell(page, employeeId, monday).getByText('Day off', { exact: true }).click();
+  await expect(cell(page, employeeId, monday).getByText('To be confirmed', { exact: true })).toBeVisible();
+  await cell(page, employeeId, monday).getByText('To be confirmed', { exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'New shift' })).toBeVisible();
 });
 
@@ -298,4 +298,26 @@ test('absence details failure shows a retry and does not reveal stale details', 
   await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: 'Notes & history' }).click();
   await expect(dialog.getByText('Recovered details')).toBeVisible();
+});
+
+ test('empty cells become Day off only after the store week is published', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift({ assigned_user_id: null, status: 'unassigned' })];
+  await page.goto('/rota');
+  await expect(cell(page, employeeId, monday).getByText('To be confirmed', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /Publish/ }).first().click();
+  await page.getByRole('dialog', { name: 'Publish schedule' }).getByRole('button', { name: /Publish 1 shift/ }).click();
+  await expect(cell(page, employeeId, monday).getByText('Day off', { exact: true })).toBeVisible();
+  await expect(cell(page, employeeId, monday).getByText('To be confirmed', { exact: true })).not.toBeVisible();
+ });
+
+test('employee with no visible shifts sees Day off for a published week', async ({ page }) => {
+  const state = await open(page); state.role = 'employee';
+  state.shifts = [shift({ is_published: true, assigned_user_id: null, status: 'unassigned' })];
+  await page.route('**/rest/v1/shifts*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto('/rota');
+  await expect(cell(page, employeeId, monday).getByText('Day off', { exact: true })).toBeVisible();
+  await expect(page.getByText('No shifts scheduled for you this week.')).toBeVisible();
+  state.shifts.push(shift({ id: 'unpublished-extra', shift_date: '2026-10-06' }));
+  await page.reload();
+  await expect(cell(page, employeeId, monday).getByText('To be confirmed', { exact: true })).toBeVisible();
 });

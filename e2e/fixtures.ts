@@ -131,6 +131,11 @@ export async function stubApi(page: Page, shared?: StubState) {
       }
       return reply(state.leaves);
     }
+    if (endpoint === 'get_rota_week_status') {
+      const start = String(body?._week_start), end = new Date(Date.parse(start + 'T00:00:00Z') + 6 * 86400000).toISOString().slice(0, 10);
+      const shifts = state.shifts.filter(shift => String(shift.shift_date) >= start && String(shift.shift_date) <= end && shift.status !== 'cancelled');
+      return reply([{ store_id: storeId, is_published: shifts.some(shift => shift.is_published) && shifts.every(shift => shift.is_published) }]);
+    }
     if (endpoint === 'get_team_member_emails') return reply([{ user_id: ownerId, email: 'owner@example.test' }, { user_id: employeeId, email: 'employee@example.test' }]);
     if (endpoint === 'get_leave_requests') return reply(state.leaves);
     if (endpoint === 'publish_rota_shifts') {

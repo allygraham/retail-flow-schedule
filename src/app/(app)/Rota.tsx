@@ -76,21 +76,22 @@ export default function Rota() {
   const reference = useAsyncData(fetchReferenceData, 'Could not load the rota. Please try again.');
   const fetchWeekData = useCallback(async () => {
     if (!business) throw new Error('No workspace');
-    const [sh, lv] = await Promise.all([
+    const [sh, lv, publication] = await Promise.all([
       (isMgr
         ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')
         : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')),
       supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(addDays(weekStart, 6))).gte('end_date', isoDate(weekStart)),
+      supabase.rpc('get_rota_week_status', { _business_id: business.id, _week_start: isoDate(weekStart) }),
     ]);
-    assertQueryResults(sh, lv);
-    return { shifts: sh.data ?? [], leave: lv.data ?? [] };
+    assertQueryResults(sh, lv, publication);
+    return { shifts: sh.data ?? [], leave: lv.data ?? [], publication: publication.data ?? [] };
   }, [business, weekStart, isMgr]);
   const week = useAsyncData(fetchWeekData, 'Could not load the rota. Please try again.');
   const loading = reference.loading || week.loading;
   const loadError = reference.error || week.error;
   const load = async () => { await Promise.all([reference.reload(), week.reload()]); };
   const { stores, roles, people } = reference.data ?? { stores: [], roles: [], people: [] };
-  const { shifts, leave } = useMemo(() => week.data ?? { shifts: [], leave: [] }, [week.data]);
+  const { shifts, leave, publication } = useMemo(() => week.data ?? { shifts: [], leave: [], publication: [] }, [week.data]);
   const gridBusy = loading || holidays.loading;
   const gridRef = useRef<HTMLDivElement>(null);
   const gridHeight = useRef(0);
@@ -437,12 +438,14 @@ export default function Rota() {
                   const cell = filteredShifts.filter(sh => sh.assigned_user_id === p.user_id && sh.shift_date === dStr);
                   const onLeave = leave.find(l => l.user_id === p.user_id && inRange(dStr, l.start_date, l.end_date) && l.status === 'approved');
                   const hol = holidays.get(dStr);
+                  const relevantStores = storeFilter === 'all' ? p.store_ids : [storeFilter];
+                  const confirmed = relevantStores.length > 0 && relevantStores.every(id => publication.some(status => status.store_id === id && status.is_published));
                   return (
                     <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={gridBusy || !isMgr || !!onLeave}
                       className={hol ? s.cellHoliday : ''}
                       onClick={() => !gridBusy && isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
-                      {!gridBusy && !onLeave && cell.length === 0 && <span className={s.dayOff}>Day off</span>}
+                      {!gridBusy && !onLeave && cell.length === 0 && <span className={s.dayOff}>{confirmed ? 'Day off' : 'To be confirmed'}</span>}
                       {!gridBusy && onLeave && (
                         <button type="button" className={`${s.shift} ${s.absenceButton} ${s[onLeave.leave_type]}`} aria-label={`View ${onLeave.leave_type === 'sick' ? 'sickness' : 'leave'} details for ${p.name}`} onClick={event => { event.stopPropagation(); absenceOpener.current = event.currentTarget; setAbsenceId(onLeave.id); }}>
                           <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
@@ -515,7 +518,7 @@ export default function Rota() {
       {!gridBusy && filteredShifts.length === 0 && (
         <div className={s.emptyBanner}>
           <span className={s.emptyIcon}>ℹ️</span>
-          <span className={s.emptyText}>{isMgr ? 'No shifts this week — click any cell to add one.' : 'Your manager hasn\'t published this week yet.'}</span>
+          <span className={s.emptyText}>{isMgr ? 'No shifts this week — click any cell to add one.' : publication.some(status => status.is_published) ? 'No shifts scheduled for you this week.' : 'Your manager hasn\'t published this week yet.'}</span>
         </div>
       )}
 
