@@ -442,6 +442,7 @@ export default function Rota() {
                       className={hol ? s.cellHoliday : ''}
                       onClick={() => !gridBusy && isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
+                      {!gridBusy && !onLeave && cell.length === 0 && <span className={s.dayOff}>Day off</span>}
                       {!gridBusy && onLeave && (
                         <button type="button" className={`${s.shift} ${s.absenceButton} ${s[onLeave.leave_type]}`} aria-label={`View ${onLeave.leave_type === 'sick' ? 'sickness' : 'leave'} details for ${p.name}`} onClick={event => { event.stopPropagation(); absenceOpener.current = event.currentTarget; setAbsenceId(onLeave.id); }}>
                           <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>

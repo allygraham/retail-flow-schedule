@@ -28,6 +28,7 @@ test('dragging changes date and assignment through one versioned request', async
   await page.goto('/rota');
   await drag(page, shiftId, 'unassigned', '2026-10-06');
   await expect(cell(page, 'unassigned', '2026-10-06').getByText('09:00–17:00')).toBeVisible();
+  await expect(cell(page, employeeId, monday).getByText('Day off', { exact: true })).toBeVisible();
   const moves = state.writes.filter(write => write.endpoint === 'move_rota_shift');
   expect(moves).toHaveLength(1);
   expect(moves[0].body).toMatchObject({ _business_id: businessId, _shift_id: shiftId, _assigned_user_id: null, _shift_date: '2026-10-06', _expected_updated_at: version });
@@ -133,6 +134,9 @@ test('weekly employee hours include drafts, deduct breaks, exclude cancellations
 test('employees without shifts show zero weekly hours', async ({ page }) => {
   await open(page); await page.goto('/rota');
   await expect(page.getByLabel('Test Employee weekly hours')).toHaveText('0h');
+  await expect(cell(page, employeeId, monday).getByText('Day off', { exact: true })).toBeVisible();
+  await cell(page, employeeId, monday).getByText('Day off', { exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'New shift' })).toBeVisible();
 });
 
 
