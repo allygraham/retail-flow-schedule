@@ -18,8 +18,14 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
   await expect(page.getByText('Cold / flu', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   await expect(page.getByText('Returned to work', { exact: true })).toBeVisible();
-  await expect(page.getByText('Annual leave entitlement', { exact: true }).locator('..')).toContainText('28');
-  await expect(page.getByText('Current allowance in working days per leave year')).toBeVisible();
+  await expect(page.getByText('Annual leave entitlement', { exact: true })).toHaveCount(0);
+  for (const label of ['Annual leave taken', 'Annual leave booked', 'Annual leave pending']) {
+    await expect(page.getByText(label, { exact: true }).locator('..')).toContainText('/ 28');
+  }
+  const sicknessDays = await page.getByText('Sickness days', { exact: true }).locator('..').boundingBox();
+  const sicknessSpells = await page.getByText('Sickness spells', { exact: true }).locator('..').boundingBox();
+  expect(sicknessDays?.y).toBe(sicknessSpells?.y);
+  await expect(page.getByText('Allowance shown is the current entitlement in working days per leave year.')).toBeVisible();
   await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('2');
   await page.getByLabel('Year', { exact: true }).selectOption('2025');
   await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('1');
@@ -56,5 +62,5 @@ for (const width of [1280, 390]) test(`owner opens staff leave details from the 
   await page.getByRole('button', { name: 'Open actions for Test Employee' }).click();
   await page.getByRole('menuitem', { name: 'View leave details', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/team/${employeeId}$`));
-  await expect(page.getByText('Annual leave entitlement', { exact: true })).toBeVisible();
+  await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('/ 28');
 });

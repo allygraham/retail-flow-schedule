@@ -51,6 +51,9 @@ export default function StaffHistory() {
   }
   const records = data?.records.filter(row => row.start_date <= period.end && row.end_date >= period.start) ?? [];
   const value = (count: number | undefined) => loading ? <LoadingSkeleton layout="inline" label="Loading total" /> : count ?? '—';
+  const leaveValue = (count: number | undefined) => loading ? value(count) : <span className={s.leaveValue}>
+    <span>{count ?? '—'}</span><span className={s.entitlement}>/ {data?.entitlement ?? '—'}</span>
+  </span>;
   return <div className={s.page}>
     <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to staff</Link>
     <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
@@ -63,11 +66,11 @@ export default function StaffHistory() {
       <section className={s.summarySection} aria-labelledby="leave-summary-title">
         <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
         <div className={s.stats}>
-      <Stat label="Annual leave entitlement" value={value(data?.entitlement)} hint="Current allowance in working days per leave year" />
-      <Stat label="Annual leave taken" value={value(summary?.taken)} hint="Approved working days through today" />
-      <Stat label="Annual leave booked" value={value(summary?.booked)} hint="Approved future working days" />
-      <Stat label="Annual leave pending" value={value(summary?.pending)} hint="Working days awaiting approval" />
+      <Stat label="Annual leave taken" value={leaveValue(summary?.taken)} hint="Approved working days through today" />
+      <Stat label="Annual leave booked" value={leaveValue(summary?.booked)} hint="Approved future working days" />
+      <Stat label="Annual leave pending" value={leaveValue(summary?.pending)} hint="Working days awaiting approval" />
         </div>
+        <p className={s.allowanceNote}>Allowance shown is the current entitlement in working days per leave year.</p>
       </section>
       <section className={`${s.summarySection} ${s.sicknessSection}`} aria-labelledby="sickness-summary-title">
         <div className={s.sectionHead}><span className={s.sectionIcon}><HeartPulse size={18} aria-hidden /></span><div><h2 id="sickness-summary-title">Sickness</h2><p>{period.label} · absence overview</p></div></div>
