@@ -1,3 +1,4 @@
+import { ArrowLeft, CalendarDays, HeartPulse, Info, Plane, UserRound } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/authContext';
@@ -51,27 +52,38 @@ export default function StaffHistory() {
   const records = data?.records.filter(row => row.start_date <= period.end && row.end_date >= period.start) ?? [];
   const value = (count: number | undefined) => loading ? <LoadingSkeleton layout="inline" label="Loading total" /> : count ?? '—';
   return <div className={s.page}>
-    <Link className={s.backLink} to="/team">← Back to staff</Link>
-    <header className={s.header}><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div>
-      <Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
+    <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to staff</Link>
+    <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
+      <div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
         {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
-      </Select></Field>
+      </Select></Field></div>
     </header>
     {error && <DataLoadError message={error} retry={reload} />}
-    <div className={s.stats}>
+    <div className={s.overview}>
+      <section className={s.summarySection} aria-labelledby="leave-summary-title">
+        <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
+        <div className={s.stats}>
       <Stat label="Annual leave entitlement" value={value(data?.entitlement)} hint="Current allowance in working days per leave year" />
       <Stat label="Annual leave taken" value={value(summary?.taken)} hint="Approved working days through today" />
       <Stat label="Annual leave booked" value={value(summary?.booked)} hint="Approved future working days" />
-      <Stat label="Annual leave pending" value={value(summary?.pending)} />
+      <Stat label="Annual leave pending" value={value(summary?.pending)} hint="Working days awaiting approval" />
+        </div>
+      </section>
+      <section className={`${s.summarySection} ${s.sicknessSection}`} aria-labelledby="sickness-summary-title">
+        <div className={s.sectionHead}><span className={s.sectionIcon}><HeartPulse size={18} aria-hidden /></span><div><h2 id="sickness-summary-title">Sickness</h2><p>{period.label} · absence overview</p></div></div>
+        <div className={s.sicknessStats}>
       <Stat label="Sickness days" value={value(summary?.sickDays)} hint="Approved calendar days through today" />
       <Stat label="Sickness spells" value={value(summary?.sickSpells)} hint="Approved absences overlapping this year" />
+        </div>
+      </section>
     </div>
     <div className={s.records}>
-      {(['annual', 'sick'] as const).map(type => <Card key={type} title={type === 'annual' ? 'Annual leave record' : 'Sickness record'} subtitle={period.label}>
+      {(['annual', 'sick'] as const).map(type => <Card key={type} title={<span className={s.recordHeading}>{type === 'annual' ? <Plane size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
         {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p className={s.note}>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
           <ul className={s.list}>{records.filter(row => row.leave_type === type).map(row => {
             const meta = parseSicknessMeta(row.sickness_meta);
             return <li key={row.id} className={s.record}>
+              <span className={s.dateIcon}><CalendarDays size={17} aria-hidden /></span>
               <div className={s.recordMain}><strong className={s.recordTitle}>{fmtDate(row.start_date)} – {fmtDate(row.end_date)}</strong>
                 {type === 'sick' && <>
                   {meta.category && <p>{SICKNESS_CATEGORY_LABEL[meta.category] ?? meta.category}</p>}
@@ -85,6 +97,6 @@ export default function StaffHistory() {
           })}</ul>}
       </Card>)}
     </div>
-    <p className={s.note}>Annual leave uses the working pattern saved when it was approved. Records spanning two leave years appear in both periods; each period’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p>
+    <div className={s.guidance}><Info size={18} aria-hidden /><p className={s.note}>Annual leave uses the working pattern saved when it was approved. Records spanning two leave years appear in both periods; each period’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p></div>
   </div>;
 }

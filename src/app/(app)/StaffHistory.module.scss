@@ -2,17 +2,35 @@
 @use '@/styles/mixins' as *;
 
 .page { @include col; gap: $sp-5; color: var(--color-text-primary, $text); }
-.header { display: flex; justify-content: space-between; align-items: end; gap: $sp-4; flex-wrap: wrap; }
+.header { padding: $sp-5; border: 1px solid var(--color-border, $border); border-radius: $r-lg; background: linear-gradient(110deg, var(--color-row-hover, #{$brand-50}), var(--color-surface, #{$surface}) 75%); display: flex; justify-content: space-between; align-items: end; gap: $sp-4; flex-wrap: wrap; }
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; color: var(--color-text-primary, $text); }
 .sub { margin-top: 4px; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; line-height: $lh-normal; }
 .backLink {
-  align-self: flex-start; font-size: $fs-sm; font-weight: $fw-medium;
+  align-self: flex-start; display: inline-flex; align-items: center; gap: $sp-2; font-size: $fs-sm; font-weight: $fw-medium;
   color: var(--color-primary, $brand-600); text-decoration: none;
   &:hover { text-decoration: underline; }
   &:focus-visible { outline: 2px solid var(--color-primary, $brand-600); outline-offset: 4px; border-radius: $r-sm; }
 }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: $sp-4; }
+.overview { display: grid; grid-template-columns: 2fr 1fr; gap: $sp-5; }
+.summarySection { min-width: 0; }
+.sectionHead { display: flex; align-items: center; gap: $sp-3; margin-bottom: $sp-3;
+  h2 { font-size: $fs-md; font-weight: $fw-semibold; margin: 0; }
+  p { margin: 3px 0 0; font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
+}
+.sectionIcon { width: 36px; height: 36px; flex-shrink: 0; border-radius: $r-md; display: grid; place-items: center; background: var(--color-row-hover, $brand-50); color: var(--color-primary, $brand-600); }
+.sicknessSection .sectionIcon { background: var(--color-danger-bg, #fef2f2); color: var(--color-danger-text, #991b1b); }
+.stats, .sicknessStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $sp-3; }
+.sicknessStats { grid-template-columns: 1fr; }
+.identity { display: flex; align-items: center; gap: $sp-4; min-width: 0; h1 { overflow-wrap: anywhere; } }
+.personIcon { display: grid; place-items: center; flex-shrink: 0; width: 52px; height: 52px; border: 1px solid var(--color-border, $border); border-radius: $r-lg; background: var(--color-surface, $surface); color: var(--color-primary, $brand-600); }
+.yearPicker { min-width: 180px; max-width: 100%; }
+.recordHeading { display: inline-flex; align-items: center; gap: $sp-2; svg { color: var(--color-primary, $brand-600); flex-shrink: 0; } }
+.dateIcon { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: $r-md; color: var(--color-text-secondary, $text-muted); background: var(--color-surface-muted, $ink-50); }
+.guidance { display: flex; align-items: flex-start; gap: $sp-3; padding: $sp-4; border: 1px solid var(--color-border, $border); border-radius: $r-md; background: var(--color-surface-muted, $ink-50); > svg { flex-shrink: 0; margin-top: 2px; color: var(--color-primary, $brand-600); } }
+@media (max-width: 1050px) { .overview { grid-template-columns: 1fr; } .sicknessStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 540px) { .header { padding: $sp-4; align-items: flex-start; } .yearPicker { width: 100%; } .personIcon { width: 42px; height: 42px; } .identity { gap: $sp-3; } .record { flex-wrap: wrap; } }
+@media (max-width: 380px) { .stats, .sicknessStats { grid-template-columns: 1fr; } }
 .records { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: $sp-4; align-items: start; }
 .list { list-style: none; margin: 0; padding: 0; }
 .record {
