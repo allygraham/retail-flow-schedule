@@ -30,19 +30,20 @@ await db.query('INSERT INTO memberships (user_id,business_id,is_active) VALUES (
 await db.query("INSERT INTO user_roles (user_id,business_id,role) VALUES ($1,$2,'employee'),($3,$2,'manager'),($4,$2,'owner')",[employee,business,manager,inactiveOwner]);
 await load('20261003153000_prevent_self_assigned_ownership.sql');
 await load('20261005180000_invitation_retry_membership.sql');
+await load('20261007140000_single_use_invitations.sql');
 const invite = async (email, token, status='pending', expires='2099-01-01') =>
   db.query("INSERT INTO invitations(business_id,email,role,token,status,expires_at) VALUES($1,$2,'employee',$3,$4,$5)",[business,email,token,status,expires]);
 await invite('new@test.invalid','new');
 await assert.rejects(()=>act(outsider,"SELECT accept_invitation('new')"),/email does not match/);
 await assert.rejects(()=>act('',"SELECT accept_invitation('new')"),/Not authenticated/);
 await act(newcomer,"SELECT accept_invitation('new')");
-await act(newcomer,"SELECT accept_invitation('new')");
+await assert.rejects(()=>act(newcomer,"SELECT accept_invitation('new')"),/accepted/);
 for (const table of ['memberships','user_roles','employee_profiles']) {
  const {rows:[row]}=await db.query('SELECT count(*)::int AS n FROM '+table+' WHERE user_id=$1 AND business_id=$2',[newcomer,business]);
  assert.equal(row.n,1);
 }
 await db.query('UPDATE memberships SET is_active=false WHERE user_id=$1 AND business_id=$2',[newcomer,business]);
-await assert.rejects(()=>act(newcomer,"SELECT accept_invitation('new')"),/Membership is inactive/);
+await assert.rejects(()=>act(newcomer,"SELECT accept_invitation('new')"),/accepted/);
 await invite('new@test.invalid','return');
 await act(newcomer,"SELECT accept_invitation('return')");
 const {rows:[member]}=await db.query('SELECT is_active FROM memberships WHERE user_id=$1 AND business_id=$2',[newcomer,business]);
@@ -61,5 +62,20 @@ for (const [token,status,expires,message] of [
  const {rows:[row]}=await db.query('SELECT count(*)::int AS n FROM memberships WHERE user_id=$1 AND business_id=$2',[outsider,business]);
  assert.equal(row.n,0);
 }
-console.log('Invitation identity, lifecycle, retry, existing role and reactivation checks passed.');
+await db.exec("UPDATE invitations SET status='expired' WHERE token='elapsed';");
+await invite('outsider@test.invalid','failed-setup');
+await db.exec(`CREATE FUNCTION reject_employee_setup() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'Profile setup failed'; END $$;
+CREATE TRIGGER reject_employee_setup BEFORE INSERT ON employee_profiles FOR EACH ROW EXECUTE FUNCTION reject_employee_setup();`);
+await assert.rejects(()=>act(outsider,"SELECT accept_invitation('failed-setup')"),/Profile setup failed/);
+const {rows:[failed]} = await db.query("SELECT status, accepted_at FROM invitations WHERE token='failed-setup'");
+assert.equal(failed.status,'pending'); assert.equal(failed.accepted_at,null);
+for (const table of ['memberships','user_roles','employee_profiles']) {
+ const {rows:[row]} = await db.query('SELECT count(*)::int AS n FROM '+table+' WHERE user_id=$1 AND business_id=$2',[outsider,business]);
+ assert.equal(row.n,0);
+}
+await db.exec('DROP TRIGGER reject_employee_setup ON employee_profiles; DROP FUNCTION reject_employee_setup();');
+await act(outsider,"SELECT accept_invitation('failed-setup')");
+await assert.rejects(()=>act(outsider,"SELECT accept_invitation('failed-setup')"),/accepted/);
+console.log('Invitation identity, lifecycle, single-use, atomic setup, existing role and reactivation checks passed.');
 await db.close();

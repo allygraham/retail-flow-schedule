@@ -133,3 +133,23 @@ test('one click requests 28 November and approval preserves that date', async ({
   expect(state.leaves[0].start_date).toBe('2026-11-28');
   expect(state.leaves[0].end_date).toBe('2026-11-28');
 });
+
+test('invited employee sets a password without confirmation and cannot reuse the code', async ({ page }) => {
+  const state = await stubApi(page);
+  const { session, user } = await import('./fixtures');
+  await page.route('**/auth/v1/signup*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...session, user }) }));
+  await page.route('**/rest/v1/rpc/get_invitation_by_token', route => {
+    if (!state.writes.some(write => write.endpoint === 'accept_invitation')) return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'invite-1', business_id: businessId, business_name: 'Test Shop', email: user.email, full_name: 'Test Owner', role: 'employee', status: 'accepted', expires_at: '2099-01-01' }]) });
+  });
+  await page.goto('/accept-invite?token=test-invite');
+  await page.locator('input[type=password]').fill('BrowserTestPassword123!');
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  expect(state.writes.filter(write => write.endpoint === 'accept_invitation')).toHaveLength(1);
+  await page.goto('/accept-invite?token=test-invite');
+  await expect(page.getByRole('heading', { name: 'Already accepted' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Activate account|Join team|Open workspace/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/login');
+  expect(state.writes.filter(write => write.endpoint === 'accept_invitation')).toHaveLength(1);
+});

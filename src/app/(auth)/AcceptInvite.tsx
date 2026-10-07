@@ -65,7 +65,7 @@ export default function AcceptInvite() {
   }, [token]);
 
   const expired = invite && (invite.status === 'expired' || new Date(invite.expires_at) < new Date());
-  const usable = invite && ((invite.status === 'pending' && !expired) || invite.status === 'accepted');
+  const usable = invite && invite.status === 'pending' && !expired;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -133,10 +133,7 @@ export default function AcceptInvite() {
           <>
             <h1 className={s.title}>Already accepted</h1>
             <p className={s.sub}>This invite has already been used. Sign in with your email and password.</p>
-            {user && user.email?.toLowerCase() === invite.email.toLowerCase() ? <form onSubmit={onSubmit}>
-              {err && <div className={s.err} role="alert">{err}</div>}
-              <Button type="submit" full loading={loading}>Open workspace</Button>
-            </form> : <div className={s.foot}><Link to={loginUrl}>Sign in</Link></div>}
+            <div className={s.foot}><Link to="/login">Sign in</Link></div>
           </>
         ) : invite.status === 'revoked' ? (
           <>

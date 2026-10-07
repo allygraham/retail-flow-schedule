@@ -69,7 +69,7 @@ describe('employee invitation onboarding', () => {
     mocks.rpc.mockResolvedValue({ data: [{ ...invitation, status: 'accepted' }], error: null });
     render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
     await screen.findByRole('heading', { name: 'Already accepted' });
-    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', expect.stringContaining('/login?next='));
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
   });
   it('shows acceptance failures without redirecting or hiding them', async () => {
     mocks.auth.user = { id: 'confirmed', email: invitation.email };
@@ -132,13 +132,27 @@ describe('invitation edge cases', () => {
   });
 });
 
-it('opens the invited workspace from an already accepted link for the signed-in recipient', async () => {
+it('a consumed link cannot accept again even for its signed-in recipient', async () => {
   mocks.auth.user = { id: 'confirmed', email: invitation.email };
-  mocks.rpc.mockImplementation((name: string) => Promise.resolve({ data: name === 'get_invitation_by_token' ? [{ ...invitation, status: 'accepted' }] : 'business', error: null }));
+  mocks.rpc.mockResolvedValue({ data: [{ ...invitation, status: 'accepted' }], error: null });
   render(<MemoryRouter initialEntries={['/accept-invite?token=test-token']}><AcceptInvite /></MemoryRouter>);
-  fireEvent.click(await screen.findByRole('button', { name: 'Open workspace' }));
-  await waitFor(() => expect(mocks.refresh).toHaveBeenCalledWith('business'));
-  expect(mocks.nav).toHaveBeenCalledWith('/dashboard', { replace: true });
+  await screen.findByRole('heading', { name: 'Already accepted' });
+  expect(screen.queryByRole('button', { name: 'Open workspace' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  expect(mocks.signUp).not.toHaveBeenCalled();
+  expect(mocks.refresh).not.toHaveBeenCalled();
+});
+
+it('does not consume a code when account creation fails and allows retry', async () => {
+  mocks.signUp.mockResolvedValueOnce({ data: {}, error: { message: 'Could not create account' } })
+    .mockResolvedValueOnce({ data: { session: { user: { id: 'new', email: invitation.email } } }, error: null });
+  await showInvite(); signup();
+  await screen.findByText('Could not create account');
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  signup();
+  await waitFor(() => expect(mocks.nav).toHaveBeenCalledWith('/dashboard', { replace: true }));
+  expect(mocks.rpc).toHaveBeenCalledWith('accept_invitation', { _token: 'test-token' });
 });
 
 
