@@ -11,7 +11,9 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
     { id: 'sick-1', user_id: employeeId, business_id: businessId, leave_type: 'sick', status: 'approved', start_date: '2026-10-02', end_date: '2026-10-05', sickness_meta: { category: 'cold_flu', return_to_work_date: '2026-10-06' }, lifecycle_status: 'returned_to_work' },
   ];
   await page.goto('/team');
-  await page.getByRole('link', { name: 'Test Employee', exact: true }).click();
+  const staffLink = page.getByRole('link', { name: 'Test Employee', exact: true });
+  await expect(staffLink.getByText('employee@example.test', { exact: true })).toBeVisible();
+  await staffLink.getByText('employee@example.test', { exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/team/${employeeId}$`));
   await expect(page.getByText('Cold / flu', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
@@ -45,4 +47,14 @@ test('owner cannot load history for someone outside the workspace', async ({ pag
   await page.goto(`/team/${stranger}`);
   await expect(page.getByRole('alert')).toContainText('Could not load this staff member');
   expect(reads).toBe(0);
+});
+
+for (const width of [1280, 390]) test(`owner opens staff leave details from the row menu at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 844 });
+  await authenticate(page); await stubApi(page);
+  await page.goto('/team');
+  await page.getByRole('button', { name: 'Open actions for Test Employee' }).click();
+  await page.getByRole('menuitem', { name: 'View leave details', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/team/${employeeId}$`));
+  await expect(page.getByText('Annual leave entitlement', { exact: true })).toBeVisible();
 });

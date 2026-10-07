@@ -654,8 +654,10 @@ export default function Team() {
                 >
                   <Avatar name={m.full_name} size="sm" />
                   <div className={t.memberMain}>
-                    <span className={t.memberName}>{isOwner && m.kind === 'member' ? <Link to={`/team/${m.user_id}`}>{m.full_name}</Link> : m.full_name}</span>
-                    {m.email && <span className={t.memberEmail}>{m.email}</span>}
+                    {isOwner && m.kind === 'member' ? <Link className={t.staffLink} aria-label={m.full_name} to={`/team/${m.user_id}`}>
+                      <span className={t.memberName}>{m.full_name}</span>
+                      {m.email && <span className={t.memberEmail}>{m.email}</span>}
+                    </Link> : <><span className={t.memberName}>{m.full_name}</span>{m.email && <span className={t.memberEmail}>{m.email}</span>}</>}
                     {metaParts.length > 0 && (
                       <span className={t.memberMeta}>
                         {metaParts.map((part, i) => (
@@ -683,6 +685,7 @@ export default function Team() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className={t.menuContent}>
+                        {isOwner && m.kind === 'member' && <DropdownMenuItem asChild><Link to={`/team/${m.user_id}`}>View leave details</Link></DropdownMenuItem>}
                         {m.kind === 'invite' && (
                           <>
                             <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>Copy link</DropdownMenuItem>
@@ -714,8 +717,7 @@ export default function Team() {
           <div className={s.tableWrap}><table className={s.table}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
+                <th colSpan={2}>Name &amp; email</th>
                 <th>Role</th>
                 <th>Job</th>
                 <th>Primary store</th>
@@ -728,13 +730,12 @@ export default function Team() {
             <tbody>
               {filtered.map(m => (
                 <tr key={m.key} className={m.account_status === 'disabled' ? t.rowDisabled : ''}>
-                  <td>
-                    <div className={s.who}>
+                  <td colSpan={2}>
+                    {isOwner && m.kind === 'member' ? <Link className={`${t.staffLink} ${t.staffLinkRow}`} aria-label={m.full_name} to={`/team/${m.user_id}`}>
                       <Avatar name={m.full_name} size="sm" />
-                      <span>{isOwner && m.kind === 'member' ? <Link to={`/team/${m.user_id}`}>{m.full_name}</Link> : m.full_name}</span>
-                    </div>
+                      <span className={t.staffIdentity}><span className={t.memberName}>{m.full_name}</span><span className={t.memberEmail}>{m.email || '—'}</span></span>
+                    </Link> : <div className={t.staffLinkRow}><Avatar name={m.full_name} size="sm" /><span className={t.staffIdentity}><span className={t.memberName}>{m.full_name}</span><span className={t.memberEmail}>{m.email || '—'}</span></span></div>}
                   </td>
-                  <td className={t.emailCell}>{m.email || <span className={s.muted}>—</span>}</td>
                   <td>
                     <Badge tone={m.role === 'owner' ? 'brand' : m.role === 'manager' ? 'info' : 'neutral'} dot>
                       {m.role}
@@ -804,6 +805,7 @@ export default function Team() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className={t.menuContent}>
+                        {isOwner && m.kind === 'member' && <DropdownMenuItem asChild><Link to={`/team/${m.user_id}`}>View leave details</Link></DropdownMenuItem>}
                             {m.kind === 'invite' && (
                               <>
                                 <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>

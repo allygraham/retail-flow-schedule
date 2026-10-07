@@ -235,3 +235,10 @@
 }
 
 .memberEmail { font-size: $fs-sm; color: var(--color-text-secondary, #{$text-soft}); overflow-wrap: anywhere; }
+
+.staffLink { display: flex; flex-direction: column; gap: 4px; min-height: 44px; padding: 6px 8px; margin: -6px -8px; border-radius: $r-sm; color: var(--color-text-primary, #{$text}); text-decoration: none;
+  &:hover { background: var(--color-row-hover, #{$brand-50}); }
+  &:focus-visible { outline: 2px solid var(--color-primary, #{$brand-600}); outline-offset: 2px; }
+}
+.staffLinkRow { display: flex; flex-direction: row; align-items: center; gap: $sp-3; min-height: 44px; }
+.staffIdentity { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
