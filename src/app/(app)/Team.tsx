@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
@@ -656,7 +657,7 @@ export default function Team() {
                 >
                   <Avatar name={m.full_name} size="sm" />
                   <div className={t.memberMain}>
-                    <span className={t.memberName}>{m.full_name}</span>
+                    <span className={t.memberName}>{isOwner && m.kind === 'member' ? <Link to={`/team/${m.user_id}`}>{m.full_name}</Link> : m.full_name}</span>
                     {metaParts.length > 0 && (
                       <span className={t.memberMeta}>
                         {metaParts.map((part, i) => (
@@ -732,7 +733,7 @@ export default function Team() {
                   <td>
                     <div className={s.who}>
                       <Avatar name={m.full_name} size="sm" />
-                      <span>{m.full_name}</span>
+                      <span>{isOwner && m.kind === 'member' ? <Link to={`/team/${m.user_id}`}>{m.full_name}</Link> : m.full_name}</span>
                     </div>
                   </td>
                   <td className={t.emailCell}>{m.email || <span className={s.muted}>—</span>}</td>
