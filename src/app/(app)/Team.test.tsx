@@ -20,7 +20,7 @@ vi.mock('@/integrations/supabase/client', () => {
     employee_profiles: [{ user_id: 'employee', contracted_hours: 20, primary_store_id: 'store', primary_role_id: null, working_days: [1, 3, 5], annual_leave_entitlement: 28 }],
     store_locations: [{ id: 'store', name: 'Main store' }], roles_catalog: [], invitations: [], memberships: [{ user_id: 'employee', is_active: true }],
   };
-  return { supabase: { rpc: mocks.rpc, channel: () => ({ on() { return this; }, subscribe() { return this; } }), removeChannel: vi.fn(), from: (table: string) => {
+  return { supabase: { rpc: (name: string, args: unknown) => name === 'get_team_member_emails' ? Promise.resolve({ data: [{ user_id: 'employee', email: 'employee@example.test' }], error: null }) : mocks.rpc(name, args), channel: () => ({ on() { return this; }, subscribe() { return this; } }), removeChannel: vi.fn(), from: (table: string) => {
     const response = Promise.resolve({ data: rows[table] ?? [], error: null });
     const query = { select: () => query, eq: () => query, order: () => query, then: response.then.bind(response) };
     return query;
@@ -88,4 +88,9 @@ it('prevents duplicate employee saves submitted in the same event', async () => 
   expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeDisabled();
   await act(async () => finish({ data: null, error: null }));
   expect(mocks.success).toHaveBeenCalledTimes(1);
+});
+
+it('shows the account email returned by the secure team lookup', async () => {
+  render(<MemoryRouter><Team /></MemoryRouter>);
+  expect(await screen.findByText('employee@example.test')).toBeVisible();
 });

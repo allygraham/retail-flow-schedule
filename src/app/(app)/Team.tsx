@@ -153,16 +153,13 @@ export default function Team() {
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [] }),
       supabase.from('memberships').select('user_id, is_active').eq('business_id', business.id),
+      canManageStaff ? supabase.rpc('get_team_member_emails', { _business_id: business.id }) : Promise.resolve({ data: [] }),
     ]);
 
     assertQueryResults(...results);
-    const [{ data: roles }, { data: profs }, { data: ep }, { data: storeRows }, { data: jobRows }, { data: invites }, { data: members }] = results;
+    const [{ data: roles }, { data: profs }, { data: ep }, { data: storeRows }, { data: jobRows }, { data: invites }, { data: members }, { data: emails }] = results;
 
-    let memberEmails: Record<string, string> = {};
-    if (canManageStaff && (roles ?? []).length) {
-      const ids = (roles ?? []).map((r) => r.user_id);
-      memberEmails = Object.fromEntries(ids.map((id: string) => [id, '']));
-    }
+    const memberEmails = Object.fromEntries((emails ?? []).map(row => [row.user_id, row.email ?? '']));
 
     const profMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p.full_name]));
     const epMap = Object.fromEntries((ep ?? []).map((e) => [e.user_id, e]));
@@ -658,6 +655,7 @@ export default function Team() {
                   <Avatar name={m.full_name} size="sm" />
                   <div className={t.memberMain}>
                     <span className={t.memberName}>{isOwner && m.kind === 'member' ? <Link to={`/team/${m.user_id}`}>{m.full_name}</Link> : m.full_name}</span>
+                    {m.email && <span className={t.memberEmail}>{m.email}</span>}
                     {metaParts.length > 0 && (
                       <span className={t.memberMeta}>
                         {metaParts.map((part, i) => (

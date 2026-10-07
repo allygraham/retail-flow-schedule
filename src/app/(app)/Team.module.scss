@@ -233,3 +233,5 @@
   gap: 12px 20px;
   label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 }
+
+.memberEmail { font-size: $fs-sm; color: var(--color-text-secondary, #{$text-soft}); overflow-wrap: anywhere; }

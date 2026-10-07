@@ -78,3 +78,31 @@ test('deactivation failures retry, disabled staff lose workspace access, reactiv
     await expect(employeePage.getByRole('heading', { name: /Week of/ })).toBeVisible();
   } finally { await employeeContext.close(); }
 });
+
+for (const width of [1280, 390]) {
+  test(`team displays and searches current member emails at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 850 });
+    await authenticate(page); await stubApi(page);
+    await page.goto('/team');
+    await expect(page.getByText('employee@example.test', { exact: true })).toBeVisible();
+    if (width === 1280) await page.getByRole('button', { name: 'Show filters' }).click();
+    const search = page.getByPlaceholder(width === 1280 ? 'Search name, email, role…' : 'Search team…');
+    await search.fill('employee@example.test');
+    await expect(page.getByText('Test Employee', { exact: true })).toBeVisible();
+    await search.fill('missing@example.test');
+    await expect(page.getByText('employee@example.test', { exact: true })).not.toBeVisible();
+    await search.fill('');
+    await expect(page.getByText('employee@example.test', { exact: true })).toBeVisible();
+  });
+}
+
+test('team email lookup errors show retry instead of blank addresses', async ({ page }) => {
+  await authenticate(page); await stubApi(page);
+  let fail = true;
+  await page.route('**/rest/v1/rpc/get_team_member_emails*', route => fail ? route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Lookup unavailable' }) }) : route.fallback());
+  await page.goto('/team');
+  await expect(page.getByRole('alert')).toContainText('Could not load the team');
+  fail = false;
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText('employee@example.test', { exact: true })).toBeVisible();
+});

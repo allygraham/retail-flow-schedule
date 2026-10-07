@@ -131,6 +131,7 @@ export async function stubApi(page: Page, shared?: StubState) {
       }
       return reply(state.leaves);
     }
+    if (endpoint === 'get_team_member_emails') return reply([{ user_id: ownerId, email: 'owner@example.test' }, { user_id: employeeId, email: 'employee@example.test' }]);
     if (endpoint === 'get_leave_requests') return reply(state.leaves);
     if (endpoint === 'publish_rota_shifts') {
       state.shifts = state.shifts.map(shift => ({ ...shift, is_published: true }));
