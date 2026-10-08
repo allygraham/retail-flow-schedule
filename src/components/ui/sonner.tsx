@@ -1,27 +1,24 @@
-import { useTheme } from "next-themes";
-import { Toaster as Sonner } from "sonner";
+import { CircleCheck, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
+import { Toaster as Sonner } from 'sonner';
+import s from './sonner.module.scss';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
-  return (
-    <Sonner
-      theme={theme as ToasterProps["theme"]}
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-        },
-      }}
-      {...props}
-    />
-  );
-};
+const Toaster = (props: ToasterProps) => (
+  <Sonner
+    theme="dark"
+    position="top-right"
+    offset={{ top: 24, right: 24 }}
+    mobileOffset={{ top: 'calc(72px + env(safe-area-inset-top))', left: 16, right: 16 }}
+    duration={6000}
+    closeButton
+    gap={12}
+    visibleToasts={3}
+    className={s.toaster}
+    icons={{ success: <CircleCheck size={24} />, error: <CircleAlert size={24} />, warning: <TriangleAlert size={24} />, info: <Info size={24} />, close: <X size={18} /> }}
+    toastOptions={{ classNames: { toast: s.toast, title: s.title, description: s.description, icon: s.icon, content: s.content, closeButton: s.close, actionButton: s.action, cancelButton: s.cancel } }}
+    {...props}
+  />
+);
 
 export { Toaster };
