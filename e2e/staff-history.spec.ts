@@ -19,7 +19,7 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   await expect(page.getByText('Returned to work', { exact: true })).toBeVisible();
   await expect(page.getByText('Annual leave entitlement', { exact: true })).toHaveCount(0);
-  for (const label of ['Annual leave taken', 'Annual leave booked', 'Annual leave pending']) {
+  for (const label of ['Taken', 'Booked', 'Pending']) {
     await expect(page.getByText(label, { exact: true }).locator('..')).toContainText('/ 28');
   }
   const sicknessDays = await page.getByText('Sickness days', { exact: true }).locator('..').boundingBox();
@@ -34,9 +34,9 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
     expect(annualSummary?.width).toBeCloseTo(sickSummary!.width, 0);
   }
   await expect(page.getByText('Allowance shown is the current entitlement in working days per leave year.')).toBeVisible();
-  await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('2');
+  await expect(page.getByText('Taken', { exact: true }).locator('..')).toContainText('2');
   await page.getByLabel('Year', { exact: true }).selectOption('2025');
-  await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('1');
+  await expect(page.getByText('Taken', { exact: true }).locator('..')).toContainText('1');
   await expect(page.getByText('Sickness days', { exact: true }).locator('..')).toContainText('0');
   await expect(page.getByText('Cold / flu', { exact: true })).toHaveCount(0);
 });
@@ -70,7 +70,7 @@ for (const width of [1280, 390]) test(`owner opens staff leave details from the 
   await page.getByRole('button', { name: 'Open actions for Test Employee' }).click();
   await page.getByRole('menuitem', { name: 'View leave details', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/team/${employeeId}$`));
-  await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('/ 28');
+  await expect(page.getByText('Taken', { exact: true }).locator('..')).toContainText('/ 28');
 });
 
 for (const width of [1280, 390]) test(`owner records leave for this staff member at ${width}px`, async ({ page }) => {
@@ -86,7 +86,7 @@ for (const width of [1280, 390]) test(`owner records leave for this staff member
   await expect(dialog).not.toBeVisible();
   await expect(page.getByText('Recorded from staff history', { exact: true })).toBeVisible();
   expect(state.writes.find(write => write.endpoint === 'record_employee_leave')?.body).toMatchObject({ _business_id: businessId, _user_id: employeeId, _leave_type: 'annual', _start_date: '2026-10-07', _end_date: '2026-10-07' });
-  await expect(page.getByText('Annual leave taken', { exact: true }).locator('..')).toContainText('1');
+  await expect(page.getByText('Taken', { exact: true }).locator('..')).toContainText('1');
 });
 
 test('failed staff leave save retains the draft and retries without duplicating records', async ({ page }) => {

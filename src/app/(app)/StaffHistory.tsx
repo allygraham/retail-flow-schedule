@@ -70,9 +70,9 @@ export default function StaffHistory() {
       <section className={s.summarySection} aria-labelledby="leave-summary-title">
         <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
         <div className={s.stats}>
-      <Stat label="Annual leave taken" value={leaveValue(summary?.taken)} hint="Approved working days through today" />
-      <Stat label="Annual leave booked" value={leaveValue(summary?.booked)} hint="Approved future working days" />
-      <Stat label="Annual leave pending" value={leaveValue(summary?.pending)} hint="Working days awaiting approval" />
+      <Stat label="Taken" value={leaveValue(summary?.taken)} hint="Approved through today" />
+      <Stat label="Booked" value={leaveValue(summary?.booked)} hint="Approved future days" />
+      <Stat label="Pending" value={leaveValue(summary?.pending)} hint="Days awaiting approval" />
         </div>
         <p className={s.allowanceNote}>Allowance shown is the current entitlement in working days per leave year.</p>
       </section>
