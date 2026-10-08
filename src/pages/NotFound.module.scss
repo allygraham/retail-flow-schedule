@@ -1,0 +1,11 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+
+.page { min-height: 100svh; display: grid; place-items: center; padding: $sp-5; background: var(--color-bg, $bg); }
+.card { @include card; width: 100%; max-width: 480px; padding: $sp-7; text-align: center; color: var(--color-text-primary, $text); }
+.icon { display: grid; place-items: center; width: 64px; height: 64px; margin: $sp-6 auto $sp-4; border-radius: $r-lg; background: var(--color-row-hover, $brand-50); color: var(--color-primary, $brand-600); }
+.eyebrow { @include eyebrow; }
+.title { @include text-h2; margin: $sp-3 0; }
+.message { color: var(--color-text-secondary, $text-muted); font-size: $fs-base; line-height: $lh-normal; }
+.action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: $sp-6; padding: $sp-3 $sp-5; border-radius: $r-md; background: var(--color-primary, $brand-600); color: var(--color-on-primary, $white); font-size: $fs-base; font-weight: $fw-semibold; &:hover { background: var(--color-primary-hover, $brand-700); } &:focus-visible { @include focus-ring; } }
+@media (max-width: 720px) { .card { padding: $sp-6 $sp-4; } .action { width: 100%; } }

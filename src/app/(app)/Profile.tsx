@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { useAsyncData } from '@/hooks/useAsyncData';
@@ -153,7 +154,7 @@ export default function Profile() {
           />
         <Card title="Upcoming shifts" subtitle="Next 10 published">
           {shifts.length === 0 ? (
-            <div className={s.empty}>No upcoming shifts.</div>
+            <EmptyState title="No upcoming shifts" description="Your next published shifts will appear here." />
           ) : (
             <ul className={s.list}>
               {shifts.map((sh) => {

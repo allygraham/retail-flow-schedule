@@ -18,3 +18,7 @@
   .body { padding: $sp-4; }
 }
 
+
+// Empty states provide their own inset, including dashboard data wrappers.
+.body:has(> [data-empty-state]:only-child),
+.body:has(> [aria-busy]:only-child > [data-empty-state]:only-child) { padding: 0; }

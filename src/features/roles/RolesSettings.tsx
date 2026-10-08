@@ -118,8 +118,8 @@ export function RolesSettings() {
         <Field label="Colour">
           <ColorSwatches value={color} onChange={setColor} />
         </Field>
-        <Button type="submit" variant="primary" disabled={busy || loading || !!loadError || !name.trim()} className="w-full sm:w-auto justify-center">
-          <Plus size={16} /> Add role
+        <Button type="submit" variant="primary" leading={<Plus size={16} aria-hidden />} disabled={busy || loading || !!loadError || !name.trim()} className="w-full sm:w-auto justify-center">
+          Add role
         </Button>
       </form>
 

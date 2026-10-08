@@ -1,7 +1,8 @@
 @use '@/styles/tokens' as *;
 
-.empty { padding: $sp-8 $sp-5; text-align: center; color: $text-muted; }
-.icon { width: 48px; height: 48px; border-radius: $r-md; background: $ink-100; margin: 0 auto $sp-3; display: grid; place-items: center; color: $brand-600; }
-.title { font-weight: $fw-semibold; color: $text; margin-bottom: 4px; font-size: $fs-md; }
-.desc { font-size: $fs-sm; max-width: 380px; margin: 0 auto; }
+.empty { padding: $sp-7 $sp-5; text-align: center; color: var(--color-text-secondary, $text-muted); }
+.icon { width: 48px; height: 48px; border-radius: $r-md; background: var(--color-surface-muted, $ink-100); margin: 0 auto $sp-3; display: grid; place-items: center; color: var(--color-primary, $brand-600); }
+.title { font-weight: $fw-semibold; color: var(--color-text-primary, $text); margin-bottom: $sp-1; font-size: $fs-md; line-height: $lh-snug; }
+.desc { font-size: $fs-sm; max-width: 380px; margin: 0 auto; line-height: $lh-normal; }
 .action { margin-top: $sp-4; }
+@media (max-width: 720px) { .empty { padding: $sp-6 $sp-4; } }

@@ -12,7 +12,7 @@
 .col { display: flex; flex-direction: column; gap: $sp-4; }
 .who { display: flex; align-items: center; gap: $sp-3; margin-bottom: $sp-5; }
 .name { font-family: $font-display; font-weight: $fw-bold; font-size: $fs-xl; }
-.role { color: $text-muted; font-size: $fs-sm; display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.role { color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .form { display: flex; flex-direction: column; gap: $sp-4; align-items: flex-start;
   > button { margin-top: $sp-2; }
 }
@@ -20,24 +20,23 @@
   display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: $sp-3 $sp-4;
   background: var(--color-surface-muted, $brand-50);
-  border: 1px solid $border; border-radius: $r-sm;
+  border: 1px solid var(--color-border, $border); border-radius: $r-sm;
   font-family: inherit; font-weight: $fw-semibold; font-size: $fs-sm;
   color: inherit; cursor: pointer;
-  &:hover { background: $brand-50; }
+  &:hover { background: var(--color-row-hover, $brand-50); }
   svg { transition: transform 0.2s ease; }
   .chevOpen { transform: rotate(180deg); }
 }
 .requestForm { display: flex; flex-direction: column; gap: $sp-4; }
 .requestError { background: hsl(0 84% 92%); color: hsl(0 63% 35%); padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
-.empty { color: $text-muted; padding: $sp-5; text-align: center; }
 .list { list-style: none; margin: 0; padding: 0; }
-.row { display: flex; align-items: center; gap: $sp-3; padding: $sp-3 $sp-5; border-bottom: 1px solid $border; &:last-child { border: none; } }
-.date { width: 44px; text-align: center; background: $brand-50; border-radius: $r-sm; padding: 4px; }
-.dDay { font-size: 10px; font-weight: $fw-bold; color: $brand-700; text-transform: uppercase; letter-spacing: 0.05em; }
-.dNum { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-lg; color: $brand-700; line-height: 1; }
+.row { display: flex; align-items: center; gap: $sp-3; padding: $sp-3 $sp-5; border-bottom: 1px solid var(--color-border, $border); &:last-child { border: none; } }
+.date { width: 44px; text-align: center; background: var(--color-row-hover, $brand-50); border-radius: $r-sm; padding: 4px; }
+.dDay { font-size: 10px; font-weight: $fw-bold; color: var(--color-primary, $brand-700); text-transform: uppercase; letter-spacing: 0.05em; }
+.dNum { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-lg; color: var(--color-primary, $brand-700); line-height: 1; }
 .rowMain { flex: 1; min-width: 0; }
 .rowName { font-weight: $fw-semibold; font-size: $fs-sm; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.rowMeta { font-size: $fs-xs; color: $text-muted; @include truncate; }
+.rowMeta { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); @include truncate; }
 
 /* --- Mobile/tablet refinement --- */
 @media (max-width: 899px) {

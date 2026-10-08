@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { useRef, useState } from 'react';
@@ -101,7 +102,7 @@ export function HolidaySettings() {
   const upcomingCustom = customs.filter((c) => c.date >= today).slice(0, 12);
 
   return (
-    <Card title="Public Holidays" subtitle="Show public holidays in the rota and calendar views.">
+    <Card title="Public holidays" subtitle="Show public holidays in the rota and calendar views.">
       <div className={s.row}>
         <div>
           <div className={s.label}>Enable public holidays</div>
@@ -143,7 +144,7 @@ export function HolidaySettings() {
           <div className={s.preview}>
             <div className={s.previewTitle}>Upcoming public holidays</div>
             {upcoming.length === 0 ? (
-              <div className={s.disabledMsg}>No upcoming holidays in the next 12 months.</div>
+              <EmptyState title="No upcoming public holidays" description="There are no public holidays in the next 12 months for this region." />
             ) : (
               <div className={s.previewList}>
                 {upcoming.map((h) => (
@@ -206,7 +207,7 @@ export function HolidaySettings() {
         )}
 
         {loadError ? <DataLoadError message={loadError} retry={reload} /> : loading ? <LoadingSkeleton label="Loading company holidays" /> : upcomingCustom.length === 0 ? (
-          <div className={s.disabledMsg}>No upcoming company holidays.</div>
+          <EmptyState title="No upcoming company holidays" description="Company closure days will appear here." />
         ) : (
           <div className={s.customList}>
             {upcomingCustom.map((c) => (
