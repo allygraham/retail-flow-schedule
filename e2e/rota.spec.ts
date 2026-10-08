@@ -71,6 +71,7 @@ test('copy previous week preserves assignment and hours but creates drafts', asy
   await page.goto('/rota'); await page.getByRole('button', { name: 'Copy previous week' }).click();
   await expect(cell(page, employeeId, monday).getByText('09:00–17:00')).toBeVisible();
   expect(state.batches).toHaveLength(1);
+  await expect(page.getByRole('button', { name: 'Copy previous week', exact: true })).toBeDisabled();
   expect(state.batches[0]).toEqual([expect.objectContaining({ shift_date: monday, assigned_user_id: employeeId, start_time: '09:00:00', end_time: '17:00:00', break_minutes: 30, notes: 'Opening', is_published: false })]);
 });
 
@@ -380,4 +381,75 @@ for (const width of [390, 1280]) test(`multiple stores keep the rota filter at $
   expect(await page.evaluate(() => sessionStorage.getItem('rota.storeFilter'))).toBe(storeId);
   await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Main Store', exact: true })).toBeVisible();
+});
+
+
+for (const published of [false, true]) test(`copy is disabled when the week has ${published ? 'published' : 'draft'} shifts`, async ({ page }) => {
+  const state = await open(page); state.shifts = [shift({ is_published: published })];
+  await page.goto('/rota');
+  const copy = page.getByRole('button', { name: 'Copy previous week', exact: true });
+  await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await expect(copy).toBeDisabled();
+  await expect(copy).toHaveAttribute('title', 'Copying is available only for an empty, unpublished week.');
+  expect(state.batches).toHaveLength(0);
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
+  await expect(copy).toBeEnabled();
+});
+
+test('copy stays disabled for a published week whose shifts were removed', async ({ page }) => {
+  await open(page);
+  await page.route('**/rest/v1/rpc/get_rota_week_status*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ store_id: storeId, is_published: true }]) }));
+  await page.goto('/rota');
+  await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByRole('button', { name: 'Copy previous week', exact: true })).toBeDisabled();
+});
+
+test('copy availability follows the selected store', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift(), shift({ id: 'previous-second', store_id: 'second-store', shift_date: '2026-09-28' })];
+  await page.route('**/rest/v1/store_locations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ id: storeId, name: 'Main Store', is_active: true }, { id: 'second-store', name: 'Second Store', is_active: true }]) }));
+  await page.goto('/rota');
+  const copy = page.getByRole('button', { name: 'Copy previous week', exact: true });
+  await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await expect(copy).toBeDisabled();
+  await page.getByRole('button', { name: 'All stores', exact: true }).click();
+  await page.getByRole('option', { name: 'Second Store', exact: true }).click();
+  await expect(copy).toBeEnabled();
+  await page.getByRole('button', { name: 'Second Store', exact: true }).click();
+  await page.getByRole('option', { name: 'Main Store', exact: true }).click();
+  await expect(copy).toBeDisabled();
+});
+
+
+for (const width of [390, 1280]) test(`copy is disabled without shifts in the previous week at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  const state = await open(page);
+  state.shifts = [shift({ shift_date: '2026-09-21' }), shift({ id: 'cancelled-previous', shift_date: '2026-09-28', status: 'cancelled' })];
+  await page.goto('/rota');
+  await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  const copy = page.getByRole('button', { name: 'Copy previous week', exact: true });
+  await expect(copy).toBeDisabled();
+  await expect(copy).toHaveAttribute('title', 'No shifts to copy from the previous week.');
+  expect(state.batches).toHaveLength(0);
+});
+
+test('previous week shifts in another store do not enable copying for the selected store', async ({ page }) => {
+  const state = await open(page); state.shifts = [shift({ shift_date: '2026-09-28' })];
+  await page.route('**/rest/v1/store_locations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ id: storeId, name: 'Main Store', is_active: true }, { id: 'second-store', name: 'Second Store', is_active: true }]) }));
+  await page.goto('/rota');
+  const copy = page.getByRole('button', { name: 'Copy previous week', exact: true });
+  await expect(copy).toBeEnabled();
+  await page.getByRole('button', { name: 'All stores', exact: true }).click();
+  await page.getByRole('option', { name: 'Second Store', exact: true }).click();
+  await expect(copy).toBeDisabled();
+  await page.getByRole('button', { name: 'Second Store', exact: true }).click();
+  await page.getByRole('option', { name: 'Main Store', exact: true }).click();
+  await expect(copy).toBeEnabled();
+});
+
+test('previous-week lookup failure disables copying and reports a retryable load error', async ({ page }) => {
+  await open(page);
+  await page.route(url => url.pathname.endsWith('/shifts') && url.searchParams.get('select') === 'store_id', route => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Previous week unavailable' }) }));
+  await page.goto('/rota');
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy previous week', exact: true })).toBeDisabled();
 });

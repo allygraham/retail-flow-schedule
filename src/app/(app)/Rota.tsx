@@ -81,15 +81,18 @@ export default function Rota() {
   const reference = useAsyncData(fetchReferenceData, 'Could not load the rota. Please try again.');
   const fetchWeekData = useCallback(async () => {
     if (!business) throw new Error('No workspace');
-    const [sh, lv, publication] = await Promise.all([
+    const [sh, lv, publication, previous] = await Promise.all([
       (isMgr
         ? supabase.from('shifts').select('*').eq('business_id', business.id).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')
         : supabase.from('shifts').select('*').eq('business_id', business.id).eq('is_published', true).not('assigned_user_id', 'is', null).gte('shift_date', isoDate(weekStart)).lte('shift_date', isoDate(addDays(weekStart, 6))).order('start_time')),
       supabase.rpc('get_leave_requests', { _business_id: business.id }).in('status', ['approved','pending']).lte('start_date', isoDate(addDays(weekStart, 6))).gte('end_date', isoDate(weekStart)),
       supabase.rpc('get_rota_week_status', { _business_id: business.id, _week_start: isoDate(weekStart) }),
+      isMgr ? supabase.from('shifts').select('store_id').eq('business_id', business.id)
+        .gte('shift_date', isoDate(addDays(weekStart, -7))).lte('shift_date', isoDate(addDays(weekStart, -1))).neq('status', 'cancelled')
+        : Promise.resolve({ data: [], error: null }),
     ]);
-    assertQueryResults(sh, lv, publication);
-    return { shifts: sh.data ?? [], leave: lv.data ?? [], publication: publication.data ?? [] };
+    assertQueryResults(sh, lv, publication, previous);
+    return { shifts: sh.data ?? [], leave: lv.data ?? [], publication: publication.data ?? [], previousStoreIds: [...new Set((previous.data ?? []).map(shift => shift.store_id))] };
   }, [business, weekStart, isMgr]);
   const week = useAsyncData(fetchWeekData, 'Could not load the rota. Please try again.');
   const loading = reference.loading || week.loading;
@@ -103,7 +106,7 @@ export default function Rota() {
       sessionStorage.setItem('rota.storeFilter', soleStoreId);
     }
   }, [soleStoreId, storeFilter]);
-  const { shifts, leave, publication } = useMemo(() => week.data ?? { shifts: [], leave: [], publication: [] }, [week.data]);
+  const { shifts, leave, publication, previousStoreIds } = useMemo(() => week.data ?? { shifts: [], leave: [], publication: [], previousStoreIds: [] }, [week.data]);
   const gridBusy = loading || holidays.loading;
   const gridRef = useRef<HTMLDivElement>(null);
   const gridHeight = useRef(0);
@@ -155,6 +158,10 @@ export default function Rota() {
     if (!gridBusy) previousPeople.current = { context: gridContext, people: matchingPeople };
   }, [gridBusy, gridContext, matchingPeople]);
 
+  const weekHasSchedule = filteredShifts.some(shift => shift.status !== 'cancelled') ||
+    publication.some(status => status.is_published && (storeFilter === 'all' || status.store_id === storeFilter));
+  const hasPreviousShifts = storeFilter === 'all' ? previousStoreIds.length > 0 : previousStoreIds.includes(storeFilter);
+  const copyDisabled = !hasPreviousShifts || gridBusy || !!loadError || !!holidays.error || weekHasSchedule || copying;
   const draftCount = useMemo(() => filteredShifts.filter(x => !x.is_published && x.status !== 'cancelled').length, [filteredShifts]);
 
   const conflictsFor = (sh: ShiftRow): string[] => {
@@ -266,7 +273,7 @@ export default function Rota() {
   };
 
   const performCopyPreviousWeek = async () => {
-    if (!business || copying) return;
+    if (!isMgr || !business || copyDisabled) return;
     setCopying(true);
     try {
       const prevStart = addDays(weekStart, -7);
@@ -294,21 +301,14 @@ export default function Rota() {
       const { error: insErr } = await supabase.from('shifts').insert(rows);
       if (insErr) { toast.error(insErr.message); return; }
       toast.success(`Copied ${rows.length} shift${rows.length === 1 ? '' : 's'} from last week`);
-      load();
+      await load();
     } catch { toast.error('Could not copy shifts. Please try again.'); }
     finally { setCopying(false); }
   };
 
   const copyPreviousWeek = async () => {
-    if (!isMgr || !business) return;
-    if (filteredShifts.length > 0) {
-      toast('This week already has shifts. Copy from last week anyway?', {
-        action: { label: 'Copy', onClick: () => performCopyPreviousWeek() },
-        cancel: { label: 'Cancel', onClick: () => {} },
-      });
-      return;
-    }
-    performCopyPreviousWeek();
+    if (!isMgr || !business || copyDisabled) return;
+    await performCopyPreviousWeek();
   };
 
   const openPublishConfirm = () => {
@@ -396,7 +396,7 @@ export default function Rota() {
           />}
         </div>
         {isMgr && <div className={s.editActions} role="group" aria-label="Schedule actions">
-          <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={gridBusy || !!loadError || !!holidays.error}>Copy previous week</Button>
+          <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={copyDisabled} title={weekHasSchedule ? "Copying is available only for an empty, unpublished week." : !gridBusy && !loadError && !hasPreviousShifts ? "No shifts to copy from the previous week." : undefined}>Copy previous week</Button>
           {!holidays.error && (
             <Button onClick={openPublishConfirm} disabled={loading || holidays.loading || draftCount === 0}>
               Publish{draftCount > 0 ? ` (${draftCount})` : ''}
