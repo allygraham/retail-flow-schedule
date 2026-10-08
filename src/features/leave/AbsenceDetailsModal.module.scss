@@ -1,0 +1,15 @@
+@use '@/styles/tokens' as *;
+.noteViewer { display: flex; flex-direction: column; gap: 16px; color: var(--color-text-primary); }
+.employee { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.identity { flex: 1; min-width: 140px; h3 { margin: 0; font-size: 16px; font-weight: 600; } p { margin: 4px 0 0; font-size: 13px; color: var(--color-text-secondary); } }
+.summary { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin: 0; padding: 14px 0; border-block: 1px solid var(--color-border); dd { font-size: 16px; } }
+.noteViewer dt, .reasonLabel { font-size: 13px; color: var(--color-text-secondary); }
+.noteViewer dd { margin: 5px 0 0; font-weight: 500; }
+.noteViewer h4 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+.reason p, .detailBlock p { margin: 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin: 0 0 20px; dd { font-size: 14px; } }
+.lifecycle { font-size: 14px; }
+.noteViewer > section:has(> button) { border-top: 1px solid var(--color-border); border-radius: 0; box-shadow: none; > button { min-height: 48px; padding-inline: 0; } }
+.form { display: grid; gap: 16px; }
+.detailBlock { display: grid; gap: 6px; }
+@media (max-width: 480px) { .facts { gap: 16px; } .summary { grid-template-columns: 1.2fr 1fr; gap: 12px; dd { font-size: 14px; } } }

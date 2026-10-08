@@ -632,3 +632,16 @@
 .requestCard button[aria-label="Open actions"] { width: 44px; height: 44px; }
 .tabs { scrollbar-width: thin; &::-webkit-scrollbar { display: block; height: 3px; } &::-webkit-scrollbar-thumb { background: var(--color-border, $border); border-radius: 3px; } }
 .recordSkeleton { min-height: 18px; margin: $sp-2 0; width: 85%; border-radius: 4px; background: var(--color-surface-muted, $ink-100); }
+
+.absenceForm {
+  gap: 20px;
+  .toggleGroup { background: transparent; border: 0; border-radius: 0; padding: 12px 0; }
+  .toggleGroupLabel { font-size: 13px; }
+  .toggleGrid { gap: 12px; }
+  label:has(input[type="checkbox"]) { min-height: 44px; }
+  input:focus-visible + .toggleTrack { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  > section > button { min-height: 48px; }
+}
+
+.recordFields { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 640px) { .recordFields { grid-template-columns: 1fr; } }

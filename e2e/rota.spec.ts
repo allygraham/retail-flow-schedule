@@ -301,7 +301,6 @@ test('absence background refresh failure keeps loaded details visible and can re
   await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('status', { name: 'Loading absence details' })).toHaveCount(0);
   await expect(dialog.getByRole('alert')).toContainText('Could not refresh absence information');
-  await dialog.getByRole('button', { name: 'Notes & history' }).click();
   await expect(dialog.getByText('Recovered details')).toBeVisible();
   fail = false;
   await dialog.getByRole('button', { name: 'Try again' }).click();
@@ -346,7 +345,6 @@ for (const type of ['annual', 'sick']) test(`${type} details appear before the b
     await expect(dialog.getByText('Test Employee', { exact: true })).toBeVisible();
     await expect(dialog.getByText(type === 'sick' ? '1 calendar day' : '1 working day', { exact: true })).toBeVisible();
     await expect(dialog.getByRole('status')).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Notes & history' }).click();
     await expect(dialog.getByText('Already loaded on rota')).toBeVisible();
     if (type === 'sick') {
       await dialog.getByRole('button', { name: 'SSP estimate' }).click();

@@ -987,7 +987,8 @@ export default function Leave() {
           </>
         }
       >
-        <div className={s.form}>
+        <div className={`${s.form} ${s.absenceForm}`}>
+          <div className={s.recordFields}>
           <Field label="Employee">
             <Select value={mgmtForm.user_id} onChange={e => setMgmtForm({ ...mgmtForm, user_id: e.target.value })}>
               <option value="">Select employee…</option>
@@ -998,7 +999,7 @@ export default function Leave() {
               ))}
             </Select>
           </Field>
-          <div className={s.row2}>
+
             <Field label="Leave type">
               <Select value={mgmtForm.leave_type} onChange={e => setMgmtForm({ ...mgmtForm, leave_type: e.target.value as typeof mgmtForm.leave_type })}>
                 <option value="annual">Annual leave</option>
@@ -1039,6 +1040,8 @@ export default function Leave() {
           {isSicknessForm && (
             <CollapsibleSection
               title="Sickness details"
+              defaultOpen
+              tone="subtle"
               icon={<Stethoscope size={14} />}
               meta={SICKNESS_CATEGORY_LABEL[(mgmtForm.sickness_meta?.category ?? 'cold_flu') as keyof typeof SICKNESS_CATEGORY_LABEL]}
             >

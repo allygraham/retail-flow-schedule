@@ -17,7 +17,7 @@ export default function RotaAbsenceDetails({ request, onClose, returnFocusTo }: 
     return `${days} ${working ? 'working' : 'calendar'} day${days === 1 ? '' : 's'}`;
   };
   if (!detailsRow) return <Modal open returnFocusTo={returnFocusTo} onClose={onClose} title="Absence details" footer={<Button onClick={onClose}>Close</Button>}><p role="alert">This absence is no longer available.</p></Modal>;
-  return <AbsenceDetailsModal deferCoverage supportingHistoryReady={!loading && !error} supportingStatus={error ? <DataLoadError message="Could not refresh absence information. Details shown are from the loaded rota." retry={load} /> : undefined} returnFocusTo={returnFocusTo} detailsRow={detailsRow} setDetailsRow={value => {
+  return <AbsenceDetailsModal supportingHistoryReady={!loading && !error} supportingStatus={error ? <DataLoadError message="Could not refresh absence information. Details shown are from the loaded rota." retry={load} /> : undefined} returnFocusTo={returnFocusTo} detailsRow={detailsRow} setDetailsRow={value => {
     if (value === null) onClose(); else setDetailsRow(value);
   }} requests={requests} workingDaysByUser={workingDaysByUser} durationLabel={durationLabel} updateSickness={updateSickness} />;
 }

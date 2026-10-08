@@ -1,17 +1,19 @@
-import { lazy, Suspense, type Dispatch, type SetStateAction, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { useAuth } from '@/features/auth/authContext';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
-import { Select } from '@/components/common/Field';
+import { Avatar } from '@/components/common/Avatar';
+import { Badge } from '@/components/common/Badge';
+import { Field, Select } from '@/components/common/Field';
 import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { Activity, Coins, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/errors';
 import { fmtDate } from '@/lib/datetime';
-import { SOURCE_LABEL, STATUS_LABEL, TYPE_LABEL } from './leaveStatus';
+import { SOURCE_LABEL, STATUS_LABEL, STATUS_TONE, TYPE_LABEL } from './leaveStatus';
 import { parseSicknessMeta, SICKNESS_CATEGORY_LABEL, SICKNESS_LIFECYCLE_LABEL, SICKNESS_LIFECYCLE_OPTIONS, type SicknessLifecycleStatus, type SicknessMeta } from './sickness';
 import type { LeaveRequestRow } from './useLeaveRequests';
-import s from '@/app/(app)/Leave.module.scss';
+import s from './AbsenceDetailsModal.module.scss';
 
 const OperationalImpactCard = lazy(() => import('./OperationalImpactCard').then(module => ({ default: module.OperationalImpactCard })));
 const CoverageRecoveryCard = lazy(() => import('./CoverageRecoveryCard').then(module => ({ default: module.CoverageRecoveryCard })));
@@ -20,7 +22,6 @@ const SspPanel = lazy(() => import('./SspPanel').then(module => ({ default: modu
 interface Props {
   supportingHistoryReady?: boolean;
   supportingStatus?: ReactNode;
-  deferCoverage?: boolean;
   returnFocusTo?: HTMLElement | null;
   detailsRow: LeaveRequestRow | null;
   setDetailsRow: Dispatch<SetStateAction<LeaveRequestRow | null>>;
@@ -29,9 +30,10 @@ interface Props {
   durationLabel: (request: LeaveRequestRow) => string;
   updateSickness: (id: string, patch: { sickness_meta?: SicknessMeta | null; lifecycle_status?: SicknessLifecycleStatus | null }) => Promise<void>;
 }
-export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, workingDaysByUser, durationLabel, updateSickness, returnFocusTo, supportingHistoryReady = true, supportingStatus, deferCoverage = false }: Props) {
+export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, workingDaysByUser, durationLabel, updateSickness, returnFocusTo, supportingHistoryReady = true, supportingStatus }: Props) {
   const { business, hasPermission } = useAuth();
   const isMgr = hasPermission('manage_leave');
+  const [updating, setUpdating] = useState(false);
   return (
       <Modal
         open={!!detailsRow}
@@ -39,28 +41,7 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
         onClose={() => setDetailsRow(null)}
         title="Absence details"
         size="lg"
-        footer={
-          <>
-            {isMgr && detailsRow?.leave_type === 'sick' && (
-              <Select
-                value={(detailsRow.lifecycle_status as string) ?? 'recorded_absence'}
-                onChange={async (e) => {
-                  if (!detailsRow) return;
-                  try {
-                    await updateSickness(detailsRow.id, { lifecycle_status: e.target.value as SicknessLifecycleStatus });
-                    setDetailsRow({ ...detailsRow, lifecycle_status: e.target.value as SicknessLifecycleStatus });
-                    toast.success('Sickness status updated');
-                  } catch (err) { toast.error(errorMessage(err, 'Could not update')); }
-                }}
-              >
-                {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </Select>
-            )}
-            <Button onClick={() => setDetailsRow(null)}>Close</Button>
-          </>
-        }
+        footer={<Button variant="outline" onClick={() => setDetailsRow(null)}>Close</Button>}
       >
         {detailsRow && (() => {
           const meta = parseSicknessMeta(detailsRow.sickness_meta);
@@ -71,59 +52,57 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
           return (
             <div className={s.noteViewer}>
               {supportingStatus}
-              <div className={s.detailList}>
-                <div className={s.detailRow}><span>Employee</span><strong>{detailsRow.profiles?.full_name ?? 'Employee'}</strong></div>
-                <div className={s.detailRow}><span>Type</span><strong>{TYPE_LABEL[detailsRow.leave_type]}</strong></div>
-                <div className={s.detailRow}><span>Dates</span><strong>{fmtDate(detailsRow.start_date, 'd MMM')} → {fmtDate(detailsRow.end_date, 'd MMM yyyy')}</strong></div>
-                <div className={s.detailRow}><span>Duration</span><strong>{durationLabel(detailsRow)}</strong></div>
-                {isSick ? (
-                  <div className={s.detailRow}>
-                    <span>Sickness status</span>
-                    <strong>{detailsRow.lifecycle_status
-                      ? SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus]
-                      : 'Recorded absence'}</strong>
-                  </div>
-                ) : (
-                  <div className={s.detailRow}><span>Status</span><strong>{STATUS_LABEL[detailsRow.status]}</strong></div>
-                )}
-                <div className={s.detailRow}><span>Source</span><strong>{SOURCE_LABEL[detailsRow.source]}</strong></div>
-                {isSick && meta.category && (
-                  <div className={s.detailRow}><span>Category</span><strong>{SICKNESS_CATEGORY_LABEL[meta.category]}</strong></div>
-                )}
-                {isSick && meta.return_to_work_date && (
-                  <div className={s.detailRow}><span>Return to work</span><strong>{fmtDate(meta.return_to_work_date, 'd MMM yyyy')}</strong></div>
-                )}
-              </div>
-
-              {isSick && (
-                <div className={s.indicatorRow}>
-                  {meta.self_certified && <span className={s.indicator}>Self-certified</span>}
-                  {meta.fit_note_received && <span className={s.indicator}>Fit note received</span>}
-                  {meta.work_related_injury && <span className={s.indicator}>Work-related injury</span>}
-                  {meta.return_to_work_interview_required && <span className={s.indicator}>RTW interview required</span>}
-                  {meta.paid_absence !== undefined && <span className={s.indicator}>{meta.paid_absence ? 'Paid' : 'Unpaid'}</span>}
+              <div className={s.employee}>
+                <Avatar name={detailsRow.profiles?.full_name} size="lg" />
+                <div className={s.identity}>
+                  <h3>{detailsRow.profiles?.full_name ?? 'Employee'}</h3>
+                  <p>{TYPE_LABEL[detailsRow.leave_type]} · {SOURCE_LABEL[detailsRow.source]}{detailsRow.primary_store?.name ? ` · ${detailsRow.primary_store.name}` : ''}</p>
                 </div>
-              )}
-
-              {isMgr && business && (deferCoverage ? <CollapsibleSection title="Shift cover" icon={<Activity size={14} />} tone="subtle" defaultOpen={false}>
-                <Suspense fallback={null}><CoverageRecoveryCard businessId={business.id} userId={detailsRow.user_id} startDate={detailsRow.start_date} endDate={detailsRow.end_date} /></Suspense>
-              </CollapsibleSection> : <Suspense fallback={null}><CoverageRecoveryCard businessId={business.id} userId={detailsRow.user_id} startDate={detailsRow.start_date} endDate={detailsRow.end_date} /></Suspense>)}
-
-              {isMgr && (
-                <CollapsibleSection
-                  title="Operational impact"
-                  icon={<Activity size={14} />}
-                  tone="subtle"
-                  defaultOpen={false}
-                  meta="Shifts affected · uncovered hours"
-                >
-                  <Suspense fallback={null}><OperationalImpactCard
-                    userId={detailsRow.user_id}
-                    startDate={detailsRow.start_date}
-                    endDate={detailsRow.end_date}
-                  /></Suspense>
-                </CollapsibleSection>
-              )}
+                <Badge tone={STATUS_TONE[detailsRow.status]}>{STATUS_LABEL[detailsRow.status]}</Badge>
+              </div>
+              <dl className={s.summary}>
+                <div><dt>Dates</dt><dd>{detailsRow.start_date === detailsRow.end_date
+                  ? fmtDate(detailsRow.start_date, 'd MMM yyyy')
+                  : `${fmtDate(detailsRow.start_date, 'd MMM')} → ${fmtDate(detailsRow.end_date, 'd MMM yyyy')}`}</dd></div>
+                <div><dt>Duration</dt><dd>{durationLabel(detailsRow)}</dd></div>
+              </dl>
+              {detailsRow.reason && <section className={s.reason}><h4>Reason</h4><p>{detailsRow.reason}</p></section>}
+              {isSick && <section className={s.sickness}>
+                <h4>Sickness details</h4>
+                <dl className={s.facts}>
+                  <div><dt>Category</dt><dd>{meta.category ? SICKNESS_CATEGORY_LABEL[meta.category] : 'Not recorded'}</dd></div>
+                  <div><dt>Return to work</dt><dd>{meta.return_to_work_date ? fmtDate(meta.return_to_work_date, 'd MMM yyyy') : 'Not recorded'}</dd></div>
+                  {([
+                    ['self_certified', 'Self-certified'],
+                    ['fit_note_received', 'Fit note received'],
+                    ['paid_absence', 'Paid absence'],
+                    ['work_related_injury', 'Work-related injury'],
+                    ['return_to_work_interview_required', 'Return-to-work interview required'],
+                  ] as const).filter(([key]) => typeof meta[key] === 'boolean').map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{typeof meta[key] === 'boolean' ? (meta[key] ? 'Yes' : 'No') : 'Not recorded'}</dd></div>)}
+                </dl>
+                {isMgr ? <Field label="Sickness status">
+                  <Select value={detailsRow.lifecycle_status ?? 'recorded_absence'} disabled={updating}
+                    onChange={async e => {
+                      const lifecycle_status = e.target.value as SicknessLifecycleStatus;
+                      const id = detailsRow.id;
+                      setUpdating(true);
+                      try {
+                        await updateSickness(id, { lifecycle_status });
+                        setDetailsRow(current => current?.id === id ? { ...current, lifecycle_status } : current);
+                        toast.success('Sickness status updated');
+                      } catch (err) { toast.error(errorMessage(err, 'Could not update')); }
+                      finally { setUpdating(false); }
+                    }}>
+                    {SICKNESS_LIFECYCLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </Select>
+                </Field> : <p className={s.lifecycle}>{SICKNESS_LIFECYCLE_LABEL[detailsRow.lifecycle_status as SicknessLifecycleStatus] ?? 'Recorded absence'}</p>}
+              </section>}
+              {isMgr && business && <CollapsibleSection title="Shift cover" icon={<Activity size={14} />} tone="subtle">
+                <Suspense fallback={null}>
+                  <CoverageRecoveryCard businessId={business.id} userId={detailsRow.user_id} startDate={detailsRow.start_date} endDate={detailsRow.end_date} />
+                  <OperationalImpactCard userId={detailsRow.user_id} startDate={detailsRow.start_date} endDate={detailsRow.end_date} />
+                </Suspense>
+              </CollapsibleSection>}
 
               {isSick && isMgr && (
                 <CollapsibleSection
@@ -145,7 +124,7 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
                 </CollapsibleSection>
               )}
 
-              {(detailsRow.reason || detailsRow.manager_note || detailsRow.review_notes) && (
+              {(detailsRow.manager_note || detailsRow.review_notes) && (
                 <CollapsibleSection
                   title="Notes & history"
                   icon={<NotebookPen size={14} />}
@@ -153,12 +132,6 @@ export function AbsenceDetailsModal({ detailsRow, setDetailsRow, requests, worki
                   defaultOpen={false}
                 >
                   <div className={s.form}>
-                    {detailsRow.reason && (
-                      <div className={s.detailBlock}>
-                        <span className={s.reasonLabel}>Reason</span>
-                        <p>{detailsRow.reason}</p>
-                      </div>
-                    )}
                     {detailsRow.manager_note && (
                       <div className={s.detailBlock}>
                         <span className={s.reasonLabel}>Manager note</span>

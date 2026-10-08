@@ -10,6 +10,7 @@ test('stale coverage release preserves every shift and refreshes before retry', 
   await page.goto('/leave');
   await page.getByRole('button', { name: /^Open details for/ }).first().click();
   const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Shift cover' }).click();
   const release = dialog.getByRole('button', { name: 'Open for pickup' });
   await expect(dialog.getByText('2 shifts need cover · 15.0h')).toBeVisible();
   state.shifts[1] = { ...state.shifts[1], assigned_user_id: ownerId, updated_at: '2026-10-05T13:00:00Z' };
