@@ -185,11 +185,18 @@
 .gridHeadTotal, .totalCell { background: var(--color-surface, $surface); position: sticky; right: 0; z-index: 2; box-shadow: -3px 0 5px rgb(0 0 0 / 4%); }
 .gridHeadTotal { z-index: 4; text-transform: none; letter-spacing: 0; }
 .today { background: color-mix(in srgb, var(--color-primary, #{$brand-500}) 7%, var(--color-surface, #{$surface})); }
-.weekend:not(.today):not(.cellHoliday):not(.gridHeadDayHoliday) { background: var(--color-surface-muted, $ink-50); }
+.weekend:not(.today):not(.cellHoliday):not(.gridHeadDayHoliday) { background: color-mix(in srgb, var(--color-text-secondary, #{$text-muted}) 3%, var(--color-surface, #{$surface})); }
 .todayLabel { display: block; font-size: 12px; color: var(--color-primary, $brand-500); margin-top: 4px; }
 .dailySummary { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 12px; font-weight: $fw-medium; text-transform: none; letter-spacing: 0; min-height: 18px; }
 .needsCover { color: var(--color-danger-text, #991b1b); }
-.contents:hover > .cell, .contents:focus-within > .cell, .contents:hover > .staffCell, .contents:focus-within > .staffCell, .contents:hover > .totalCell, .contents:focus-within > .totalCell { background-color: var(--color-row-hover, $brand-50); }
+.contents:hover > .cell, .contents:focus-within > .cell { background-color: var(--color-row-hover, $brand-50); }
+// Theme hover colours can contain alpha. Sticky columns need an opaque base
+// so scrolling shift cards cannot show through the highlighted row.
+.contents:hover > .staffCell, .contents:focus-within > .staffCell,
+.contents:hover > .totalCell, .contents:focus-within > .totalCell {
+  background-color: var(--color-surface, $surface);
+  background-image: linear-gradient(var(--color-row-hover, #{$brand-50}), var(--color-row-hover, #{$brand-50}));
+}
 .shiftButton { width: 100%; text-align: left; font: inherit; display: block; &:disabled { opacity: 1; cursor: default; } &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: 2px; } }
 .shift:not(.openShift):not(.sick):not(.annual):not(.unpaid):not(.other) { background: var(--color-surface, $surface); }
 .shift.draft { background: var(--color-surface-muted, $ink-50); }

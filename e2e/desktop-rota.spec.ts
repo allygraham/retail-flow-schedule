@@ -24,7 +24,7 @@ test('desktop keeps scheduled hours pinned and marks today with truthful daily c
   const after = await total.boundingBox();
   expect(Math.abs(after!.x - before!.x)).toBeLessThan(2);
   await grid.evaluate(el => { el.scrollLeft = 0; });
-  await page.screenshot({ path: '/Users/allygraham/Documents/Codex/2026-10-03/i-h/design/rota-desktop-improvements.png', fullPage: true });
+  await page.screenshot({ path: test.info().outputPath('desktop-rota.png'), fullPage: true });
 });
 
 test('shift and add-another controls work with keyboard, including empty cells', async ({ page }) => {
@@ -61,4 +61,36 @@ test('employee search and primary-role filter narrow rows without hiding operati
   await expect(page.getByText('No employees match these filters.')).toBeVisible();
   await page.getByRole('button', { name: 'Clear filters' }).click();
   await expect(page.locator('[data-rota-cell="other|2026-10-05"]')).toBeVisible();
+});
+
+
+test('highlighted sticky name and hours columns remain opaque while scrolling', async ({ page }) => {
+  const state = await stubApi(page); state.shifts = [shift()];
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await page.goto('/rota');
+  const grid = page.getByLabel('Weekly rota');
+  await expect(grid).toHaveAttribute('aria-busy', 'false');
+  // Exercise a translucent workspace highlight, including keyboard focus.
+  await grid.evaluate(el => { (el as HTMLElement).style.setProperty('--color-row-hover', 'rgba(100, 80, 200, 0.12)'); });
+  const row = page.getByLabel('Test Employee weekly hours').locator('..');
+  const name = row.locator(':scope > div').first();
+  const hours = page.getByLabel('Test Employee weekly hours');
+  const edit = row.getByRole('button', { name: /09:00/ });
+  await edit.focus();
+  await grid.evaluate(el => { el.scrollLeft = 250; });
+  for (const pinned of [name, hours]) {
+    const style = await pinned.evaluate(el => {
+      const css = getComputedStyle(el);
+      return { base: css.backgroundColor, highlight: css.backgroundImage };
+    });
+    expect(style.base).toMatch(/^rgb\(/);
+    expect(style.highlight).toContain('linear-gradient');
+  }
+  await hours.hover();
+  await edit.evaluate(el => (el as HTMLElement).blur());
+  for (const pinned of [name, hours]) {
+    await expect(pinned).toHaveCSS('background-image', /linear-gradient/);
+    expect(await pinned.evaluate(el => getComputedStyle(el).backgroundColor)).toMatch(/^rgb\(/);
+  }
+  await page.screenshot({ path: test.info().outputPath('highlighted-sticky-columns.png'), fullPage: true });
 });
