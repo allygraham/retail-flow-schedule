@@ -9,8 +9,9 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const branding = useOptionalBranding();
-  const tokens = buildThemeStyle(branding?.theme ?? DEFAULT_THEME);
-  const toastStyle = { ...tokens, '--toast-foreground': readableForeground(tokens['--color-sidebar']), '--toast-action-foreground': readableForeground(tokens['--color-primary']), ...style };
+  const theme = branding?.theme ?? DEFAULT_THEME;
+  const tokens = buildThemeStyle(theme);
+  const toastStyle = { ...tokens, '--toast-foreground': readableForeground(tokens['--color-sidebar']), '--toast-action-foreground': theme.themeKey === 'topdrawer' ? '#ffffff' : readableForeground(tokens['--color-primary']), ...style };
   return (
   <Sonner
     theme="dark"

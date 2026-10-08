@@ -59,6 +59,7 @@ for (const [theme, background, primary] of [['forest', 'rgb(5, 46, 22)', 'rgb(22
     await expect(notification).toHaveCSS('background-color', background);
     await expect(notification).toHaveCSS('border-left-color', primary);
     await expect(notification.getByRole('button', { name: 'Confirm', exact: true })).toHaveCSS('background-color', primary);
+    if (theme === 'topdrawer') await expect(notification.getByRole('button', { name: 'Confirm', exact: true })).toHaveCSS('color', 'rgb(255, 255, 255)');
   });
 }
 test('custom light toast and action colours keep readable foregrounds', async ({ page }) => {
