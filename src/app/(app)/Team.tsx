@@ -573,9 +573,9 @@ export default function Team() {
       </Card>
 
       <Card padded={false}>
-        {loadError ? <DataLoadError message={loadError} retry={load} /> : loading || !data ? (
+        {loadError ? <DataLoadError message={loadError} retry={load} /> : (loading || !data) && isCompact ? (
           <LoadingSkeleton label="Loading team" />
-        ) : filtered.length === 0 ? (
+        ) : !loading && data && filtered.length === 0 ? (
           <EmptyState
             title={rows.length === 0 ? 'No team yet' : 'No matches'}
             description={rows.length === 0
@@ -678,8 +678,8 @@ export default function Team() {
                 {canManageStaff && <th></th>}
               </tr>
             </thead>
-            <tbody>
-              {filtered.map(m => (
+            <tbody aria-busy={loading || !data}>
+              {loading || !data ? <tr><td colSpan={canManageStaff ? 9 : 8}><LoadingSkeleton label="Loading team" rows={5} /></td></tr> : filtered.map(m => (
                 <tr key={m.key} className={m.account_status === 'disabled' ? t.rowDisabled : ''}>
                   <td colSpan={2}>
                     {isOwner && m.kind === 'member' ? <Link className={`${t.staffLink} ${t.staffLinkRow}`} aria-label={m.full_name} to={`/team/${m.user_id}`}>

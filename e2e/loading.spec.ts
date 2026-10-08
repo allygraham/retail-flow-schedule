@@ -87,3 +87,26 @@ test('loading a new page module preserves the existing navigation', async ({ pag
   await expect(page.getByRole('heading', { name: 'Your people' })).toBeVisible();
   expect(await shell?.evaluate(el => el.isConnected)).toBe(true);
 });
+
+
+test('team keeps its table headers mounted while staff rows load', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await authenticate(page); await stubApi(page);
+  let release!: () => void;
+  const ready = new Promise<void>(resolve => { release = resolve; });
+  await page.route(url => url.hostname === 'example.supabase.co' && url.pathname.endsWith('/employee_profiles'), async route => { await ready; await route.fallback(); });
+  await page.goto('/team');
+  const table = page.getByRole('table');
+  let header;
+  try {
+    await expect(page.getByRole('status', { name: 'Loading team', exact: true })).toBeVisible();
+    for (const name of ['Name & email', 'Role', 'Job', 'Primary store', 'Hours', 'Status', 'Annual leave']) {
+      await expect(table.getByRole('columnheader', { name, exact: true })).toBeVisible();
+    }
+    header = await table.locator('thead').elementHandle();
+    await expect(table.locator('tbody')).toHaveAttribute('aria-busy', 'true');
+  } finally { release(); }
+  await expect(page.getByRole('status', { name: 'Loading team', exact: true })).toHaveCount(0);
+  await expect(table.locator('tbody')).toHaveAttribute('aria-busy', 'false');
+  expect(await header?.evaluate(el => el.isConnected)).toBe(true);
+});
