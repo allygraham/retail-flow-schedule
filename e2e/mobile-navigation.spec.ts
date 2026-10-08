@@ -89,3 +89,20 @@ test('skip link and compact drawer remain usable with reduced motion', async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   await page.screenshot({ path: test.info().outputPath('mobile-menu.png') });
 });
+
+for (const width of [390, 1280]) {
+  test(`account row aligns avatar and text at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    if (width < 768) await page.getByRole('button', { name: 'Open menu' }).click();
+    const button = page.getByRole('button', { name: 'Sign out', exact: true });
+    await expect(button).toBeVisible();
+    const layout = await button.evaluate(el => {
+      const avatar = el.firstElementChild!.getBoundingClientRect();
+      const text = el.lastElementChild!.getBoundingClientRect();
+      return { delta: Math.abs(avatar.y + avatar.height / 2 - text.y - text.height / 2), textHeight: text.height, height: el.getBoundingClientRect().height };
+    });
+    expect(layout.delta).toBeLessThan(1);
+    expect(layout.textHeight).toBeLessThanOrEqual(40);
+    expect(layout.height).toBeGreaterThanOrEqual(44);
+  });
+}

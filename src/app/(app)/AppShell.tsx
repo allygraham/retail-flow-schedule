@@ -130,18 +130,20 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   );
 
   const renderUser = () => (
-    <div className={s.user}>
+    <button type="button" aria-label="Sign out" className={s.user} onClick={async () => {
+      try { await signOut(); nav('/login', { replace: true }); } catch (error) {
+        const message = errorMessage(error, 'Could not sign out. Please try again.');
+        if (error instanceof SignOutError && error.localSignedOut) {
+          nav('/login', { replace: true });
+        } else { toast.error(message); }
+      }
+    }}>
       <Avatar name={fullName} />
-      <div className={s.userInfo}>
-        <div className={s.userName}>{fullName ?? 'You'}</div>
-        <button onClick={async () => { try { await signOut(); nav('/login', { replace: true }); } catch (error) {
-          const message = errorMessage(error, 'Could not sign out. Please try again.');
-          if (error instanceof SignOutError && error.localSignedOut) {
-            nav('/login', { replace: true });
-          } else { toast.error(message); }
-        } }} type="button" className={s.signout}>Sign out</button>
-      </div>
-    </div>
+      <span className={s.userInfo}>
+        <span className={s.userName}>{fullName ?? 'You'}</span>
+        <span className={s.signout}>Sign out</span>
+      </span>
+    </button>
   );
 
   const renderBiz = () => (
