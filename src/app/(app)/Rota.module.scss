@@ -43,7 +43,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 180px repeat(7, minmax(120px, 1fr)) 80px;
+  grid-template-columns: 180px repeat(7, minmax(120px, 1fr)) 104px;
   overflow-x: auto;
   @include scrollbar;
 }
@@ -121,7 +121,7 @@
 .shiftMeta { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); margin: 2px 0 4px; }
 
 .cancelled { opacity: 0.55; text-decoration: line-through; background: var(--color-surface-muted, $ink-100); }
-.draft { background: repeating-linear-gradient(45deg, var(--color-row-hover, $brand-50), var(--color-row-hover, $brand-50) 6px, var(--color-surface, #fff) 6px, var(--color-surface, #fff) 12px); }
+.draft { background: var(--color-surface-muted, $ink-50); }
 .openShift { background: var(--color-danger-bg, #ffe4e6); border-color: color-mix(in srgb, var(--color-danger, #fecdd3) 35%, var(--color-border, #{$border})); border-left-color: var(--color-danger, $status-unassigned); }
 .annual { background: var(--color-row-hover, $brand-50); border-left-color: var(--color-primary, $status-leave); }
 .sick   { background: var(--color-danger-bg, #fee2e2); border-left-color: var(--color-danger, $status-sick); }
@@ -180,3 +180,19 @@
 }
 
 .mobilePublication { min-height: 24px; padding-top: 4px; }
+
+.staffFilters { display: flex; gap: $sp-3; align-items: center; flex-wrap: wrap; > input { max-width: 260px; } > select { max-width: 220px; } }
+.gridHeadTotal, .totalCell { background: var(--color-surface, $surface); position: sticky; right: 0; z-index: 2; box-shadow: -3px 0 5px rgb(0 0 0 / 4%); }
+.gridHeadTotal { z-index: 4; text-transform: none; letter-spacing: 0; }
+.today { background: color-mix(in srgb, var(--color-primary, #{$brand-500}) 7%, var(--color-surface, #{$surface})); }
+.weekend:not(.today):not(.cellHoliday):not(.gridHeadDayHoliday) { background: var(--color-surface-muted, $ink-50); }
+.todayLabel { display: block; font-size: 12px; color: var(--color-primary, $brand-500); margin-top: 4px; }
+.dailySummary { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 12px; font-weight: $fw-medium; text-transform: none; letter-spacing: 0; min-height: 18px; }
+.needsCover { color: var(--color-danger-text, #991b1b); }
+.contents:hover > .cell, .contents:focus-within > .cell, .contents:hover > .staffCell, .contents:focus-within > .staffCell, .contents:hover > .totalCell, .contents:focus-within > .totalCell { background-color: var(--color-row-hover, $brand-50); }
+.shiftButton { width: 100%; text-align: left; font: inherit; display: block; &:disabled { opacity: 1; cursor: default; } &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: 2px; } }
+.shift:not(.openShift):not(.sick):not(.annual):not(.unpaid):not(.other) { background: var(--color-surface, $surface); }
+.shift.draft { background: var(--color-surface-muted, $ink-50); }
+.addShift { opacity: 0; padding: 5px; min-height: 28px; background: transparent; border: 1px dashed var(--color-border, $border); border-radius: $r-sm; color: var(--color-text-secondary, $text-muted); font-size: 12px; text-align: left; cursor: pointer; margin-top: auto; &:focus-visible { opacity: 1; outline: 2px solid var(--color-primary, $brand-500); } }
+.cell:hover .addShift, .cell:focus-within .addShift { opacity: 1; }
+.noMatches { grid-column: 1 / -1; padding: $sp-4; color: var(--color-text-secondary, $text-muted); }

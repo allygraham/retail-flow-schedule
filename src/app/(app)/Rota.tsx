@@ -34,6 +34,8 @@ import { planShiftDrop } from '@/features/rota/shiftMoves';
 export default function Rota() {
   const { business, user, fullName, hasPermission } = useAuth();
   const isMobile = useIsMobile();
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState('all');
   const [mobileView, setMobileView] = useState<'people' | 'day'>('people');
   const absenceOpener = useRef<HTMLButtonElement | null>(null);
   const [absenceId, setAbsenceId] = useState<string | null>(null);
@@ -112,7 +114,7 @@ export default function Rota() {
   const gridBusy = loading || holidays.loading;
   const gridRef = useRef<HTMLDivElement>(null);
   const gridHeight = useRef(0);
-  const gridContext = `${business?.id}:${isMgr}:${isMobile}:${storeFilter}:${mobileView}`;
+  const gridContext = `${business?.id}:${isMgr}:${isMobile}:${storeFilter}:${mobileView}:${staffSearch}:${staffRoleFilter}`;
   const previousGridContext = useRef(gridContext);
   if (previousGridContext.current !== gridContext) {
     previousGridContext.current = gridContext;
@@ -134,6 +136,18 @@ export default function Rota() {
         + minutesBetween(shift.start_time, shift.end_time, shift.break_minutes ?? 0);
     }
     return Object.fromEntries(Object.entries(minutes).map(([id, total]) => [id, +(total / 60).toFixed(2)]));
+  }, [filteredShifts]);
+
+  // Counts describe the whole selected store/week, independently of staff-row filters.
+  const dailySummary = useMemo(() => {
+    const summary: Record<string, { people: Set<string>; open: number }> = {};
+    for (const shift of filteredShifts) {
+      if (shift.status === 'cancelled') continue;
+      const day = summary[shift.shift_date] ??= { people: new Set<string>(), open: 0 };
+      if (shift.assigned_user_id) day.people.add(shift.assigned_user_id);
+      else day.open += 1;
+    }
+    return summary;
   }, [filteredShifts]);
 
   const personalShifts = useMemo(() => filteredShifts.filter(shift => shift.assigned_user_id === user?.id && shift.is_published), [filteredShifts, user?.id]);
@@ -162,6 +176,8 @@ export default function Rota() {
   useLayoutEffect(() => {
     if (!gridBusy) previousPeople.current = { context: gridContext, people: matchingPeople };
   }, [gridBusy, gridContext, matchingPeople]);
+
+  const desktopPeople = visiblePeople.filter(person => person.name.toLocaleLowerCase().includes(staffSearch.trim().toLocaleLowerCase()) && (staffRoleFilter === 'all' || person.primary_role_id === staffRoleFilter));
 
   const weekHasSchedule = filteredShifts.some(shift => shift.status !== 'cancelled') ||
     publication.some(status => status.is_published && (storeFilter === 'all' || status.store_id === storeFilter));
@@ -435,6 +451,11 @@ export default function Rota() {
 
 
       {dayControl}
+      {!isMobile && isMgr && <div className={s.staffFilters} role="group" aria-label="Staff filters">
+        <Input aria-label="Search employees" placeholder="Search employees" value={staffSearch} onChange={event => setStaffSearch(event.target.value)} />
+        <Select aria-label="Filter by primary role" value={staffRoleFilter} onChange={event => setStaffRoleFilter(event.target.value)}><option value="all">All roles</option>{roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}</Select>
+        {(staffSearch || staffRoleFilter !== 'all') && <Button variant="ghost" onClick={() => { setStaffSearch(''); setStaffRoleFilter('all'); }}>Clear filters</Button>}
+      </div>}
       {isMobile && (!isMgr || mobileView === 'people') ? <MobileRota key={`${business?.id}:${user?.id}:${storeFilter}`}
         gridRef={gridRef} minHeight={gridHeight.current} days={days} manager={isMgr} loading={gridBusy} context={`${business?.id}:${user?.id}:${storeFilter}:${isoDate(weekStart)}`}
         people={isMgr ? visiblePeople : [{ ...(peopleById[user!.id] ?? { user_id: user!.id, primary_role_id: null, primary_store_id: null, store_ids: stores.map(store => store.id) }), name: fullName ?? peopleById[user!.id]?.name ?? 'You' }]}
@@ -452,9 +473,12 @@ export default function Rota() {
               const dStr = isoDate(d);
               const hol = holidays.get(dStr);
               return (
-                <div key={dStr} className={`${s.gridHead} ${s.gridHeadDay} ${hol ? s.gridHeadDayHoliday : ''}`}>
-                  <div className={s.dayName}>{format(d, 'EEE')}</div>
+                <div key={dStr} className={`${s.gridHead} ${s.gridHeadDay} ${hol ? s.gridHeadDayHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''} ${d.getDay() === 0 || d.getDay() === 6 ? s.weekend : ''}`} data-today={dStr === isoDate(new Date()) || undefined}>
+                  <div className={s.dayName}>{format(d, 'EEE')}{dStr === isoDate(new Date()) && <span className={s.todayLabel}>Today</span>}</div>
                   <div className={s.dayDate}>{format(d, 'd MMM')}</div>
+                  {!isMobile && isMgr && <div className={s.dailySummary} aria-label={`Summary for ${dStr}`}>
+                    {gridBusy ? <span className={s.totalSkeleton} aria-hidden="true" /> : <>{dailySummary[dStr]?.people.size ?? 0} scheduled{(dailySummary[dStr]?.open ?? 0) > 0 && <span className={s.needsCover}>{(dailySummary[dStr]?.open ?? 0)} open</span>}</>}
+                  </div>}
                   {hol && (
                     <div className={s.holidayLabel} title={hol.name}>
                       <span className={s.holidayDot} />{hol.name}
@@ -463,9 +487,9 @@ export default function Rota() {
                 </div>
               );
             })}
-            {isMgr && <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Total</div>}
+            {isMgr && <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Scheduled hours</div>}
             {/* per-employee rows */}
-            {visiblePeople.map(p => (
+            {(isMobile ? visiblePeople : desktopPeople).map(p => (
               <div key={p.user_id} className={s.contents}>
                 {isMgr && (
                   <div className={s.staffCell}>
@@ -486,28 +510,29 @@ export default function Rota() {
                   const confirmed = relevantStores.length > 0 && relevantStores.every(id => publication.some(status => status.store_id === id && status.is_published));
                   return (
                     <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={gridBusy || !isMgr || !!onLeave}
-                      className={hol ? s.cellHoliday : ''}
+                      className={`${hol ? s.cellHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''} ${d.getDay() === 0 || d.getDay() === 6 ? s.weekend : ''}`}
                       onClick={() => !gridBusy && isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
                       {!gridBusy && !onLeave && cell.length === 0 && <span className={s.dayOff}>{confirmed ? 'Day off' : 'To be confirmed'}</span>}
                       {!gridBusy && onLeave && (
                         <button type="button" className={`${s.shift} ${s.absenceButton} ${s[onLeave.leave_type]}`} aria-label={`View ${onLeave.leave_type === 'sick' ? 'sickness' : 'leave'} details for ${p.name}`} onClick={event => { event.stopPropagation(); absenceOpener.current = event.currentTarget; setAbsenceId(onLeave.id); }}>
-                          <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : 'Leave'}</div>
+                          <div className={s.shiftTime}>{onLeave.leave_type === 'sick' ? 'Sick' : onLeave.leave_type === 'annual' ? 'Annual leave' : onLeave.leave_type === 'unpaid' ? 'Unpaid leave' : 'Other leave'}</div>
                         </button>
                       )}
                       {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
-                          <div className={`${s.shift} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
+                          <button type="button" disabled={!isMgr} className={`${s.shift} ${s.shiftButton} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
                             onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}
                             style={{ borderLeftColor: roleById[sh.role_id ?? '']?.color ?? undefined }}
                           >
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                            <div className={s.shiftMeta}>{stores.length > 1 && <>{storeById[sh.store_id]?.name} · </>}{hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0)}h</div>
-                            {conflictsFor(sh).length > 0 && <Badge tone="danger">⚠ {conflictsFor(sh).join(', ')}</Badge>}
+                            <div className={s.shiftMeta}>{roleById[sh.role_id ?? '']?.name && <div>{roleById[sh.role_id ?? '']?.name}</div>}{stores.length > 1 && <>{storeById[sh.store_id]?.name} · </>}{hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0)}h</div>
+                            {conflictsFor(sh).length > 0 && <Badge tone="danger">Conflict: {conflictsFor(sh).join(', ')}</Badge>}
                             {!sh.is_published && <Badge tone="warning">Draft</Badge>}
-                          </div>
+                          </button>
                         </DraggableShift>
                       ))}
+                      {!isMobile && isMgr && !gridBusy && !onLeave && <button type="button" className={s.addShift} aria-label={`Add shift for ${p.name} on ${dStr}`} onClick={event => { event.stopPropagation(); openCreate(dStr, p.user_id); }}>{cell.length > 0 ? '+ Add another shift' : '+ Add shift'}</button>}
                     </DroppableCell>
                   );
                 })}
@@ -516,6 +541,7 @@ export default function Rota() {
                 </div>}
               </div>
             ))}
+            {!isMobile && isMgr && desktopPeople.length === 0 && <div className={s.noMatches}>No employees match these filters.</div>}
             {/* Unassigned row — managers only */}
             {isMgr && (
               <div className={s.contents}>
@@ -529,18 +555,19 @@ export default function Rota() {
                   const hol = holidays.get(dStr);
                   return (
                     <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={gridBusy || !isMgr}
-                      className={hol ? s.cellHoliday : ''}
+                      className={`${hol ? s.cellHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''} ${d.getDay() === 0 || d.getDay() === 6 ? s.weekend : ''}`}
                       onClick={() => !gridBusy && isMgr && openCreate(dStr)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
                       {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
-                          <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
+                          <button type="button" className={`${s.shift} ${s.shiftButton} ${sh.status === 'cancelled' ? s.cancelled : s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
                             <div className={s.shiftMeta}>{stores.length > 1 && <>{storeById[sh.store_id]?.name} · </>}{roleById[sh.role_id ?? '']?.name ?? 'Floor'}</div>
-                            <Badge tone="unassigned" dot>Needs cover</Badge>
-                          </div>
+                            {sh.status === 'cancelled' ? <Badge>Cancelled</Badge> : <Badge tone="unassigned" dot>Needs cover</Badge>}
+                          </button>
                         </DraggableShift>
                       ))}
+                      {!isMobile && !gridBusy && <button type="button" className={s.addShift} aria-label={`Add unassigned shift on ${dStr}`} onClick={event => { event.stopPropagation(); openCreate(dStr); }}>+ Add shift</button>}
                     </DroppableCell>
                   );
                 })}
@@ -657,9 +684,9 @@ function DroppableCell({ id, disabled, onClick, className, children }: { id: str
 }
 
 function DraggableShift({ id, disabled, children }: { id: string; disabled?: boolean; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled });
+  const { listeners, setNodeRef, isDragging } = useDraggable({ id, disabled });
   return (
-    <div ref={setNodeRef} data-shift-id={id} {...(disabled ? {} : attributes)} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: disabled ? 'auto' : 'none', cursor: disabled ? 'pointer' : 'grab' }}>
+    <div ref={setNodeRef} data-shift-id={id} {...listeners} style={{ opacity: isDragging ? 0.4 : 1, touchAction: disabled ? 'auto' : 'none', cursor: disabled ? 'pointer' : 'grab' }}>
       {children}
     </div>
   );

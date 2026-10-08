@@ -100,7 +100,7 @@ test('approved leave disables cell creation and drop assignment', async ({ page 
   const state = await open(page); state.shifts = [shift()];
   state.leaves = [{ id: 'approved-leave', business_id: businessId, user_id: employeeId, start_date: '2026-10-06', end_date: '2026-10-06', status: 'approved', leave_type: 'annual' }];
   await page.goto('/rota');
-  await expect(cell(page, employeeId, '2026-10-06').getByText('Leave', { exact: true })).toBeVisible();
+  await expect(cell(page, employeeId, '2026-10-06').getByText('Annual leave', { exact: true })).toBeVisible();
   // Click cell padding: the absence button intentionally opens its details.
   await cell(page, employeeId, '2026-10-06').click({ position: { x: 2, y: 2 } });
   await expect(page.getByRole('dialog')).toHaveCount(0);
