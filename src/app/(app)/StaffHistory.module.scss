@@ -22,12 +22,11 @@
 .stats, .sicknessStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $sp-3; }
 .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .identity { display: flex; align-items: center; gap: $sp-4; min-width: 0; h1 { overflow-wrap: anywhere; } }
-.personIcon { display: grid; place-items: center; flex-shrink: 0; width: 52px; height: 52px; border: 1px solid var(--color-border, $border); border-radius: $r-lg; background: var(--color-surface, $surface); color: var(--color-primary, $brand-600); }
 .yearPicker { min-width: 180px; max-width: 100%; }
 .recordHeading { display: inline-flex; align-items: center; gap: $sp-2; svg { color: var(--color-primary, $brand-600); flex-shrink: 0; } }
 .dateIcon { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: $r-md; color: var(--color-text-secondary, $text-muted); background: var(--color-surface-muted, $ink-50); }
 .guidance { display: flex; align-items: flex-start; gap: $sp-3; padding: $sp-4; border: 1px solid var(--color-border, $border); border-radius: $r-md; background: var(--color-surface-muted, $ink-50); > svg { flex-shrink: 0; margin-top: 2px; color: var(--color-primary, $brand-600); } }
-@media (max-width: 540px) { .header { padding: $sp-4; align-items: flex-start; } .yearPicker { width: 100%; } .personIcon { width: 42px; height: 42px; } .identity { gap: $sp-3; } .record { flex-wrap: wrap; } }
+@media (max-width: 540px) { .header { padding: $sp-4; align-items: flex-start; } .yearPicker { width: 100%; } .identity { gap: $sp-3; } .record { flex-wrap: wrap; } }
 @media (max-width: 380px) { .stats, .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .list { list-style: none; margin: 0; padding: 0; }
 .record {
