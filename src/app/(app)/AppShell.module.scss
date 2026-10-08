@@ -114,28 +114,6 @@
   color: var(--color-sidebar-text, $white);
 }
 
-.biz {
-  padding: $sp-3;
-  background: var(--color-sidebar-hover, rgba(255, 255, 255, 0.04));
-  border-radius: $r-md;
-  margin-bottom: $sp-4;
-  border: 1px solid var(--color-sidebar-border, rgba(255, 255, 255, 0.1));
-}
-.bizName {
-  color: var(--color-sidebar-text, $white);
-  font-weight: $fw-semibold;
-  font-size: $fs-sm;
-  margin-bottom: 6px;
-  @include truncate;
-}
-.roleBadge {
-  // Sidebar-aware role badge: ignore the bright brand tokens and lean on
-  // sidebar-text/border so it stays readable on dark navigation surfaces.
-  background: var(--color-sidebar-hover, rgba(255, 255, 255, 0.08)) !important;
-  color: var(--color-sidebar-text, $white) !important;
-  border: 1px solid var(--color-sidebar-border, rgba(255, 255, 255, 0.16)) !important;
-}
-
 .nav {
   display: flex;
   flex-direction: column;
@@ -196,41 +174,12 @@
   border: 1px solid var(--color-sidebar-border, transparent);
 }
 
-.user {
-  width: 100%;
-  min-height: 44px;
-  background: transparent;
-  border: none;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  margin-top: auto;
-  padding: $sp-3;
-  display: flex;
-  align-items: center;
-  gap: $sp-3;
-  border-top: 1px solid var(--color-sidebar-border, rgba(255, 255, 255, 0.1));
-  &:focus-visible { @include focus-ring; }
-  &:hover .signout {
-    color: var(--color-sidebar-text, $white);
-    text-decoration: underline;
-  }
-}
-.userInfo {
-  @include col;
-  gap: 2px;
-  min-width: 0;
-}
-.userName {
-  color: var(--color-sidebar-text, $white);
-  font-size: $fs-sm;
-  font-weight: $fw-semibold;
-  @include truncate;
-}
-.signout {
-  color: var(--color-sidebar-text-muted, rgba(255, 255, 255, 0.7));
-  font-size: $fs-xs;
-}
+ .accountFooter { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-sidebar-border); flex-shrink: 0; }
+.user { display: flex; align-items: center; gap: 12px; padding: 0 12px 12px; }
+.userInfo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.userName { color: var(--color-sidebar-text); font-size: 14px; font-weight: 500; @include truncate; }
+.userRole { color: var(--color-sidebar-text-muted); font-size: 13px; text-transform: capitalize; }
+.signoutButton { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 8px; font: inherit; font-size: 14px; color: var(--color-sidebar-text); background: var(--color-sidebar-hover); cursor: pointer; &:hover { background: color-mix(in srgb, var(--color-sidebar-text) 16%, var(--color-sidebar)); } &:focus-visible { @include focus-ring; } }
 
 .backdrop {
   position: fixed;
@@ -333,3 +282,19 @@
 @media (prefers-reduced-motion: reduce) {
   .drawer, .backdrop { transition: none; }
 }
+
+.sideBrand, .drawerHead { padding: 8px 4px 20px; gap: 8px; border-bottom: 1px solid var(--color-sidebar-border); margin-bottom: 20px; align-items: flex-start; }
+.workspaceIdentity { display: flex; align-items: flex-start; gap: 12px; min-width: 0; flex: 1; padding: 4px; color: var(--color-sidebar-text); border-radius: 8px; &:focus-visible { @include focus-ring; } }
+.workspaceLogo { width: 40px; height: 40px; flex-shrink: 0; object-fit: contain; }
+.workspaceCopy { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.workspaceName { font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.workspaceRole { font-size: 12px; line-height: 1.5; color: var(--color-sidebar-text-muted); &::first-letter { text-transform: uppercase; } }
+.nav { gap: 24px; padding-bottom: 24px; }
+.navGroup { display: flex; flex-direction: column; gap: 4px; }
+.groupLabel { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-sidebar-text-muted); margin: 0 12px 6px; }
+.link { min-height: 48px; border-radius: 8px; font-size: 14px; }
+.active { box-shadow: none; }
+.linkBadge { font-size: 12px; background: var(--color-warning); color: #111827; }
+.closeBtn { flex-shrink: 0; }
+.drawer { width: min(320px, calc(100vw - 40px)); padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.sideBrand .workspaceRole, .drawerHead .workspaceRole { color: var(--color-sidebar-text-muted) !important; }

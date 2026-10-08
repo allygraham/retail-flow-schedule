@@ -4,14 +4,13 @@ import { SignOutError } from '@/features/auth/signOut';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { PageBoundary } from "@/components/common/PageBoundary";
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Menu, X, LayoutDashboard, Calendar, CalendarDays, Users, MapPin, User, Settings,
+  Menu, X, LogOut, LayoutDashboard, Calendar, CalendarDays, Users, MapPin, User, Settings,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/authContext';
 import { Logo } from '@/components/common/Logo';
 import { Avatar } from '@/components/common/Avatar';
-import { Badge } from '@/components/common/Badge';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
 import { useBranding, buildThemeStyle } from '@/features/branding/brandingContext';
 import { NAV_PERMISSIONS, type AppNavItem } from '@/features/auth/permissions';
@@ -29,6 +28,12 @@ const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof Layo
   { key: 'stores', to: '/stores', label: 'Stores', icon: MapPin },
   { key: 'profile', to: '/profile', label: 'My profile', icon: User },
   { key: 'settings', to: '/settings', label: 'Settings', icon: Settings },
+];
+
+const NAV_GROUPS: Array<{ label: string; keys: AppNavItem[] }> = [
+  { label: 'Work', keys: ['dashboard', 'rota', 'leave'] },
+  { label: 'Manage', keys: ['team', 'stores'] },
+  { label: 'Account', keys: ['profile', 'settings'] },
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
@@ -107,7 +112,12 @@ export default function AppShell({ children }: { children?: ReactNode }) {
 
   const renderNav = (onClick?: () => void) => (
     <nav className={s.nav} aria-label="Primary navigation">
-      {items.map(n => {
+      {NAV_GROUPS.map(group => {
+        const links = items.filter(item => group.keys.includes(item.key));
+        if (!links.length) return null;
+        return <div key={group.label} className={s.navGroup} role="group" aria-label={group.label}>
+          <p className={s.groupLabel} aria-hidden="true">{group.label}</p>
+          {links.map(n => {
         const Icon = n.icon;
         return (
           <NavLink
@@ -125,12 +135,19 @@ export default function AppShell({ children }: { children?: ReactNode }) {
             )}
           </NavLink>
         );
+          })}
+        </div>;
       })}
     </nav>
   );
 
   const renderUser = () => (
-    <button type="button" aria-label="Sign out" className={s.user} onClick={async () => {
+    <div className={s.accountFooter}>
+      <div className={s.user}>
+        <Avatar name={fullName} />
+        <span className={s.userInfo}><span className={s.userName}>{fullName ?? 'You'}</span><span className={s.userRole}>{role ?? 'Member'}</span></span>
+      </div>
+    <button type="button" aria-label="Sign out" className={s.signoutButton} onClick={async () => {
       try { await signOut(); nav('/login', { replace: true }); } catch (error) {
         const message = errorMessage(error, 'Could not sign out. Please try again.');
         if (error instanceof SignOutError && error.localSignedOut) {
@@ -138,19 +155,17 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         } else { toast.error(message); }
       }
     }}>
-      <Avatar name={fullName} />
-      <span className={s.userInfo}>
-        <span className={s.userName}>{fullName ?? 'You'}</span>
-        <span className={s.signout}>Sign out</span>
-      </span>
+      <LogOut size={18} aria-hidden="true" />
+      <span>Sign out</span>
     </button>
+    </div>
   );
 
-  const renderBiz = () => (
-    <div className={s.biz}>
-      <div className={s.bizName}>{workspaceName}</div>
-      <Badge tone="brand" dot className={s.roleBadge}>{role ?? '—'}</Badge>
-    </div>
+  const renderWorkspace = (onClick?: () => void) => (
+    <Link className={s.workspaceIdentity} to="/dashboard" onClick={onClick} aria-label={workspaceName}>
+      {theme.logoUrl ? <img className={s.workspaceLogo} src={theme.logoUrl} alt="" /> : <Avatar name={workspaceName} />}
+      <span className={s.workspaceCopy}><span className={s.workspaceName}>{workspaceName}</span><span className={s.workspaceRole}>{role ?? 'Member'} workspace</span></span>
+    </Link>
   );
 
   return (
@@ -172,13 +187,12 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         <NotificationsBell variant="mobile" />
       </header>
 
-      {/* Desktop sidebar (unchanged behavior) */}
+      {/* Shared desktop and mobile navigation structure. */}
       <aside className={s.side}>
         <div className={s.sideBrand}>
-          <Logo to="/dashboard" size="sm" useBusinessLogo />
+          {renderWorkspace()}
           <NotificationsBell variant="desktop" />
         </div>
-        {renderBiz()}
         {renderNav()}
         {renderUser()}
       </aside>
@@ -198,15 +212,14 @@ export default function AppShell({ children }: { children?: ReactNode }) {
           <aside className={`${s.drawer} ${s.drawerOpen} tenantTheme`} style={buildThemeStyle(theme)}>
             <Dialog.Title className={s.srOnly}>Main navigation</Dialog.Title>
             <div className={s.drawerHead}>
-              <div onClick={navigateFromMenu}><Logo to="/dashboard" size="sm" useBusinessLogo /></div>
+              {renderWorkspace(navigateFromMenu)}
               <Dialog.Close asChild>
                 <button ref={closeBtnRef} type="button" className={s.closeBtn} aria-label="Close menu">
                   <X size={22} aria-hidden="true" />
                 </button>
               </Dialog.Close>
             </div>
-            {renderBiz()}
-            {renderNav(navigateFromMenu)}
+                {renderNav(navigateFromMenu)}
             {renderUser()}
           </aside>
         </Dialog.Content>
