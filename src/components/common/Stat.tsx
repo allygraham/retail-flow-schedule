@@ -1,9 +1,9 @@
 import { ReactNode } from 'react';
 import s from './Stat.module.scss';
 
-export function Stat({ label, value, hint, accent, icon }: { label: string; value: ReactNode; hint?: string; accent?: 'brand'|'warn'|'danger'|'success'; icon?: ReactNode }) {
+export function Stat({ label, value, hint, accent, icon, compact = false }: { label: string; value: ReactNode; hint?: string; accent?: 'brand'|'warn'|'danger'|'success'; icon?: ReactNode; compact?: boolean }) {
   return (
-    <div className={`${s.stat} ${accent ? s[accent] : ''}`}>
+    <div className={`${s.stat} ${accent ? s[accent] : ''} ${compact ? s.compact : ''}`}>
       {icon && <div className={s.icon}>{icon}</div>}
       <div className={s.label}>{label}</div>
       <div className={s.value}>{value}</div>

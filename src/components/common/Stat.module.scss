@@ -26,3 +26,12 @@
 .warn    { .icon { background: var(--color-warning-bg, #fef3c7); color: var(--color-warning-text, #92400e); } }
 .danger  { .icon { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); } }
 .success { .icon { background: var(--color-success-bg, #dcfce7); color: var(--color-success-text, #166534); } }
+
+@media (max-width: 540px) {
+  .compact { padding: $sp-3; border: none; border-radius: 0; box-shadow: none; min-width: 0; background: transparent;
+    + .compact { border-left: 1px solid var(--color-border, $border); }
+    .label { font-size: $fs-xs; line-height: $lh-snug; }
+    .value { font-size: $fs-xl; margin-top: $sp-2; }
+    .hint { font-size: $fs-xs; line-height: $lh-snug; margin-top: $sp-2; }
+  }
+}

@@ -91,9 +91,9 @@ export default function StaffHistory() {
       <section className={`${s.summarySection} ${s.annualSummary}`} aria-labelledby="leave-summary-title">
         <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
         <div className={s.stats}>
-      <Stat label="Taken" value={leaveValue(summary?.taken)} hint="Approved through today" />
-      <Stat label="Booked" value={leaveValue(summary?.booked)} hint="Approved future days" />
-      <Stat label="Pending" value={leaveValue(summary?.pending)} hint="Days awaiting approval" />
+      <Stat compact label="Taken" value={leaveValue(summary?.taken)} hint="Approved through today" />
+      <Stat compact label="Booked" value={leaveValue(summary?.booked)} hint="Approved future days" />
+      <Stat compact label="Pending" value={leaveValue(summary?.pending)} hint="Days awaiting approval" />
         </div>
         <p className={s.allowanceNote}>Allowance shown is the current entitlement in working days per leave year.</p>
       </section>
@@ -101,8 +101,8 @@ export default function StaffHistory() {
       <section className={`${s.summarySection} ${s.sicknessSection} ${s.sickSummary}`} aria-labelledby="sickness-summary-title">
         <div className={s.sectionHead}><span className={s.sectionIcon}><HeartPulse size={18} aria-hidden /></span><div><h2 id="sickness-summary-title">Sickness</h2><p>{period.label} · absence overview</p></div></div>
         <div className={s.sicknessStats}>
-      <Stat label="Sickness days" value={value(summary?.sickDays)} hint="Approved calendar days through today" />
-      <Stat label="Sickness spells" value={value(summary?.sickSpells)} hint="Approved absences overlapping this year" />
+      <Stat compact label="Sickness days" value={value(summary?.sickDays)} hint="Approved calendar days through today" />
+      <Stat compact label="Sickness spells" value={value(summary?.sickSpells)} hint="Approved absences overlapping this year" />
         </div>
       </section>
       {recordPanel('sick')}

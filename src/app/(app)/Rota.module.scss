@@ -5,7 +5,15 @@
 .header { display: flex; align-items: end; justify-content: space-between; gap: $sp-4; flex-wrap: wrap; }
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; color: var(--color-text-primary, $text); }
-.controls { display: flex; gap: $sp-2; align-items: center; flex-wrap: wrap; }
+.controls { display: flex; justify-content: space-between; gap: $sp-4; align-items: center; flex-wrap: wrap; padding: $sp-3; background: var(--color-surface, $surface); border: 1px solid var(--color-border, $border); border-radius: $r-lg; }
+.contextControls { display: flex; gap: $sp-3; align-items: center; flex-wrap: wrap; min-width: 0; }
+.editActions { display: flex; gap: $sp-2; align-items: center; flex-wrap: wrap; }
+@media (max-width: 540px) {
+ .controls { gap: $sp-3; }
+  .contextControls { width: 100%; }
+  .weekNav { width: 100%; > button { flex: 1 1 auto; min-height: 44px; } }
+  .editActions { width: 100%; padding-top: $sp-3; border-top: 1px solid var(--color-border, $border); > button { flex: 1; min-height: 44px; } }
+}
 
 .weekNav {
   display: inline-flex;
@@ -14,9 +22,10 @@
   border: 1px solid var(--color-border, $border);
   border-radius: $r-sm;
   overflow: hidden;
-  height: 42.5px;
+  height: 44px;
 }
 .navBtn {
+  white-space: nowrap;
   height: 100%;
   padding: 0 12px;
   background: none;

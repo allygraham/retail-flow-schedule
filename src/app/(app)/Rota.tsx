@@ -366,13 +366,15 @@ export default function Rota() {
   };
 
   const pageHeader = (
-<header className={s.header}>
+    <>
+      <header className={s.header}>
         <div>
           <span className={s.eye}>Rota</span>
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
         </div>
-        <div className={s.controls}>
-          {isMgr && <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={gridBusy || !!loadError || !!holidays.error}>Copy previous week</Button>}
+      </header>
+      <div className={s.controls} role="group" aria-label="Rota controls">
+        <div className={s.contextControls}>
           <div className={s.weekNav} role="group" aria-label="Week navigation">
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>Current week</button>
@@ -383,13 +385,17 @@ export default function Rota() {
             options={stores.map(st => ({ id: st.id, name: st.name }))}
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
           />
-          {isMgr && !holidays.error && (
+        </div>
+        {isMgr && <div className={s.editActions} role="group" aria-label="Schedule actions">
+          <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={gridBusy || !!loadError || !!holidays.error}>Copy previous week</Button>
+          {!holidays.error && (
             <Button onClick={openPublishConfirm} disabled={loading || holidays.loading || draftCount === 0}>
               Publish{draftCount > 0 ? ` (${draftCount})` : ''}
             </Button>
           )}
-        </div>
-      </header>
+        </div>}
+      </div>
+    </>
   );
   const dayControl = (isMobile && <Field label="Rota day">
         <Select aria-label="Rota day" value={selectedDay} onChange={event => setSelectedDay(Number(event.target.value))}>
