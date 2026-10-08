@@ -7,7 +7,7 @@ import { errorMessage } from '@/lib/errors';
 import type { AppRole } from '@/types/domain';
 import { WEEKDAYS } from '@/features/leave/leaveDays';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
+import { MoreHorizontal, SlidersHorizontal, Pencil, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
@@ -208,6 +208,8 @@ export default function Team() {
   const { data, loading, error: loadError, reload: load } = useAsyncData(fetchData, 'Could not load the team. Please try again.');
   const { rows, stores, jobs } = useMemo(() => data ?? { rows: [], stores: [], jobs: [] }, [data]);
 
+  const showStore = stores.length > 1;
+
   const activeChips: ActiveChip[] = useMemo(() => {
     const chips: ActiveChip[] = [];
     if (q.trim()) chips.push({ key: 'q', label: `“${q.trim()}”`, onRemove: () => setQ('') });
@@ -224,7 +226,6 @@ export default function Team() {
     });
     return chips;
   }, [fRole, fStatus, fStore, q, stores]);
-  const activeFilterChips = activeChips.map(c => c.label);
   const hasActiveFilters = activeChips.length > 0;
   const activeNonSearchCount = activeChips.filter(c => c.key !== 'q').length;
   const clearFilters = () => { setQ(''); setFRole('all'); setFStore('all'); setFStatus('all'); };
@@ -445,6 +446,47 @@ export default function Team() {
 
   const openLeave = (row: Row) => { setLeaveRow(row); };
 
+  const renderEntitlement = (row: Row) => <>
+                    {row.kind === 'invite' ? (
+                      <span className={s.muted}>—</span>
+                    ) : canManageStaff && editingId === row.user_id ? (
+                      <span className={t.inlineEdit}>
+                        <input
+                          type="number"
+                          min={0}
+                          max={365}
+                          value={draft}
+                          onChange={e => setDraft(e.target.value)}
+                          autoFocus
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveEntitlement(row.user_id!);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          aria-label={`Leave entitlement for ${row.full_name}`}
+                          className={t.inlineInput}
+                        />
+                        <button className={t.inlineBtn} onClick={() => saveEntitlement(row.user_id!)}>Save</button>
+                        <button className={t.inlineBtnGhost} onClick={() => setEditingId(null)}>Cancel</button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!canManageStaff}
+                        aria-label={`Edit leave entitlement for ${row.full_name}`}
+                        className={t.editable}
+                        onClick={() => {
+                          if (!canManageStaff || row.kind !== 'member') return;
+                          setDraft(String(row.annual_leave_entitlement));
+                          setEditingId(row.user_id!);
+                        }}
+                        title={canManageStaff ? 'Edit entitlement' : undefined}
+                      >
+                        {row.annual_leave_entitlement} days {canManageStaff && <Pencil size={13} aria-hidden="true" />}
+                      </button>
+                    )}
+                    {row.kind === 'member' && !row.working_days?.length && <div className={t.attention}>Working days not set</div>}
+  </>;
+
   const pageHeader = (
 <header className={s.header}>
         <div>
@@ -464,115 +506,32 @@ export default function Team() {
     <div className={s.page}>
       {pageHeader}
 
-      <Card>
-        {isCompact ? (
-          <div className={s.filterBar}>
-            <div className={t.mobileFilterBar}>
-              <Input
-                className={t.searchInline}
-                placeholder="Search team…"
-                value={q}
-                onChange={e => setQ(e.target.value)}
-              />
-              <button
-                type="button"
-                className={t.filterBtn}
-                onClick={() => setFilterSheetOpen(true)}
-                aria-label="Open filters"
-              >
-                <SlidersHorizontal size={15} />
-                Filters
-                {activeNonSearchCount > 0 && (
-                  <span className={t.filterBtnCount}>{activeNonSearchCount}</span>
-                )}
-              </button>
-            </div>
-            {hasActiveFilters && (
-              <div className={t.chipsRow}>
-                {activeChips.map((chip) => (
-                  <span key={chip.key} className={t.chip}>
-                    {chip.label}
-                    <button
-                      type="button"
-                      className={t.chipX}
-                      onClick={chip.onRemove}
-                      aria-label={`Remove ${chip.label}`}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-                <button type="button" className={t.clearAll} onClick={clearFilters}>
-                  Clear all
-                </button>
-              </div>
-            )}
+      <Card padded={false} className={t.directory} role="region" aria-label="Team members">
+        <div className={t.directoryToolbar}>
+          <div className={t.toolbar}>
+            <Input className={t.search} aria-label="Search team" placeholder="Search name, email, role…" value={q} onChange={e => setQ(e.target.value)} />
+            <Button variant="outline" leading={<SlidersHorizontal size={16} />} aria-expanded={isCompact ? filterSheetOpen : filtersOpen}
+              aria-label={isCompact ? 'Open filters' : undefined} onClick={() => isCompact ? setFilterSheetOpen(true) : setFiltersOpen(open => !open)}>
+              {!isCompact && filtersOpen ? 'Hide filters' : 'Filters'}{activeNonSearchCount > 0 ? ` (${activeNonSearchCount})` : ''}
+            </Button>
           </div>
-        ) : (
-          <div className={s.filterBar}>
-            <div className={s.filterFooter}>
-              <div className={s.filterSummary}>
-                {hasActiveFilters ? (
-                  activeFilterChips.map((chip) => (
-                    <span key={chip} className={s.filterChip}>{chip}</span>
-                  ))
-                ) : (
-                  <span className={s.filterHint}>No filters applied</span>
-                )}
-              </div>
-              <div className={s.filterActions}>
-                <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
-                  {filtersOpen ? 'Hide filters' : 'Show filters'}
-                </Button>
-                {hasActiveFilters && (
-                  <Button variant="ghost" onClick={clearFilters}>Clear filters</Button>
-                )}
-              </div>
-            </div>
-
-            {filtersOpen && (
-              <div className={s.filterGrid}>
-                <Field label="Search">
-                  <Input
-                    placeholder="Search name, email, role…"
-                    value={q}
-                    onChange={e => setQ(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="Role">
-                  <Select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
-                    <option value="all">All roles</option>
-                    <option value="owner">Owner</option>
-                    <option value="manager">Manager</option>
-                    <option value="employee">Employee</option>
-                  </Select>
-                </Field>
-
-                <Field label="Store">
-                  <Select value={fStore} onChange={e => setFStore(e.target.value)}>
-                    <option value="all">All stores</option>
-                    {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-                  </Select>
-                </Field>
-
-                <Field label="Account status">
-                  <Select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
-                    <option value="all">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="invited">Invited</option>
-                    <option value="disabled">Disabled</option>
-                    <option value="expired">Expired</option>
-                    <option value="revoked">Revoked</option>
-                  </Select>
-                </Field>
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
-
-      <Card padded={false}>
+          {!isCompact && filtersOpen && <div className={t.filterGrid}>
+            <Field label="Role"><Select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
+              <option value="all">All roles</option><option value="owner">Owner</option><option value="manager">Manager</option><option value="employee">Employee</option>
+            </Select></Field>
+            {showStore && <Field label="Store"><Select value={fStore} onChange={e => setFStore(e.target.value)}>
+              <option value="all">All stores</option>{stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+            </Select></Field>}
+            <Field label="Account status"><Select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
+              <option value="all">All statuses</option>{Object.entries(STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </Select></Field>
+          </div>}
+          {hasActiveFilters && <div className={t.chipsRow}>
+            {activeChips.map(chip => <span className={t.chip} key={chip.key}>{chip.label}<button className={t.chipX} type="button" aria-label={`Remove ${chip.label}`} onClick={chip.onRemove}><X size={14} /></button></span>)}
+            <button type="button" className={t.clearAll} onClick={clearFilters}>Clear filters</button>
+          </div>}
+        </div>
+        <div className={t.directoryHeading}><h2>Team members</h2>{data && <span>{filtered.length} {filtered.length === 1 ? 'person' : 'people'}</span>}</div>
         {loadError ? <DataLoadError message={loadError} retry={load} /> : (loading || !data) && isCompact ? (
           <LoadingSkeleton label="Loading team" />
         ) : !loading && data && filtered.length === 0 ? (
@@ -593,9 +552,9 @@ export default function Team() {
               const canDeactivateRow = canDeactivate(m) && m.account_status === 'active';
               const canReactivateRow = canDeactivate(m) && m.account_status === 'disabled';
               const metaParts = [
-                m.store_name && m.store_name !== '—' ? m.store_name : null,
+                showStore && m.store_name && m.store_name !== '—' ? m.store_name : null,
                 m.job_name && m.job_name !== '—' ? m.job_name : null,
-                m.contracted_hours ? `${m.contracted_hours}h/wk` : null,
+                m.role[0].toUpperCase() + m.role.slice(1),
               ].filter(Boolean) as string[];
 
               return (
@@ -619,13 +578,12 @@ export default function Team() {
                         ))}
                       </span>
                     )}
+                    <dl className={t.memberFacts}>
+                      <div><dt>Contract</dt><dd>{m.contracted_hours !== null ? `${m.contracted_hours} h/week` : '—'}</dd></div>
+                      <div><dt>Entitlement <span className={t.unit}>per leave year</span></dt><dd>{renderEntitlement(m)}</dd></div>
+                    </dl>
                     <div className={t.memberBadges}>
-                      <Badge tone={m.role === 'owner' ? 'brand' : m.role === 'manager' ? 'info' : 'neutral'} dot>
-                        {m.role}
-                      </Badge>
-                      <Badge tone={STATUS_TONE[m.account_status]} dot>
-                        {STATUS_LABEL[m.account_status]}
-                      </Badge>
+                      {m.account_status === 'active' ? <span className={t.activeStatus}>Active</span> : <Badge tone={STATUS_TONE[m.account_status]} dot>{m.account_status === 'expired' ? 'Invite expired' : STATUS_LABEL[m.account_status]}</Badge>}
                     </div>
                   </div>
                   {canManageStaff && (
@@ -665,77 +623,28 @@ export default function Team() {
             })}
           </div>
         ) : (
-          <div className={s.tableWrap}><table className={s.table}>
+          <div className={t.tableWrap}><table className={`${s.table} ${t.directoryTable}`}>
             <thead>
               <tr>
-                <th colSpan={2}>Name &amp; email</th>
-                <th>Role</th>
-                <th>Job</th>
-                <th>Primary store</th>
-                <th>Hours</th>
-                <th>Status</th>
-                <th>Annual leave</th>
-                {canManageStaff && <th></th>}
+                <th>Person</th><th>Role &amp; job</th>{showStore && <th>Primary store</th>}
+                <th>Contract</th><th aria-label="Leave entitlement">Leave entitlement<span className={t.unit}>days per leave year</span></th><th>Account</th>
+                {canManageStaff && <th><span className="sr-only">Actions</span></th>}
               </tr>
             </thead>
             <tbody aria-busy={loading || !data}>
-              {loading || !data ? <tr><td colSpan={canManageStaff ? 9 : 8}><LoadingSkeleton label="Loading team" rows={5} /></td></tr> : filtered.map(m => (
+              {loading || !data ? <tr><td colSpan={5 + Number(showStore) + Number(canManageStaff)}><LoadingSkeleton label="Loading team" rows={5} /></td></tr> : filtered.map(m => (
                 <tr key={m.key} className={m.account_status === 'disabled' ? t.rowDisabled : ''}>
-                  <td colSpan={2}>
+                  <td>
                     {isOwner && m.kind === 'member' ? <Link className={`${t.staffLink} ${t.staffLinkRow}`} aria-label={m.full_name} to={`/team/${m.user_id}`}>
                       <Avatar name={m.full_name} size="sm" />
                       <span className={t.staffIdentity}><span className={t.memberName}>{m.full_name}</span><span className={t.memberEmail}>{m.email || '—'}</span></span>
                     </Link> : <div className={t.staffLinkRow}><Avatar name={m.full_name} size="sm" /><span className={t.staffIdentity}><span className={t.memberName}>{m.full_name}</span><span className={t.memberEmail}>{m.email || '—'}</span></span></div>}
                   </td>
-                  <td>
-                    <Badge tone={m.role === 'owner' ? 'brand' : m.role === 'manager' ? 'info' : 'neutral'} dot>
-                      {m.role}
-                    </Badge>
-                  </td>
-                  <td>{m.job_name}</td>
-                  <td>{m.store_name}</td>
-                  <td>{m.contracted_hours ? `${m.contracted_hours}h/wk` : '—'}</td>
-                  <td>
-                    <Badge tone={STATUS_TONE[m.account_status]} dot>
-                      {STATUS_LABEL[m.account_status]}
-                    </Badge>
-                  </td>
-                  <td>
-                    {m.kind === 'invite' ? (
-                      <span className={s.muted}>—</span>
-                    ) : canManageStaff && editingId === m.user_id ? (
-                      <span className={t.inlineEdit}>
-                        <input
-                          type="number"
-                          min={0}
-                          max={365}
-                          value={draft}
-                          onChange={e => setDraft(e.target.value)}
-                          autoFocus
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') saveEntitlement(m.user_id!);
-                            if (e.key === 'Escape') setEditingId(null);
-                          }}
-                          className={t.inlineInput}
-                        />
-                        <button className={t.inlineBtn} onClick={() => saveEntitlement(m.user_id!)}>Save</button>
-                        <button className={t.inlineBtnGhost} onClick={() => setEditingId(null)}>Cancel</button>
-                      </span>
-                    ) : (
-                      <span
-                        className={canManageStaff ? t.editable : ''}
-                        onClick={() => {
-                          if (!canManageStaff || m.kind !== 'member') return;
-                          setDraft(String(m.annual_leave_entitlement));
-                          setEditingId(m.user_id!);
-                        }}
-                        title={canManageStaff ? 'Click to edit' : undefined}
-                      >
-                        {m.annual_leave_entitlement} days
-                      </span>
-                    )}
-                    {m.kind === 'member' && !m.working_days?.length && <div className={s.muted}>Working days not set</div>}
-                  </td>
+                  <td><span className={t.roleLabel}>{m.role}</span>{m.job_name !== '—' && <span className={t.secondary}>{m.job_name}</span>}</td>
+                  {showStore && <td>{m.store_name}</td>}
+                  <td>{m.contracted_hours !== null ? `${m.contracted_hours} h/week` : '—'}</td>
+                  <td>{renderEntitlement(m)}</td>
+                  <td>{m.account_status === 'active' ? <span className={t.activeStatus}>Active</span> : <Badge tone={STATUS_TONE[m.account_status]} dot>{m.account_status === 'expired' ? 'Invite expired' : STATUS_LABEL[m.account_status]}</Badge>}</td>
                   {canManageStaff && (
                     <td>
                       {(() => {
@@ -830,12 +739,12 @@ export default function Team() {
               <option value="employee">Employee</option>
             </Select>
           </Field>
-          <Field label="Store">
+          {showStore && <Field label="Store">
             <Select value={fStore} onChange={e => setFStore(e.target.value)}>
               <option value="all">All stores</option>
               {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
             </Select>
-          </Field>
+          </Field>}
           <Field label="Account status">
             <Select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
               <option value="all">All statuses</option>

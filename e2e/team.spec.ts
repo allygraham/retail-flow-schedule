@@ -85,8 +85,7 @@ for (const width of [1280, 390]) {
     await authenticate(page); await stubApi(page);
     await page.goto('/team');
     await expect(page.getByText('employee@example.test', { exact: true })).toBeVisible();
-    if (width === 1280) await page.getByRole('button', { name: 'Show filters' }).click();
-    const search = page.getByPlaceholder(width === 1280 ? 'Search name, email, role…' : 'Search team…');
+    const search = page.getByRole('textbox', { name: 'Search team' });
     await search.fill('employee@example.test');
     await expect(page.getByText('Test Employee', { exact: true })).toBeVisible();
     await search.fill('missing@example.test');

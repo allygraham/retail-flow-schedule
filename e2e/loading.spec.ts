@@ -14,6 +14,7 @@ for (const scenario of [
   const ready = new Promise<void>(resolve => { release = resolve; });
   await page.route(url => url.hostname === 'example.supabase.co' && url.pathname.endsWith(`/${scenario.endpoint}`), async route => { await ready; await route.fallback(); });
   await page.goto(scenario.path);
+  if (scenario.path === '/rota') await page.getByRole('button', { name: 'Day', exact: true }).click();
   const skeleton = page.getByRole('status', { name: scenario.label, exact: true });
   try {
     await expect(skeleton).toBeVisible();
@@ -100,7 +101,7 @@ test('team keeps its table headers mounted while staff rows load', async ({ page
   let header;
   try {
     await expect(page.getByRole('status', { name: 'Loading team', exact: true })).toBeVisible();
-    for (const name of ['Name & email', 'Role', 'Job', 'Primary store', 'Hours', 'Status', 'Annual leave']) {
+    for (const name of ['Person', 'Role & job', 'Contract', 'Leave entitlement', 'Account']) {
       await expect(table.getByRole('columnheader', { name, exact: true })).toBeVisible();
     }
     header = await table.locator('thead').elementHandle();
