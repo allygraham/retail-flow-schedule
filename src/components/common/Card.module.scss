@@ -1,15 +1,16 @@
 @use '@/styles/tokens' as *;
 @use '@/styles/mixins' as *;
 
-.card { @include card; }
+.card { @include card; min-width: 0; box-shadow: none; }
 .head {
   display: flex; align-items: center; justify-content: space-between;
   padding: $sp-4 $sp-5; border-bottom: 1px solid var(--color-border, var(--theme-border, #{$border}));
-  gap: $sp-4;
+  gap: $sp-3;
+  > :first-child { min-width: 0; }
 }
 .title { font-weight: $fw-semibold; font-size: $fs-md; color: var(--color-text-primary, var(--theme-text, #{$text})); }
-.sub { color: var(--color-text-secondary, var(--theme-text-muted, #{$text-muted})); font-size: $fs-sm; margin-top: 2px; }
-.action { display: flex; gap: $sp-2; }
+.sub { color: var(--color-text-secondary, var(--theme-text-muted, #{$text-muted})); font-size: $fs-xs; line-height: $lh-normal; margin-top: 4px; }
+.action { display: flex; gap: $sp-2; flex-shrink: 0; }
 .body { padding: $sp-5; }
 .bodyFlush { padding: 0; }
 

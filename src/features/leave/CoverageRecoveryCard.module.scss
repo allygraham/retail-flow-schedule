@@ -32,6 +32,7 @@
 }
 .shiftHead {
   width: 100%;
+  min-height: 44px;
   display: flex; align-items: center; justify-content: space-between; gap: $sp-3;
   padding: $sp-2 $sp-3;
   background: transparent; border: none; cursor: pointer; text-align: left;
@@ -42,7 +43,7 @@
 .shiftMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .muted { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; }
 .tag {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.06em;
   padding: 2px 6px; border-radius: $r-sm;
   background: var(--color-surface, $surface);
   border: 1px solid var(--color-border, $border);

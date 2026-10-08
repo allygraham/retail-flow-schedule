@@ -8,10 +8,10 @@
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: $sp-3; }
 .stat {
   background: var(--color-surface-muted, #{$ink-50}); border-radius: $r-md; padding: $sp-3;
-  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  display: flex; flex-direction: column; gap: $sp-2; min-width: 0; align-items: flex-start;
 }
-.statValue { font-family: $font-display; font-weight: $fw-extra; font-size: $fs-xl; line-height: 1.15; color: var(--color-text-primary, #{$text}); }
-.statLabel { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-secondary, #{$text-muted}); font-weight: $fw-semibold; }
+.statValue { font-family: $font-display; font-weight: $fw-bold; font-size: $fs-xl; line-height: 1.15; color: var(--color-text-primary, #{$text}); }
+.statLabel { font-size: $fs-sm; line-height: $lh-snug; color: var(--color-text-secondary, #{$text-muted}); font-weight: $fw-semibold; }
 .accent {
   background: var(--color-row-hover, #{$brand-50});
   .statValue, .statLabel { color: var(--color-primary, #{$brand-700}); }
@@ -41,12 +41,20 @@
 
 @media (max-width: 720px) {
   .wrap { gap: $sp-3; }
-  .stats { grid-template-columns: repeat(2, 1fr); gap: $sp-2; }
-  .stat { padding: $sp-2 $sp-3; }
-  .statValue { font-size: $fs-lg; }
-  .stat.muted { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $sp-2; }
+  .stat { padding: $sp-3 $sp-2; }
+  .statValue { font-size: $fs-lg; overflow-wrap: anywhere; }
+  .statLabel { font-size: $fs-xs; }
+  .stat.muted { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: baseline; padding: $sp-1 0; background: transparent;
+    .statValue { font-size: $fs-sm; }
+  }
   .legendMuted { margin-left: 0; width: 100%; }
 }
 
 
 .loading { padding: $sp-5; text-align: center; color: var(--color-text-secondary, #{$text-muted}); font-size: $fs-sm; }
+
+.danger { background: var(--color-danger-bg, #fee2e2);
+  .statValue, .statLabel { color: var(--color-danger-text, #991b1b); }
+}
+@media (prefers-reduced-motion: reduce) { .barTaken, .barPending { transition: none; } }

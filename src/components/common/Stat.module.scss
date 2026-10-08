@@ -3,42 +3,45 @@
 
 .stat {
   @include card;
+  box-shadow: none;
   padding: $sp-5;
+  min-width: 0;
   position: relative;
-  overflow: hidden;
 }
 .icon {
-  position: absolute; top: $sp-4; right: $sp-4;
-  width: 36px; height: 36px; border-radius: $r-md;
+  width: 28px; height: 28px; border-radius: $r-sm;
   display: grid; place-items: center;
-  background: var(--color-surface-muted, #{$brand-50}); color: var(--color-primary, #{$brand-600});
+  margin-bottom: $sp-3;
+  background: var(--color-row-hover, $brand-50);
+  color: var(--color-primary, $brand-600);
 }
-.label { color: var(--color-text-secondary, #{$text-muted}); font-size: $fs-sm; font-weight: $fw-medium; }
+.label { color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; font-weight: $fw-medium; line-height: $lh-snug; overflow-wrap: anywhere; }
 .value {
-  font-family: $font-display; font-weight: $fw-extra;
-  font-size: $fs-3xl; line-height: 1; margin-top: 6px;
-  letter-spacing: -0.02em;
-  color: var(--color-text-primary, #{$text});
+  font-family: $font-display; font-weight: $fw-bold;
+  font-size: $fs-3xl; line-height: 1.15; margin-top: $sp-2;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, $text);
 }
-.hint { color: var(--color-text-secondary, #{$text-muted}); font-size: $fs-xs; margin-top: 8px; }
-
-.brand   { .icon { background: var(--color-row-hover, #{$brand-50}); color: var(--color-primary, #{$brand-700}); } }
-.warn    { .icon { background: var(--color-warning-bg, #fef3c7); color: var(--color-warning-text, #92400e); } }
-.danger  { .icon { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); } }
-.success { .icon { background: var(--color-success-bg, #dcfce7); color: var(--color-success-text, #166534); } }
-
+.hint { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; line-height: $lh-normal; margin-top: $sp-2; }
+.brand .icon { background: var(--color-row-hover, $brand-50); color: var(--color-primary, $brand-700); }
+.warn .icon { background: var(--color-warning-bg, #fef3c7); color: var(--color-warning-text, #92400e); }
+.danger .icon { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); }
+.success .icon { background: var(--color-success-bg, #dcfce7); color: var(--color-success-text, #166534); }
+.muted { background: var(--color-surface, $surface);
+  .value { font-weight: $fw-semibold; }
+  .icon { color: var(--color-text-secondary, $text-muted); background: var(--color-surface-muted, $ink-50); }
+}
+.attention { border-color: var(--color-warning, $warning); background: var(--color-warning-bg, #fef3c7);
+  .label, .value, .hint { color: var(--color-warning-text, #92400e); }
+  .label { font-weight: $fw-semibold; }
+}
 @media (max-width: 540px) {
+  .stat { padding: $sp-4; }
+  .value { font-size: $fs-2xl; }
   .compact { padding: $sp-3; border: none; border-radius: 0; box-shadow: none; min-width: 0; background: transparent;
     + .compact { border-left: 1px solid var(--color-border, $border); }
     .label { font-size: $fs-xs; line-height: $lh-snug; }
     .value { font-size: $fs-xl; margin-top: $sp-2; }
     .hint { font-size: $fs-xs; line-height: $lh-snug; margin-top: $sp-2; }
   }
-}
-
-.muted { background: var(--color-surface-muted, $ink-50); border-color: transparent; box-shadow: none;
-  .value { font-weight: $fw-semibold; color: var(--color-text-secondary, $text-muted); }
-}
-.attention { border-color: var(--color-warning, $warning); background: var(--color-warning-bg, #fef3c7);
-  .label { color: var(--color-warning-text, #92400e); font-weight: $fw-semibold; }
 }

@@ -2,7 +2,7 @@
 @use '@/styles/mixins' as *;
 
 .page { @include col; gap: $sp-5; color: var(--color-text-primary, $text); }
-.header { padding: $sp-5; border: 1px solid var(--color-border, $border); border-radius: $r-lg; background: linear-gradient(110deg, var(--color-row-hover, #{$brand-50}), var(--color-surface, #{$surface}) 75%); display: flex; justify-content: space-between; align-items: end; gap: $sp-4; flex-wrap: wrap; }
+.header { padding: $sp-5; border: 1px solid var(--color-border, $border); border-radius: $r-lg; background: var(--color-surface, $surface); display: flex; justify-content: space-between; align-items: end; gap: $sp-4; flex-wrap: wrap; }
 .eye { @include eyebrow; }
 .h1 { @include text-h2; margin-top: 6px; color: var(--color-text-primary, $text); }
 .sub { margin-top: 4px; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; line-height: $lh-normal; }

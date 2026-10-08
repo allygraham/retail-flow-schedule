@@ -5,7 +5,7 @@
   padding: $sp-4;
   border-radius: $r-md;
   background: var(--color-surface-muted, $ink-50);
-  border: 1px dashed var(--color-border, $border);
+  border: 1px solid var(--color-border, $border);
   @include col; gap: $sp-3;
 }
 .head { display: flex; align-items: center; justify-content: space-between; gap: $sp-2; flex-wrap: wrap; }
@@ -18,9 +18,11 @@
 }
 .note { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
 .grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $sp-3; margin: 0;
-  dt { font-size: $fs-xs; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold; }
+  dt { font-size: $fs-xs; line-height: $lh-normal; color: var(--color-text-secondary, $text-muted); font-weight: $fw-semibold; }
+  > div { padding: $sp-3; background: var(--color-surface, $surface); border-radius: $r-md; min-width: 0; overflow-wrap: anywhere; }
+  > div:first-child { grid-column: 1 / -1; border-left: 3px solid var(--color-primary, $brand-600); dd { font-family: $font-display; font-size: $fs-2xl; font-variant-numeric: tabular-nums; } }
   dd { margin: 4px 0 0; font-size: $fs-md; color: var(--color-text-primary, $text); font-weight: $fw-semibold; }
 }
 .summary { margin: 0; font-size: $fs-sm; color: var(--color-text-secondary, $text-soft); }

@@ -28,8 +28,8 @@ export function LeaveBalanceCard({ balance, loading, patternMissing, error, titl
       ) : (
         <div className={`${s.wrap} ${compact ? s.compact : ''}`}>
           <div className={s.stats}>
-            <Stat label={balance.remaining < 0 ? 'Over entitlement' : 'Remaining'} value={`${Math.abs(balance.remaining)} days`} accent />
-            <Stat label="Taken" value={`${balance.taken} days\n`} />
+            <Stat label={balance.remaining < 0 ? 'Over entitlement' : 'Remaining'} value={`${Math.abs(balance.remaining)} days`} accent danger={balance.remaining < 0} />
+            <Stat label="Taken" value={`${balance.taken} days`} />
             <Stat label="Entitlement" value={`${balance.entitlement} days`} muted />
           </div>
           <Bar entitlement={balance.entitlement} taken={balance.taken} pending={balance.pending} />
@@ -44,11 +44,11 @@ export function LeaveBalanceCard({ balance, loading, patternMissing, error, titl
   );
 }
 
-function Stat({ label, value, accent, muted }: { label: string; value: string; accent?: boolean; muted?: boolean }) {
+function Stat({ label, value, accent, muted, danger }: { label: string; value: string; accent?: boolean; muted?: boolean; danger?: boolean }) {
   return (
-    <div className={`${s.stat} ${accent ? s.accent : ''} ${muted ? s.muted : ''}`}>
-      <div className={s.statValue}>{value}</div>
+    <div className={`${s.stat} ${accent ? s.accent : ''} ${muted ? s.muted : ''} ${danger ? s.danger : ''}`}>
       <div className={s.statLabel}>{label}</div>
+      <div className={s.statValue}>{value}</div>
     </div>
   );
 }

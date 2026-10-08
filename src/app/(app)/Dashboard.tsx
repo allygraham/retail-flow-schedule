@@ -3,8 +3,8 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, CalendarDays, ArrowRight, BellRing } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Calendar, Clock, MapPin, CalendarDays, ArrowRight, BellRing, Users, HeartPulse, TriangleAlert, ClipboardList } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
 import { useNotifications } from '@/features/notifications/useNotifications';
@@ -189,7 +189,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
 
       <div className={s.grid}>
         {/* This week */}
-        <Card title="This week" subtitle={`${fmtDate(days[0], 'd MMM')} – ${fmtDate(days[6], 'd MMM')}`}>
+        <Card padded={false} title="This week" subtitle={`${fmtDate(days[0], 'd MMM')} – ${fmtDate(days[6], 'd MMM')}`}>
           <ul className={s.weekList}>
             {days.map(d => {
               const iso = isoDate(d);
@@ -278,7 +278,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         </Card>
 
         {/* Activity / alerts */}
-        <Card
+        <Card padded={false}
           title="Recent updates"
           subtitle="Schedule changes & alerts"
           action={(
@@ -312,7 +312,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
         </Card>
 
         {/* Upcoming shifts (compact list, after next) */}
-          <Card title="Then after that" subtitle="Your next shifts"
+          <Card padded={false} title="Then after that" subtitle="Your next shifts"
             action={<Button variant="ghost" size="sm" trailing={<ArrowRight size={14} />} onClick={() => nav('/rota')}>Full rota</Button>}>
             <DashboardContent loading={loading} error={loadError} label="Loading upcoming shifts">
             {restUpcoming.length === 0 ? <EmptyState title="No further shifts" description="Your next published shifts will appear here." /> : <ul className={s.list}>
@@ -393,6 +393,10 @@ function ManagerDashboard() {
           <h1 className={s.h1}>{greeting}</h1>
           <p className={s.sub}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {business.name}</p>
         </div>
+        <div className={s.quickActions}>
+          <Link className={s.actionLink} to="/rota"><CalendarDays size={16} aria-hidden />View rota</Link>
+          <Link className={`${s.actionLink} ${s.primaryLink}`} to="/team"><Users size={16} aria-hidden />View team</Link>
+        </div>
       </header>
   );
   const data = result ?? { shiftsToday: [], leaveApproved: [], sickToday: [], pendingLeave: [], unassigned: [], profilesById: {} };
@@ -420,16 +424,57 @@ function ManagerDashboard() {
         </div>
       )}
 
-      <div className={s.stats}>
-        <Stat muted label="Working today" value={statValue(data.shiftsToday.filter((s) => s.assigned_user_id).length)} accent="success" hint="Across all stores" />
-        <Stat muted label="On annual leave" value={statValue(data.leaveApproved.length)} accent="brand" />
-        <Stat muted label="Off sick" value={statValue(data.sickToday.length)} accent="danger" />
-        <Stat muted={loading || !!loadError || data.unassigned.length === 0} attention={!loading && !loadError && data.unassigned.length > 0} label="Unassigned shifts" value={statValue(data.unassigned.length)} accent="warn" hint="Need cover" />
-        <Stat muted={loading || !!loadError || data.pendingLeave.length === 0} attention={!loading && !loadError && data.pendingLeave.length > 0} label="Pending requests" value={statValue(data.pendingLeave.length)} accent="warn" />
+      <div className={s.stats} role="group" aria-label="Staffing overview" aria-description="Across all stores">
+        <Stat muted icon={<Users size={18} aria-hidden />} label="Working today" value={statValue(data.shiftsToday.filter((s) => s.assigned_user_id).length)} accent="success" />
+        <Stat muted icon={<CalendarDays size={18} aria-hidden />} label="On annual leave" value={statValue(data.leaveApproved.length)} accent="brand" />
+        <Stat muted icon={<HeartPulse size={18} aria-hidden />} label="Off sick" value={statValue(data.sickToday.length)} accent="danger" />
+        <Stat muted={loading || !!loadError || data.unassigned.length === 0} attention={!loading && !loadError && data.unassigned.length > 0} icon={<TriangleAlert size={18} aria-hidden />} label="Unassigned shifts" value={statValue(data.unassigned.length)} accent="warn" hint="Need cover" />
+        <Stat muted={loading || !!loadError || data.pendingLeave.length === 0} attention={!loading && !loadError && data.pendingLeave.length > 0} icon={<ClipboardList size={18} aria-hidden />} label="Pending requests" value={statValue(data.pendingLeave.length)} accent="warn" />
       </div>
 
       <div className={s.cols}>
-        <Card title="Today's shifts" subtitle={loading ? <LoadingSkeleton layout="inline" label="Loading shift count" /> : loadError ? 'Schedule unavailable' : `${data.shiftsToday.length} scheduled`}>
+
+        <Card padded={false} data-dashboard-panel="requests" className={`${s.requestsPanel} ${!loading && !loadError && data.pendingLeave.length > 0 ? s.attentionCard : ''}`} action={<Link className={s.panelLink} to="/leave">Review requests<ArrowRight size={14} aria-hidden /></Link>} title="Pending leave requests" subtitle="Awaiting your review">
+          <DashboardContent loading={loading} error={loadError} label="Loading pending leave requests">
+          {data.pendingLeave.length === 0 ? (
+            <EmptyState title="All caught up" description="No requests need attention." />
+          ) : (
+            <ul className={s.list}>
+              {data.pendingLeave.slice(0, 6).map((lr) => (
+                <li key={lr.id} className={s.row}>
+                  <Avatar name={data.profilesById[lr.user_id]} />
+                  <div className={s.rowMain}>
+                    <div className={s.rowName}>{data.profilesById[lr.user_id] ?? 'Employee'}</div>
+                    <div className={s.rowMeta}>{fmtDate(lr.start_date)} → {fmtDate(lr.end_date)} · {TYPE_LABEL[lr.leave_type]}</div>
+                  </div>
+                  <Badge tone="pending" dot>Pending</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+          </DashboardContent>
+        </Card>
+
+        <Card padded={false} data-dashboard-panel="coverage" className={`${s.coveragePanel} ${!loading && !loadError && data.unassigned.length > 0 ? s.attentionCard : ''}`} action={<Link className={s.panelLink} to="/rota">View rota<ArrowRight size={14} aria-hidden /></Link>} title="Coverage gaps" subtitle="Upcoming unassigned shifts">
+          <DashboardContent loading={loading} error={loadError} label="Loading coverage gaps">
+          {data.unassigned.length === 0 ? (
+            <EmptyState title="Fully covered" description="No gaps in the published rota." />
+          ) : (
+            <ul className={s.list}>
+              {data.unassigned.slice(0, 6).map((sh) => (
+                <li key={sh.id} className={s.row}>
+                  <div className={s.rowMain}>
+                    <div className={s.rowName}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}</div>
+                    <div className={s.rowMeta}>{fmtDate(sh.shift_date)} · {fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
+                  </div>
+                  <Badge tone="unassigned" dot>Open</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+          </DashboardContent>
+        </Card>
+        <Card padded={false} className={s.todayPanel} data-dashboard-panel="today" action={<Link className={s.panelLink} to="/rota">View rota<ArrowRight size={14} aria-hidden /></Link>} title="Today's shifts" subtitle={loading ? <LoadingSkeleton layout="inline" label="Loading shift count" /> : loadError ? 'Schedule unavailable' : `${data.shiftsToday.length} scheduled`}>
           <DashboardContent loading={loading} error={loadError} label="Loading today’s shifts">
           {data.shiftsToday.length === 0 ? (
             <EmptyState title="No shifts today" description="Enjoy the quiet day!" />
@@ -450,46 +495,6 @@ function ManagerDashboard() {
           </DashboardContent>
         </Card>
 
-        <Card className={!loading && !loadError && data.pendingLeave.length > 0 ? s.attentionCard : undefined} title="Pending leave requests" subtitle="Awaiting your review">
-          <DashboardContent loading={loading} error={loadError} label="Loading pending leave requests">
-          {data.pendingLeave.length === 0 ? (
-            <EmptyState title="All caught up" description="No requests need attention." />
-          ) : (
-            <ul className={s.list}>
-              {data.pendingLeave.slice(0, 6).map((lr) => (
-                <li key={lr.id} className={s.row}>
-                  <Avatar name={data.profilesById[lr.user_id]} />
-                  <div className={s.rowMain}>
-                    <div className={s.rowName}>{data.profilesById[lr.user_id] ?? 'Employee'}</div>
-                    <div className={s.rowMeta}>{fmtDate(lr.start_date)} → {fmtDate(lr.end_date)} · {lr.leave_type}</div>
-                  </div>
-                  <Badge tone="pending" dot>Pending</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-          </DashboardContent>
-        </Card>
-
-        <Card className={!loading && !loadError && data.unassigned.length > 0 ? s.attentionCard : undefined} title="Coverage gaps" subtitle="Upcoming unassigned shifts">
-          <DashboardContent loading={loading} error={loadError} label="Loading coverage gaps">
-          {data.unassigned.length === 0 ? (
-            <EmptyState title="Fully covered" description="No gaps in the published rota." />
-          ) : (
-            <ul className={s.list}>
-              {data.unassigned.slice(0, 6).map((sh) => (
-                <li key={sh.id} className={s.row}>
-                  <div className={s.rowMain}>
-                    <div className={s.rowName}>{sh.store_locations?.name} · {sh.roles_catalog?.name ?? 'Floor'}</div>
-                    <div className={s.rowMeta}>{fmtDate(sh.shift_date)} · {fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                  </div>
-                  <Badge tone="unassigned" dot>Open</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-          </DashboardContent>
-        </Card>
       </div>
     </div>
   );
