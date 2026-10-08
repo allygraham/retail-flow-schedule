@@ -203,3 +203,9 @@
 .addShift { opacity: 0; padding: 5px; min-height: 28px; background: transparent; border: 1px dashed var(--color-border, $border); border-radius: $r-sm; color: var(--color-text-secondary, $text-muted); font-size: 12px; text-align: left; cursor: pointer; margin-top: auto; &:focus-visible { opacity: 1; outline: 2px solid var(--color-primary, $brand-500); } }
 .cell:hover .addShift, .cell:focus-within .addShift { opacity: 1; }
 .noMatches { grid-column: 1 / -1; padding: $sp-4; color: var(--color-text-secondary, $text-muted); }
+
+.gridHeadStaff {
+  background-color: var(--color-surface, $surface);
+  background-image: linear-gradient(var(--color-surface-muted, #{$ink-50}), var(--color-surface-muted, #{$ink-50}));
+}
+.contents:hover > .cell.weekend, .contents:focus-within > .cell.weekend { background: var(--color-row-hover, $brand-50); }
