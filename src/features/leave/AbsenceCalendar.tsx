@@ -1,23 +1,26 @@
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useMemo, useState } from 'react';
 import type { LeaveRequestRow } from './useLeaveRequests';
 import { TYPE_LABEL } from './leaveStatus';
-import { fmtDate } from '@/lib/datetime';
+import { STATUS_LABEL } from './leaveStatus';
+import { fmtDate, isoDate } from '@/lib/datetime';
 import s from './AbsenceCalendar.module.scss';
 
 interface Props {
   requests: LeaveRequestRow[];
+  loading?: boolean;
   onSelectRequest?: (r: LeaveRequestRow) => void;
 }
 
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function addMonths(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
-function isoOf(d: Date) { return d.toISOString().slice(0, 10); }
+const isoOf = isoDate;
 
 /**
  * Monthly absence overview. Shows annual leave vs sickness separately.
  * Subtle, scannable, click-day-to-inspect.
  */
-export function AbsenceCalendar({ requests, onSelectRequest }: Props) {
+export function AbsenceCalendar({ requests, loading = false, onSelectRequest }: Props) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -58,17 +61,19 @@ export function AbsenceCalendar({ requests, onSelectRequest }: Props) {
   const selectedItems = selected ? (byDay.get(selected) ?? []) : [];
 
   return (
-    <div className={s.wrap}>
+    <div className={s.wrap} aria-busy={loading}>
       <div className={s.toolbar}>
         <button type="button" className={s.navBtn} onClick={() => setCursor(addMonths(cursor, -1))} aria-label="Previous month">‹</button>
         <div className={s.monthLabel}>{fmtDate(isoOf(cursor), 'MMMM yyyy')}</div>
         <button type="button" className={s.navBtn} onClick={() => setCursor(addMonths(cursor, 1))} aria-label="Next month">›</button>
         <div className={s.legend}>
-          <span className={`${s.dot} ${s.leave}`} /> Annual leave
+          <span className={`${s.dot} ${s.leave}`} /> Annual / unpaid leave
           <span className={`${s.dot} ${s.sick}`} /> Sickness
           <span className={`${s.dot} ${s.other}`} /> Other
         </div>
       </div>
+      <div className={s.calendarLayout}>
+      <div className={s.monthGrid}>
       <div className={s.weekHead}>
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <div key={d}>{d}</div>)}
       </div>
@@ -84,6 +89,8 @@ export function AbsenceCalendar({ requests, onSelectRequest }: Props) {
               key={iso}
               type="button"
               className={`${s.cell} ${inMonth ? '' : s.outMonth} ${isToday ? s.today : ''} ${selected === iso ? s.selected : ''}`}
+              aria-label={`${fmtDate(iso, 'EEEE d MMM yyyy')}, ${loading ? 'loading absences' : `${items.length} absence${items.length === 1 ? '' : 's'}`}`}
+              aria-pressed={selected === iso}
               onClick={() => setSelected(iso)}
             >
               <span className={s.dayNum}>{date.getDate()}</span>
@@ -97,7 +104,8 @@ export function AbsenceCalendar({ requests, onSelectRequest }: Props) {
           );
         })}
       </div>
-      {selected && (
+      </div>
+      {loading ? <div className={s.dayPanel}><LoadingSkeleton label="Loading day absences" /></div> : selected ? (
         <div className={s.dayPanel}>
           <div className={s.dayHead}>
             <strong>{fmtDate(selected, 'EEEE d MMM yyyy')}</strong>
@@ -112,7 +120,7 @@ export function AbsenceCalendar({ requests, onSelectRequest }: Props) {
                   <button type="button" className={s.dayItem} onClick={() => onSelectRequest?.(item)}>
                     <span className={`${s.dot} ${item.leave_type === 'sick' ? s.sick : item.leave_type === 'other' ? s.other : s.leave}`} />
                     <span className={s.name}>{item.profiles?.full_name ?? 'Employee'}</span>
-                    <span className={s.muted}>{TYPE_LABEL[item.leave_type]}</span>
+                    <span className={s.muted}>{TYPE_LABEL[item.leave_type]} · {STATUS_LABEL[item.status]}</span>
                     <span className={s.muted}>{fmtDate(item.start_date, 'd MMM')} → {fmtDate(item.end_date, 'd MMM')}</span>
                   </button>
                 </li>
@@ -120,7 +128,8 @@ export function AbsenceCalendar({ requests, onSelectRequest }: Props) {
             </ul>
           )}
         </div>
-      )}
+      ) : <div className={s.dayPanel}><div className={s.dayHead}><strong>Day details</strong></div><p className={s.muted}>Select a date to see its leave and absence records.</p></div>}
+      </div>
     </div>
   );
 }

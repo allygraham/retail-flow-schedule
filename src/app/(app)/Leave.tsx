@@ -1,4 +1,5 @@
 import { AbsenceDetailsModal } from '@/features/leave/AbsenceDetailsModal';
+import { DataLoadError } from '@/components/common/DataLoadError';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { errorMessage } from '@/lib/errors';
 import { canCancelLeave } from '@/features/leave/leavePermissions';
@@ -7,7 +8,7 @@ import { daysBetween, daysInYear, workingDaysBetween } from '@/features/leave/le
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth/authContext';
 import { useLeaveRequests, type LeaveRequestRow } from '@/features/leave/useLeaveRequests';
-import { SOURCE_LABEL, SOURCE_TONE, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
+import { SOURCE_LABEL, STATUS_LABEL, STATUS_TONE, TYPE_LABEL, TYPE_TONE } from '@/features/leave/leaveStatus';
 import { useLeaveBalance } from '@/features/leave/useLeaveBalance';
 import { LeaveBalanceCard } from '@/features/leave/LeaveBalanceCard';
 import { LeaveBalanceInline } from '@/features/leave/LeaveBalanceInline';
@@ -261,6 +262,7 @@ export default function Leave() {
   };
 
   const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, request: LeaveRequestRow) => {
+    if (event.target !== event.currentTarget) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       openLeaveDetails(request);
@@ -403,10 +405,6 @@ export default function Leave() {
     { key: 'calendar', label: 'Calendar' },
   ];
 
-  if (leaveError) return <div role="alert">
-    <h1>Unable to load leave requests</h1><p>{leaveError}</p>
-    <Button onClick={() => { void reloadRequests(); }}>Try again</Button>
-  </div>;
 
   return (
     <div className={s.page}>
@@ -416,7 +414,7 @@ export default function Leave() {
           <h1 className={s.h1}>{isMgr ? 'Leave & absence' : 'My time off'}</h1>
           {isMgr && counts.pending > 0 && (
             <p className={s.sub}>
-              <Badge tone="pending" dot>{counts.pending} pending</Badge> awaiting your review
+              <Badge tone="pending" dot>{counts.pending} awaiting review</Badge>
             </p>
           )}
         </div>
@@ -429,22 +427,20 @@ export default function Leave() {
         </div>
       </header>
 
-      {!isMgr && (
+      {!isMgr && <div className={s.personalOverview}>
         <LeaveBalanceCard balance={balance} loading={balanceLoading} patternMissing={patternMissing} error={balanceError} />
-      )}
 
-      {!isMgr && (
         <Card>
           <div className={s.upcomingSummary}>
             <div>
               <div className={s.upcomingEyebrow}>Upcoming leave</div>
-              {upcomingLeave.request ? (
+              {loading ? <LoadingSkeleton layout="inline" label="Loading upcoming leave" /> : upcomingLeave.request ? (
                 <>
                   <div className={s.upcomingTitle}>
                     {upcomingLeave.state === 'current' ? 'Currently on leave' : TYPE_LABEL[upcomingLeave.request.leave_type]}
                   </div>
                   <div className={s.upcomingMeta}>
-                    {fmtDate(upcomingLeave.request.start_date, 'd MMM')} → {fmtDate(upcomingLeave.request.end_date, 'd MMM yyyy')}
+                    {upcomingLeave.request.start_date === upcomingLeave.request.end_date ? fmtDate(upcomingLeave.request.start_date, 'd MMM yyyy') : `${fmtDate(upcomingLeave.request.start_date, 'd MMM')} → ${fmtDate(upcomingLeave.request.end_date, 'd MMM yyyy')}`}
                     <span className={s.upcomingPill}>{durationLabel(upcomingLeave.request)}</span>
                   </div>
                 </>
@@ -455,7 +451,7 @@ export default function Leave() {
                 </>
               )}
             </div>
-            {upcomingLeave.request ? (
+            {!loading && upcomingLeave.request ? (
               <div className={s.rowMeta}>
                 <Badge tone={TYPE_TONE[upcomingLeave.request.leave_type]}>{TYPE_LABEL[upcomingLeave.request.leave_type]}</Badge>
                 <Badge tone={STATUS_TONE[upcomingLeave.request.status]} dot>{STATUS_LABEL[upcomingLeave.request.status]}</Badge>
@@ -463,18 +459,29 @@ export default function Leave() {
             ) : null}
           </div>
         </Card>
-      )}
+      </div>}
 
-      <div className={s.tabs} role="tablist">
+      <section className={s.recordsPanel} aria-label="Absence records">
+      <div className={s.tabs} role="tablist" aria-label="Absence views">
         {tabs.filter(t => t.show !== false).map(t => (
           <button
             key={t.key}
             role="tab"
             aria-selected={filter === t.key}
             className={`${s.tab} ${filter === t.key ? s.tabActive : ''}`}
+            tabIndex={filter === t.key ? 0 : -1}
+            onKeyDown={event => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+              event.preventDefault();
+              const visible = tabs.filter(tab => tab.show !== false);
+              const index = visible.findIndex(tab => tab.key === t.key);
+              const next = event.key === 'Home' ? 0 : event.key === 'End' ? visible.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + visible.length) % visible.length;
+              setFilter(visible[next].key);
+              event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+            }}
             onClick={() => setFilter(t.key)}
           >
-            {t.label}{typeof t.count === 'number' ? ` (${t.count})` : ''}
+            {t.label} {typeof t.count === 'number' && <span className={s.tabCount}>{loading ? '…' : t.count}</span>}
           </button>
         ))}
       </div>
@@ -551,14 +558,15 @@ export default function Leave() {
         const activeNonSearchCount = activeFilterChips.filter(c => c.key !== 'employeeQuery').length;
 
         return (
-          <Card>
+          <div className={s.recordFilters}>
             {isCompact ? (
               <div className={s.filterBar}>
                 <div className={t.mobileFilterBar}>
                   {isMgr ? (
                     <Input
                       className={t.searchInline}
-                      placeholder="Search employee…"
+                      aria-label="Search employees"
+                      placeholder="Search employees"
                       value={filters.employeeQuery}
                       onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
                     />
@@ -602,26 +610,12 @@ export default function Leave() {
             ) : (
               <div className={s.filterBar}>
                 <div className={s.filterFooter}>
-                  <div className={s.filterSummary}>
-                    {hasActiveFilters ? (
-                      activeFilterChips.map((chip) => (
-                        <button key={chip.label} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
-                          <span>{chip.label}</span>
-                          <span aria-hidden="true">×</span>
-                        </button>
-                      ))
-                    ) : (
-                      <span className={s.filterHint}>No filters applied</span>
-                    )}
-                  </div>
+                  {isMgr && <Input className={s.employeeSearch} aria-label="Search employees" placeholder="Search employees" value={filters.employeeQuery} onChange={event => setLeaveFilter('employeeQuery', event.target.value)} />}
                   <div className={s.filterActions}>
-                    <Button variant="outline" onClick={() => setFiltersOpen((open) => !open)}>
-                      {filtersOpen ? 'Hide filters' : 'Show filters'}
-                    </Button>
-                    <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+                    <Button variant="outline" leading={<SlidersHorizontal size={15} />} aria-expanded={filtersOpen} onClick={() => setFiltersOpen(open => !open)}>{filtersOpen ? 'Hide filters' : 'Filters'}{activeNonSearchCount > 0 && ` (${activeNonSearchCount})`}</Button>
+                    {hasActiveFilters && <Button variant="ghost" onClick={clearFilters}>Clear filters</Button>}
                   </div>
                 </div>
-
                 {filtersOpen && (
                   <div className={s.filterGrid}>
                     {filterFields}
@@ -646,18 +640,18 @@ export default function Leave() {
                 {filterFields}
               </div>
             </Modal>
-          </Card>
+          </div>
         );
       })()}
 
 
-      {filter === 'calendar' ? (
-        <Card padded={false}>
-          <AbsenceCalendar requests={requests} onSelectRequest={(r) => openLeaveDetails(r)} />
-        </Card>
+      {leaveError ? <div className={s.recordsError}><DataLoadError message={leaveError} retry={reloadRequests} /></div> : filter === 'calendar' ? (
+        <div className={s.recordsContent}>
+          <AbsenceCalendar loading={loading} requests={requests} onSelectRequest={(r) => openLeaveDetails(r)} />
+        </div>
       ) : (
-        <Card padded={false}>
-          {hasActiveFilters && (
+        <div className={s.recordsContent}>
+          {hasActiveFilters && !isCompact && (
             <div className={s.activeFiltersRow}>
               {activeFilterChips.map((chip) => (
                 <button key={`table-${chip.label}`} type="button" className={s.filterChip} onClick={() => clearFilterChip(chip.key)}>
@@ -668,7 +662,11 @@ export default function Leave() {
             </div>
           )}
           {loading ? (
-            <LoadingSkeleton label="Loading leave requests" />
+            isCompact ? <LoadingSkeleton label="Loading leave requests" /> : <div className={s.tableWrap} role="status" aria-label="Loading leave requests" aria-busy="true">
+              <table className={s.table}><thead><tr>{[...(isMgr ? ['Employee'] : []), 'Type', 'Dates', 'Status', 'Source / impact', 'Submitted', ...(isMgr ? ['Actions'] : [])].map(label => <th key={label}>{label}</th>)}</tr></thead>
+                <tbody aria-hidden="true">{[0, 1, 2].map(row => <tr key={row}>{Array.from({ length: isMgr ? 7 : 5 }, (_, column) => <td key={column}><div className={s.recordSkeleton} /></td>)}</tr>)}</tbody>
+              </table>
+            </div>
           ) : filtered.length === 0 ? (
             <EmptyState
               title={hasActiveFilters ? 'No leave & absence matches those filters' : isMgr && filter === 'pending' ? 'All caught up' : 'Nothing here yet'}
@@ -683,14 +681,14 @@ export default function Leave() {
             />
           ) : isCompact ? (() => {
             return (
-              <div className={t.cardList}>
+              <div className={s.requestList}>
                 {filtered.map(r => {
                   const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
                   const meta = parseSicknessMeta(r.sickness_meta);
                   const isSick = r.leave_type === 'sick';
                   const linked = isSick && detectLinkedSickness(r);
                   const lifecycle = r.lifecycle_status as SicknessLifecycleStatus | null;
-                  const dateLabel = `${fmtDate(r.start_date, 'd MMM')} → ${fmtDate(r.end_date, 'd MMM yyyy')}`;
+                  const dateLabel = r.start_date === r.end_date ? fmtDate(r.start_date, 'd MMM yyyy') : `${fmtDate(r.start_date, 'd MMM')} → ${fmtDate(r.end_date, 'd MMM yyyy')}`;
                   const metaParts = [
                     durationLabel(r),
                     isMgr ? (r.primary_store?.name ?? null) : null,
@@ -701,11 +699,11 @@ export default function Leave() {
                   return (
                     <div
                       key={r.id}
-                      className={t.memberCard}
+                      className={s.requestCard}
                       role="button"
                       tabIndex={0}
                       onClick={() => openLeaveDetails(r)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLeaveDetails(r); } }}
+                      onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLeaveDetails(r); } }}
                       aria-label={`Open details for ${TYPE_LABEL[r.leave_type]} leave ${dateLabel}`}
                     >
                       {isMgr ? (
@@ -713,12 +711,12 @@ export default function Leave() {
                       ) : (
                         <TypeIcon type={r.leave_type} />
                       )}
-                      <div className={t.memberMain}>
-                        <span className={t.memberName}>
+                      <div className={s.requestMain}>
+                        <span className={s.requestName}>
                           {isMgr ? (r.profiles?.full_name ?? 'Employee') : TYPE_LABEL[r.leave_type]}
                         </span>
-                        <span className={t.memberMeta}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{dateLabel}</span>
+                        <span className={s.requestMeta}>
+                          <span className={s.requestDates}>{dateLabel}</span>
                           {metaParts.map((part, i) => (
                             <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               <span className={t.memberDot} />
@@ -726,11 +724,8 @@ export default function Leave() {
                             </span>
                           ))}
                         </span>
-                        <div className={t.memberBadges}>
-                          <Badge tone={TYPE_TONE[r.leave_type]}>
-                            <TypeIcon type={r.leave_type} />
-                            {TYPE_LABEL[r.leave_type]}
-                          </Badge>
+                        <div className={s.requestBadges}>
+                          {isMgr && <span className={s.typeLabel}><TypeIcon type={r.leave_type} />{TYPE_LABEL[r.leave_type]}</span>}
                           {isSick ? (
                             <Badge tone={lifecycle ? SICKNESS_LIFECYCLE_TONE[lifecycle] : 'info'} dot>
                               {lifecycle ? SICKNESS_LIFECYCLE_LABEL[lifecycle] : 'Recorded absence'}
@@ -745,6 +740,7 @@ export default function Leave() {
                           )}
                         </div>
                       </div>
+                      {isMgr && canReviewPending && <button type="button" className={s.reviewLink} onClick={event => { event.stopPropagation(); openReview(r, 'approved'); }}>Review request</button>}
                       {hasMenu && (
                         <div onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
@@ -788,11 +784,11 @@ export default function Leave() {
               <thead>
                 <tr>
                   {isMgr && <th>Employee</th>}
-                  {isMgr && <th>Store</th>}
+
                   <th>Type</th>
                   <th>Dates</th>
                   <th>Status</th>
-                  <th>Operational impact</th>
+                  <th>Source / impact</th>
                   <th>Submitted</th>
                   {hasAnyActions && <th aria-label="Actions" />}
                 </tr>
@@ -818,24 +814,20 @@ export default function Leave() {
                         <td>
                           <div className={s.who}>
                             <Avatar name={r.profiles?.full_name ?? undefined} size="sm" />
-                            <span>{r.profiles?.full_name ?? 'Employee'}</span>
+                            <div><span>{r.profiles?.full_name ?? 'Employee'}</span><div className={s.muted}>{r.primary_store?.name ?? '—'}</div></div>
                           </div>
                         </td>
                       )}
-                      {isMgr && <td className={s.muted}>{r.primary_store?.name ?? '—'}</td>}
                       <td>
                         <div className={s.typeCell}>
-                          <Badge tone={TYPE_TONE[r.leave_type]}>
-                            <TypeIcon type={r.leave_type} />
-                            {TYPE_LABEL[r.leave_type]}
-                          </Badge>
+                          <span className={s.typeLabel}><TypeIcon type={r.leave_type} />{TYPE_LABEL[r.leave_type]}</span>
                           {isSick && meta.category && (
                             <span className={s.muted}>{SICKNESS_CATEGORY_LABEL[meta.category]}</span>
                           )}
                         </div>
                       </td>
                       <td className={s.dates}>
-                        <div className={s.dateRange}>{fmtDate(r.start_date, 'd MMM')} → {fmtDate(r.end_date, 'd MMM yyyy')}</div>
+                        <div className={s.dateRange}>{r.start_date === r.end_date ? fmtDate(r.start_date, 'd MMM yyyy') : `${fmtDate(r.start_date, 'd MMM')} → ${fmtDate(r.end_date, 'd MMM yyyy')}`}</div>
                         <div className={s.muted}>{durationLabel(r)}</div>
                       </td>
                       <td>
@@ -877,9 +869,7 @@ export default function Leave() {
                       </td>
                       <td>
                         <div className={s.impactCell}>
-                          <Badge tone={r.source === 'employee_request' ? 'neutral' : SOURCE_TONE[r.source]}>
-                            {SOURCE_LABEL[r.source]}
-                          </Badge>
+                          <span>{SOURCE_LABEL[r.source]}</span>
                           {r.status === 'approved' && (
                             <span className={s.muted}>Shifts returned to open coverage</span>
                           )}
@@ -902,6 +892,8 @@ export default function Leave() {
                         <td className={s.actions}>
                           {canReviewPending ? (
                             <div className={s.actionsInner} onClick={(e) => e.stopPropagation()}>
+                              <button type="button" className={s.reviewLink} onClick={() => openReview(r, 'approved')}>Approve</button>
+                              <button type="button" className={s.declineLink} onClick={() => openReview(r, 'rejected')}>Decline</button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <button
@@ -932,8 +924,10 @@ export default function Leave() {
             );
           })()}
 
-        </Card>
+        </div>
       )}
+
+      </section>
 
       {/* Request modal */}
       <Modal

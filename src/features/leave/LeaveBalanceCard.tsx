@@ -28,9 +28,9 @@ export function LeaveBalanceCard({ balance, loading, patternMissing, error, titl
       ) : (
         <div className={`${s.wrap} ${compact ? s.compact : ''}`}>
           <div className={s.stats}>
-            <Stat label={balance.remaining < 0 ? 'Over entitlement' : 'Remaining'} value={`${Math.abs(balance.remaining)} days`} accent danger={balance.remaining < 0} />
-            <Stat label="Taken" value={`${balance.taken} days`} />
-            <Stat label="Entitlement" value={`${balance.entitlement} days`} muted />
+            <Stat label={balance.remaining < 0 ? 'Over entitlement' : 'Remaining'} value={`${Math.abs(balance.remaining)} ${Math.abs(balance.remaining) === 1 ? 'day' : 'days'}`} accent danger={balance.remaining < 0} />
+            <Stat label="Taken" value={`${balance.taken} ${balance.taken === 1 ? 'day' : 'days'}`} />
+            <Stat label="Entitlement" value={`${balance.entitlement} ${balance.entitlement === 1 ? 'day' : 'days'}`} muted />
           </div>
           <Bar entitlement={balance.entitlement} taken={balance.taken} pending={balance.pending} />
           <div className={s.legend}>

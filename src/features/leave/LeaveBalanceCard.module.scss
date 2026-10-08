@@ -58,3 +58,12 @@
   .statValue, .statLabel { color: var(--color-danger-text, #991b1b); }
 }
 @media (prefers-reduced-motion: reduce) { .barTaken, .barPending { transition: none; } }
+
+// Flat, labelled metrics preserve the balance's meaning without nested tiles.
+.stat { background: transparent; border-radius: 0; padding: 0 $sp-3 0 0; gap: $sp-1; border-right: 1px solid var(--color-border, $border); &:last-child { border-right: 0; padding-right: 0; } }
+.statLabel { font-size: 12px; font-weight: $fw-medium; }
+.statValue { font-size: $fs-lg; font-variant-numeric: tabular-nums; }
+.accent { background: transparent; .statLabel { color: var(--color-text-secondary, $text-muted); } .statValue { color: var(--color-text-primary, $text); } }
+.bar { height: 8px; }
+.danger { background: transparent; .statValue, .statLabel { color: var(--color-danger-text, #991b1b); } }
+@media (max-width: 720px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: $sp-2; } .stat { padding: 0 $sp-2 0 0; } .statValue { font-size: 18px; } .stat.muted { grid-column: auto; flex-direction: column; align-items: flex-start; padding: 0; gap: $sp-1; .statValue { font-size: 18px; } } }

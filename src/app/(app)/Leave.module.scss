@@ -594,3 +594,41 @@
 .toggleLabel {
   user-select: none;
 }
+
+// One connected records surface keeps controls close to the affected records.
+.recordsPanel { min-width: 0; background: var(--color-surface, $surface); border: 1px solid var(--color-border, $border); border-radius: $r-md; }
+.recordsContent { min-width: 0; }
+.recordsError { padding: $sp-4; }
+.tabs { background: transparent; border-radius: 0; padding: 0 $sp-4; align-self: auto; border-bottom: 1px solid var(--color-border, $border); gap: $sp-3; }
+.tab { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: $sp-2 0; border-radius: 0; border-bottom: 2px solid transparent; &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: -3px; } }
+.tabActive { box-shadow: none; border-bottom-color: var(--color-primary, $brand-500); color: var(--color-primary, $brand-500); background: transparent; }
+.tabCount { font-size: 12px; line-height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-surface-muted, $ink-50); font-variant-numeric: tabular-nums; }
+.tabActive .tabCount { background: var(--color-row-hover, $brand-50); }
+.recordFilters { padding: $sp-3 $sp-4; border-bottom: 1px solid var(--color-border, $border); }
+.employeeSearch { max-width: 320px; flex: 1; min-width: 160px; }
+.filterActions { margin-left: auto; }
+.personalOverview { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: $sp-4; > * { min-width: 0; } }
+.upcomingTitle { font-size: $fs-lg; font-weight: $fw-semibold; }
+.upcomingEyebrow { text-transform: none; letter-spacing: 0; font-size: $fs-sm; color: var(--color-text-primary, $text); }
+.table { min-width: 800px; th, td { padding: $sp-3 $sp-4; } th { text-transform: none; letter-spacing: 0; font-weight: $fw-medium; } tbody tr:nth-child(even) td { background: transparent; } }
+.dates { font-weight: $fw-medium; }
+.typeCell { flex-direction: column; align-items: flex-start; }
+.typeLabel { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm; svg { flex-shrink: 0; margin: 0; } }
+.noteButton, .indicator { font-size: 12px; text-transform: none; letter-spacing: 0; }
+.noteButton { min-height: 32px; }
+.actions { min-width: 0; }
+.actionsInner { display: flex; align-items: center; gap: 4px; }
+.reviewLink, .declineLink { border: 0; background: transparent; padding: $sp-2; min-height: 44px; font: inherit; font-size: $fs-sm; font-weight: $fw-medium; cursor: pointer; color: var(--color-primary, $brand-600); border-radius: $r-sm; white-space: nowrap; &:hover { background: var(--color-row-hover, $brand-50); } &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: -2px; } }
+.declineLink { color: var(--color-text-secondary, $text-muted); }
+.requestList { display: flex; flex-direction: column; padding: $sp-3; gap: $sp-3; }
+.requestCard { display: grid; grid-template-columns: 32px minmax(0, 1fr) 44px; align-items: start; gap: $sp-2; border: 1px solid var(--color-border, $border); border-radius: $r-md; padding: $sp-3; cursor: pointer; background: var(--color-surface, $surface); &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: 2px; } &:hover { border-color: var(--color-border-strong, $border-strong); } > .reviewLink { grid-column: 1 / -1; justify-self: stretch; text-align: left; border-top: 1px solid var(--color-border, $border); border-radius: 0; margin: 0 (-$sp-3) (-$sp-3); padding: $sp-2 $sp-3; } > div:last-child:not(.requestMain) { grid-column: 3; grid-row: 1; } }
+.requestMain { min-width: 0; display: flex; flex-direction: column; gap: $sp-2; }
+.requestName { color: var(--color-text-primary, $text); font-size: $fs-sm; font-weight: $fw-semibold; overflow-wrap: anywhere; }
+.requestMeta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; color: var(--color-text-secondary, $text-muted); }
+.requestDates { width: 100%; font-size: $fs-sm; font-weight: $fw-semibold; color: var(--color-text-primary, $text); }
+.requestBadges { display: flex; flex-wrap: wrap; align-items: center; gap: $sp-2; }
+@media (max-width: 1023px) { .personalOverview { grid-template-columns: minmax(0, 1fr); } .headerActions > button { min-height: 44px; } }
+@media (max-width: 540px) { .tabs { gap: $sp-3; padding: 0 $sp-3; } .tab { font-size: 12px; } .recordFilters { padding: $sp-3; } .requestBadges { flex-direction: column; align-items: flex-start; } .header { align-items: center; } .h1 { font-size: 24px; } .sub { font-size: 12px; } .filterActions { width: auto; } }
+.requestCard button[aria-label="Open actions"] { width: 44px; height: 44px; }
+.tabs { scrollbar-width: thin; &::-webkit-scrollbar { display: block; height: 3px; } &::-webkit-scrollbar-thumb { background: var(--color-border, $border); border-radius: 3px; } }
+.recordSkeleton { min-height: 18px; margin: $sp-2 0; width: 85%; border-radius: 4px; background: var(--color-surface-muted, $ink-100); }
