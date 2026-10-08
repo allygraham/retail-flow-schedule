@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, HeartPulse, Info, Plane, Plus, UserRound } from 'lucide-react';
+import { ArrowLeft, CalendarDays, HeartPulse, Info, Plane, UserRound } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/authContext';
@@ -82,7 +82,7 @@ export default function StaffHistory() {
     <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
       <div className={s.headerActions}><div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
         {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
-      </Select></Field></div><Button disabled={loading || !!loadError || !data} onClick={() => setAddingLeave(true)}><Plus size={16} aria-hidden /> Add leave</Button></div>
+      </Select></Field></div><Button disabled={loading || !!loadError || !data} onClick={() => setAddingLeave(true)}>Add leave</Button></div>
     </header>
     {addingLeave && userId && data && <AddStaffLeaveModal userId={userId} name={data.name} onClose={() => setAddingLeave(false)} onSaved={reload} />}
     {error && <DataLoadError message={error} retry={reload} />}
