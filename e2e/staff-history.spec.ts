@@ -33,6 +33,17 @@ for (const width of [1280, 390]) test(`owner can open staff history and change y
     expect(annualSummary?.width).toBeCloseTo(annualRecord!.width, 0);
     expect(annualSummary?.width).toBeCloseTo(sickSummary!.width, 0);
   }
+  if (width === 390) {
+    const annualSummary = await page.locator('section[aria-labelledby="leave-summary-title"]').boundingBox();
+    const annualRecord = await page.getByRole('region', { name: 'Annual leave record', exact: true }).boundingBox();
+    const sickSummary = await page.locator('section[aria-labelledby="sickness-summary-title"]').boundingBox();
+    const sickRecord = await page.getByRole('region', { name: 'Sickness record', exact: true }).boundingBox();
+    expect(annualRecord!.width).toBeCloseTo(annualSummary!.width, 0);
+    expect(sickRecord!.width).toBeCloseTo(annualSummary!.width, 0);
+    expect(annualRecord!.y).toBeGreaterThan(annualSummary!.y + annualSummary!.height);
+    expect(sickSummary!.y).toBeGreaterThan(annualRecord!.y + annualRecord!.height);
+    expect(sickRecord!.y).toBeGreaterThan(sickSummary!.y + sickSummary!.height);
+  }
   await expect(page.getByText('Allowance shown is the current entitlement in working days per leave year.')).toBeVisible();
   await expect(page.getByText('Taken', { exact: true }).locator('..')).toContainText('2');
   await page.getByLabel('Year', { exact: true }).selectOption('2025');

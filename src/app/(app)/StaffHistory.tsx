@@ -57,35 +57,8 @@ export default function StaffHistory() {
   const leaveValue = (count: number | undefined) => loading ? value(count) : <span className={s.leaveValue}>
     <span>{count ?? '—'}</span><span className={s.entitlement}>/ {data?.entitlement ?? '—'}</span>
   </span>;
-  return <div className={s.page}>
-    <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to team</Link>
-    <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
-      <div className={s.headerActions}><div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
-        {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
-      </Select></Field></div><Button disabled={loading || !!loadError || !data} onClick={() => setAddingLeave(true)}><Plus size={16} aria-hidden /> Add leave</Button></div>
-    </header>
-    {addingLeave && userId && data && <AddStaffLeaveModal userId={userId} name={data.name} onClose={() => setAddingLeave(false)} onSaved={reload} />}
-    {error && <DataLoadError message={error} retry={reload} />}
-    <div className={s.overview}>
-      <section className={s.summarySection} aria-labelledby="leave-summary-title">
-        <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
-        <div className={s.stats}>
-      <Stat label="Taken" value={leaveValue(summary?.taken)} hint="Approved through today" />
-      <Stat label="Booked" value={leaveValue(summary?.booked)} hint="Approved future days" />
-      <Stat label="Pending" value={leaveValue(summary?.pending)} hint="Days awaiting approval" />
-        </div>
-        <p className={s.allowanceNote}>Allowance shown is the current entitlement in working days per leave year.</p>
-      </section>
-      <section className={`${s.summarySection} ${s.sicknessSection}`} aria-labelledby="sickness-summary-title">
-        <div className={s.sectionHead}><span className={s.sectionIcon}><HeartPulse size={18} aria-hidden /></span><div><h2 id="sickness-summary-title">Sickness</h2><p>{period.label} · absence overview</p></div></div>
-        <div className={s.sicknessStats}>
-      <Stat label="Sickness days" value={value(summary?.sickDays)} hint="Approved calendar days through today" />
-      <Stat label="Sickness spells" value={value(summary?.sickSpells)} hint="Approved absences overlapping this year" />
-        </div>
-      </section>
-    </div>
-    <div className={s.records}>
-      {(['annual', 'sick'] as const).map(type => <Card key={type} role="region" aria-label={type === 'annual' ? 'Annual leave record' : 'Sickness record'} title={<span className={s.recordHeading}>{type === 'annual' ? <Plane size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
+  const recordPanel = (type: 'annual' | 'sick') => (
+<Card className={type === 'annual' ? s.annualRecord : s.sickRecord} role="region" aria-label={type === 'annual' ? 'Annual leave record' : 'Sickness record'} title={<span className={s.recordHeading}>{type === 'annual' ? <Plane size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
         {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p className={s.note}>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
           <ul className={s.list}>{records.filter(row => row.leave_type === type).map(row => {
             const meta = parseSicknessMeta(row.sickness_meta);
@@ -102,7 +75,36 @@ export default function StaffHistory() {
               <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
             </li>;
           })}</ul>}
-      </Card>)}
+      </Card>
+  );
+  return <div className={s.page}>
+    <Link className={s.backLink} to="/team"><ArrowLeft size={15} aria-hidden /> Back to team</Link>
+    <header className={s.header}><div className={s.identity}><span className={s.personIcon}><UserRound size={24} aria-hidden /></span><div><span className={s.eye}>Staff history</span><h1 className={s.h1}>{data?.name ?? 'Staff history'}</h1><p className={s.sub}>Annual leave and sickness by leave year</p></div></div>
+      <div className={s.headerActions}><div className={s.yearPicker}><Field label="Year"><Select value={year} onChange={event => setYear(Number(event.target.value))}>
+        {[...years].sort((a, b) => b - a).map(y => <option key={y} value={y}>{leavePeriodForYear(business, y).label}</option>)}
+      </Select></Field></div><Button disabled={loading || !!loadError || !data} onClick={() => setAddingLeave(true)}><Plus size={16} aria-hidden /> Add leave</Button></div>
+    </header>
+    {addingLeave && userId && data && <AddStaffLeaveModal userId={userId} name={data.name} onClose={() => setAddingLeave(false)} onSaved={reload} />}
+    {error && <DataLoadError message={error} retry={reload} />}
+    <div className={s.contentGrid}>
+      <section className={`${s.summarySection} ${s.annualSummary}`} aria-labelledby="leave-summary-title">
+        <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
+        <div className={s.stats}>
+      <Stat label="Taken" value={leaveValue(summary?.taken)} hint="Approved through today" />
+      <Stat label="Booked" value={leaveValue(summary?.booked)} hint="Approved future days" />
+      <Stat label="Pending" value={leaveValue(summary?.pending)} hint="Days awaiting approval" />
+        </div>
+        <p className={s.allowanceNote}>Allowance shown is the current entitlement in working days per leave year.</p>
+      </section>
+      {recordPanel('annual')}
+      <section className={`${s.summarySection} ${s.sicknessSection} ${s.sickSummary}`} aria-labelledby="sickness-summary-title">
+        <div className={s.sectionHead}><span className={s.sectionIcon}><HeartPulse size={18} aria-hidden /></span><div><h2 id="sickness-summary-title">Sickness</h2><p>{period.label} · absence overview</p></div></div>
+        <div className={s.sicknessStats}>
+      <Stat label="Sickness days" value={value(summary?.sickDays)} hint="Approved calendar days through today" />
+      <Stat label="Sickness spells" value={value(summary?.sickSpells)} hint="Approved absences overlapping this year" />
+        </div>
+      </section>
+      {recordPanel('sick')}
     </div>
     <div className={s.guidance}><Info size={18} aria-hidden /><p className={s.note}>Annual leave uses the working pattern saved when it was approved. Records spanning two leave years appear in both periods; each period’s totals count only its own dates. Pending, declined and cancelled records are shown but are excluded from taken and sickness totals.</p></div>
   </div>;
