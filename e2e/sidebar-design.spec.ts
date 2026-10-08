@@ -4,12 +4,19 @@ for (const width of [320, 390, 1440]) {
   test(`grouped sidebar follows the workspace palette at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 950 });
     await authenticate(page); await stubApi(page);
-    await page.route('**/rest/v1/business_branding*', route => route.fulfill({ json: { theme_key: 'topdrawer', primary_color: '#747C61', secondary_color: '#4C4E56', display_name: 'The Top Drawer' } }));
+    await page.route('**/rest/v1/business_branding*', route => route.fulfill({ json: { theme_key: 'topdrawer', primary_color: '#747C61', secondary_color: '#4C4E56', display_name: 'The Top Drawer', logo_url: '/test-workspace-logo.svg' } }));
+    await page.route('**/test-workspace-logo.svg', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="88" viewBox="0 0 280 88"><text x="0" y="48" fill="#747C61" font-size="28">THE TOP DRAWER</text></svg>' }));
     await page.goto('/team'); await expect(page.getByRole('heading', { name: 'Your people' })).toBeVisible();
     if (width < 768) await page.getByRole('button', { name: 'Open menu' }).click();
     const sidebar = width < 768 ? page.getByRole('dialog', { name: 'Main navigation' }) : page.getByRole('complementary');
     await expect(sidebar).toHaveCSS('background-color', 'rgb(76, 78, 86)');
     await expect(sidebar.getByRole('link', { name: 'The Top Drawer', exact: true })).toHaveCount(1);
+    const identity = sidebar.getByRole('link', { name: 'The Top Drawer', exact: true });
+    const logo = await identity.locator('img').boundingBox();
+    const name = await identity.getByText('The Top Drawer', { exact: true }).boundingBox();
+    expect(logo!.width).toBeGreaterThanOrEqual(120);
+    expect(name!.y).toBeGreaterThanOrEqual(logo!.y + logo!.height);
+    await expect(identity.getByText('Owner', { exact: false })).toHaveText('owner');
     const nav = sidebar.getByRole('navigation', { name: 'Primary navigation' });
     for (const label of ['Work', 'Manage', 'Account']) await expect(nav.getByRole('group', { name: label })).toBeVisible();
     const active = nav.getByRole('link', { name: 'Team', exact: true });
