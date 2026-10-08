@@ -14,10 +14,10 @@ for (const width of [320, 390, 1440]) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await authenticate(page); await stubApi(page); await page.goto('/team');
     await expect(page.getByText('employee@example.test')).toBeVisible();
-    for (const [type, color] of [['success', 'rgb(74, 222, 128)'], ['error', 'rgb(251, 113, 133)'], ['info', 'rgb(96, 165, 250)'], ['warning', 'rgb(251, 191, 36)']]) {
+    for (const [type, color] of [['success', 'rgb(34, 197, 94)'], ['error', 'rgb(239, 68, 68)'], ['info', 'rgb(91, 95, 239)'], ['warning', 'rgb(245, 158, 11)']]) {
       await showToast(page, type, 'Changes saved', 'Your changes are available to the team.');
       const notification = page.locator('[data-sonner-toast]').filter({ hasText: 'Changes saved' });
-      await expect(notification).toHaveCSS('background-color', 'rgb(17, 24, 39)');
+      await expect(notification).toHaveCSS('background-color', 'rgb(15, 23, 42)');
       await expect(notification).toHaveCSS('border-left-color', color);
       await expect(notification).toBeInViewport();
       await expect.poll(async () => (await notification.boundingBox())?.y ?? 0).toBeGreaterThanOrEqual(width < 600 ? 60 : 20);
@@ -46,5 +46,30 @@ test('existing invitation-copy confirmation uses the styled toast', async ({ pag
   await page.goto('/team');
   await page.getByRole('button', { name: 'Open actions for New Person' }).click();
   await page.getByRole('menuitem', { name: 'Copy link', exact: true }).click();
-  await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'Invite link copied' })).toHaveCSS('background-color', 'rgb(17, 24, 39)');
+  await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'Invite link copied' })).toHaveCSS('background-color', 'rgb(15, 23, 42)');
+});
+
+for (const [theme, background, primary] of [['forest', 'rgb(5, 46, 22)', 'rgb(22, 163, 74)'], ['sunset', 'rgb(67, 20, 7)', 'rgb(249, 115, 22)'], ['topdrawer', 'rgb(76, 78, 86)', 'rgb(116, 124, 97)']]) {
+  test(`toast follows the ${theme} workspace palette`, async ({ page }) => {
+    await authenticate(page); await stubApi(page);
+    await page.route('**/rest/v1/business_branding*', route => route.fulfill({ json: { theme_key: theme, secondary_color: '#' + background.match(/\d+/g)!.map(value => Number(value).toString(16).padStart(2, '0')).join(''), primary_color: '#' + primary.match(/\d+/g)!.map(value => Number(value).toString(16).padStart(2, '0')).join('') } }));
+    await page.goto('/team'); await expect(page.getByText('employee@example.test')).toBeVisible();
+    await showToast(page, 'info', 'Theme confirmation', 'Palette matches this workspace.', true);
+    const notification = page.locator('[data-sonner-toast]');
+    await expect(notification).toHaveCSS('background-color', background);
+    await expect(notification).toHaveCSS('border-left-color', primary);
+    await expect(notification.getByRole('button', { name: 'Confirm', exact: true })).toHaveCSS('background-color', primary);
+  });
+}
+test('custom light toast and action colours keep readable foregrounds', async ({ page }) => {
+  await authenticate(page); await stubApi(page);
+  await page.route('**/rest/v1/business_branding*', route => route.fulfill({ json: { theme_key: 'default', primary_color: '#FDE047', secondary_color: '#F5EBDC' } }));
+  await page.goto('/team'); await expect(page.getByText('employee@example.test')).toBeVisible();
+  await showToast(page, 'info', 'Custom theme', 'Readable on a light custom background.', true);
+  const notification = page.locator('[data-sonner-toast]');
+  await expect(notification).toHaveCSS('background-color', 'rgb(245, 235, 220)');
+  await expect(notification).toHaveCSS('color', 'rgb(0, 0, 0)');
+  const action = notification.getByRole('button', { name: 'Confirm', exact: true });
+  await expect(action).toHaveCSS('background-color', 'rgb(253, 224, 71)');
+  await expect(action).toHaveCSS('color', 'rgb(0, 0, 0)');
 });

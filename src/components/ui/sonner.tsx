@@ -1,10 +1,17 @@
 import { CircleCheck, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
 import { Toaster as Sonner } from 'sonner';
 import s from './sonner.module.scss';
+import { buildThemeStyle, useOptionalBranding } from '@/features/branding/brandingContext';
+import { readableForeground } from '@/features/branding/contrast';
+import { DEFAULT_THEME } from '@/features/branding/types';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-const Toaster = (props: ToasterProps) => (
+const Toaster = ({ style, ...props }: ToasterProps) => {
+  const branding = useOptionalBranding();
+  const tokens = buildThemeStyle(branding?.theme ?? DEFAULT_THEME);
+  const toastStyle = { ...tokens, '--toast-foreground': readableForeground(tokens['--color-sidebar']), '--toast-action-foreground': readableForeground(tokens['--color-primary']), ...style };
+  return (
   <Sonner
     theme="dark"
     position="top-right"
@@ -17,8 +24,10 @@ const Toaster = (props: ToasterProps) => (
     className={s.toaster}
     icons={{ success: <CircleCheck size={24} />, error: <CircleAlert size={24} />, warning: <TriangleAlert size={24} />, info: <Info size={24} />, close: <X size={18} /> }}
     toastOptions={{ classNames: { toast: s.toast, title: s.title, description: s.description, icon: s.icon, content: s.content, closeButton: s.close, actionButton: s.action, cancelButton: s.cancel } }}
+    style={toastStyle}
     {...props}
   />
-);
+  );
+};
 
 export { Toaster };
