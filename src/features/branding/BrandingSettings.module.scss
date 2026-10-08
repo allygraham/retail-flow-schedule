@@ -164,3 +164,24 @@
   .swatches { grid-template-columns: 1fr; }
   .previewCardRow { grid-template-columns: 1fr; }
 }
+
+.customisation { border: 1px solid var(--color-border, $border); border-radius: $r-md; padding: $sp-4;
+  summary { display: flex; align-items: center; justify-content: space-between; gap: $sp-3; cursor: pointer; font-size: $fs-sm; font-weight: $fw-semibold; color: var(--color-text-primary, $text); min-height: 44px; list-style: none;
+    &::-webkit-details-marker { display: none; }
+    &:focus-visible { @include focus-ring; }
+  }
+  &[open] summary { margin-bottom: $sp-4; svg { transform: rotate(180deg); } }
+}
+@media (max-width: 720px) {
+  .themeGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $sp-3; }
+  .themeCard { gap: $sp-2; padding: $sp-2; min-width: 0; }
+  .themePreview { height: 76px; grid-template-columns: 28px 1fr; }
+  .themePreviewSidebar { padding: 6px; gap: 6px; }
+  .previewLogoMark { width: 16px; }
+  .themePreviewBody { padding: 6px; gap: 6px; }
+  .previewBadgeRow, .previewMiniTable, .themeDesc { display: none; }
+  .themeMeta { flex-wrap: wrap; gap: $sp-1; }
+  .themeName { font-size: $fs-sm; }
+  .selectedPill { font-size: $fs-xs; padding: 2px 6px; }
+  .footer { flex-wrap: wrap; .dirty { flex-basis: 100%; } }
+}

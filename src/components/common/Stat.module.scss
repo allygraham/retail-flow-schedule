@@ -35,3 +35,10 @@
     .hint { font-size: $fs-xs; line-height: $lh-snug; margin-top: $sp-2; }
   }
 }
+
+.muted { background: var(--color-surface-muted, $ink-50); border-color: transparent; box-shadow: none;
+  .value { font-weight: $fw-semibold; color: var(--color-text-secondary, $text-muted); }
+}
+.attention { border-color: var(--color-warning, $warning); background: var(--color-warning-bg, #fef3c7);
+  .label { color: var(--color-warning-text, #92400e); font-weight: $fw-semibold; }
+}

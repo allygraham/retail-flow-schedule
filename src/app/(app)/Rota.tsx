@@ -1,3 +1,5 @@
+import { Info } from 'lucide-react';
+import { ScrollCue } from '@/components/common/ScrollCue';
 import RotaAbsenceDetails from '@/features/leave/RotaAbsenceDetails';
 import { parseSicknessMeta, type SicknessLifecycleStatus } from '@/features/leave/sickness';
 import type { LeaveSource } from '@/types/domain';
@@ -478,7 +480,7 @@ export default function Rota() {
                             style={{ borderLeftColor: roleById[sh.role_id ?? '']?.color ?? undefined }}
                           >
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0)}h</div>
+                            <div className={s.shiftMeta}>{stores.length > 1 && <>{storeById[sh.store_id]?.name} · </>}{hoursBetween(sh.start_time, sh.end_time, sh.break_minutes ?? 0)}h</div>
                             {conflictsFor(sh).length > 0 && <Badge tone="danger">⚠ {conflictsFor(sh).join(', ')}</Badge>}
                             {!sh.is_published && <Badge tone="warning">Draft</Badge>}
                           </div>
@@ -512,7 +514,7 @@ export default function Rota() {
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
                           <div className={`${s.shift} ${s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
-                            <div className={s.shiftMeta}>{storeById[sh.store_id]?.name} · {roleById[sh.role_id ?? '']?.name ?? 'Floor'}</div>
+                            <div className={s.shiftMeta}>{stores.length > 1 && <>{storeById[sh.store_id]?.name} · </>}{roleById[sh.role_id ?? '']?.name ?? 'Floor'}</div>
                             <Badge tone="unassigned" dot>Needs cover</Badge>
                           </div>
                         </DraggableShift>
@@ -533,11 +535,12 @@ export default function Rota() {
             )}
           </DragOverlay>
         </DndContext>
+        <ScrollCue target={gridRef} label={isMgr ? "rota columns and totals" : "rota days"} />
       </Card>
 
       {!gridBusy && filteredShifts.length === 0 && (
         <div className={s.emptyBanner}>
-          <span className={s.emptyIcon}>ℹ️</span>
+          <Info size={16} className={s.emptyIcon} aria-hidden />
           <span className={s.emptyText}>{isMgr ? 'No shifts this week — click any cell to add one.' : publication.some(status => status.is_published) ? 'No shifts scheduled for you this week.' : 'Your manager hasn\'t published this week yet.'}</span>
         </div>
       )}

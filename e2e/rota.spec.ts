@@ -97,10 +97,11 @@ test('failed swap keeps both original placements', async ({ page }) => {
 
 test('approved leave disables cell creation and drop assignment', async ({ page }) => {
   const state = await open(page); state.shifts = [shift()];
-  state.leaves = [{ user_id: employeeId, start_date: '2026-10-06', end_date: '2026-10-06', status: 'approved', leave_type: 'annual' }];
+  state.leaves = [{ id: 'approved-leave', business_id: businessId, user_id: employeeId, start_date: '2026-10-06', end_date: '2026-10-06', status: 'approved', leave_type: 'annual' }];
   await page.goto('/rota');
   await expect(cell(page, employeeId, '2026-10-06').getByText('Leave', { exact: true })).toBeVisible();
-  await cell(page, employeeId, '2026-10-06').click();
+  // Click cell padding: the absence button intentionally opens its details.
+  await cell(page, employeeId, '2026-10-06').click({ position: { x: 2, y: 2 } });
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await drag(page, shiftId, employeeId, '2026-10-06');
   await expect(cell(page, employeeId, monday).getByText('09:00–17:00')).toBeVisible();

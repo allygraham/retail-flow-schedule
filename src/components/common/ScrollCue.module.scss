@@ -1,0 +1,9 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+.cue { display: flex; align-items: center; justify-content: flex-end; gap: $sp-1; color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; padding: 0 $sp-2;
+  button { display: grid; place-items: center; width: 44px; height: 44px; background: transparent; border: 0; border-radius: $r-sm; color: var(--color-primary, $brand-600); cursor: pointer;
+    &:hover:not(:disabled) { background: var(--color-row-hover, $brand-50); }
+    &:disabled { opacity: .3; cursor: default; }
+    &:focus-visible { @include focus-ring; }
+  }
+}

@@ -4,7 +4,7 @@ import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Plane, ArrowRight, BellRing } from 'lucide-react';
+import { Calendar, Clock, MapPin, CalendarDays, ArrowRight, BellRing } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
 import { useNotifications } from '@/features/notifications/useNotifications';
@@ -93,7 +93,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
           <p className={`${s.sub} text-justify`}>{fmtDate(new Date(), 'EEEE, d MMMM yyyy')} · {businessName}</p>
         </div>
         <div className={s.quickActions}>
-          <Button variant="primary" leading={<Plane size={16} />} onClick={() => nav('/leave')}>Request time off</Button>
+          <Button variant="primary" leading={<CalendarDays size={16} />} onClick={() => nav('/leave')}>Request time off</Button>
           <Button variant="secondary" leading={<Calendar size={16} />} onClick={() => nav('/rota')}>View full rota</Button>
         </div>
       </header>
@@ -241,7 +241,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
             <ul className={s.list}>
               {nextApproved && (
                 <li className={s.row}>
-                  <div className={s.iconBubble}><Plane size={16} /></div>
+                  <div className={s.iconBubble}><CalendarDays size={16} /></div>
                   <div className={s.rowMain}>
                     <div className={s.rowName}>Next time off</div>
                     <div className={s.rowMeta}>{fmtDate(nextApproved.start_date)} → {fmtDate(nextApproved.end_date)} · {TYPE_LABEL[nextApproved.leave_type as keyof typeof TYPE_LABEL]}</div>
@@ -251,7 +251,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
               )}
               {pendingLeave.slice(0, 3).map(l => (
                 <li key={l.id} className={s.row}>
-                  <div className={s.iconBubble}><Plane size={16} /></div>
+                  <div className={s.iconBubble}><CalendarDays size={16} /></div>
                   <div className={s.rowMain}>
                     <div className={s.rowName}>{TYPE_LABEL[l.leave_type as keyof typeof TYPE_LABEL]}</div>
                     <div className={s.rowMeta}>{fmtDate(l.start_date)} → {fmtDate(l.end_date)}</div>
@@ -264,7 +264,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
                 .slice(0, 2)
                 .map(l => (
                   <li key={l.id} className={s.row}>
-                    <div className={s.iconBubble}><Plane size={16} /></div>
+                    <div className={s.iconBubble}><CalendarDays size={16} /></div>
                     <div className={s.rowMain}>
                       <div className={s.rowName}>{TYPE_LABEL[l.leave_type as keyof typeof TYPE_LABEL]}</div>
                       <div className={s.rowMeta}>{fmtDate(l.start_date)} → {fmtDate(l.end_date)}</div>
@@ -421,11 +421,11 @@ function ManagerDashboard() {
       )}
 
       <div className={s.stats}>
-        <Stat label="Working today" value={statValue(data.shiftsToday.filter((s) => s.assigned_user_id).length)} accent="success" hint="Across all stores" />
-        <Stat label="On annual leave" value={statValue(data.leaveApproved.length)} accent="brand" />
-        <Stat label="Off sick" value={statValue(data.sickToday.length)} accent="danger" />
-        <Stat label="Unassigned shifts" value={statValue(data.unassigned.length)} accent="warn" hint="Need cover" />
-        <Stat label="Pending requests" value={statValue(data.pendingLeave.length)} accent="warn" />
+        <Stat muted label="Working today" value={statValue(data.shiftsToday.filter((s) => s.assigned_user_id).length)} accent="success" hint="Across all stores" />
+        <Stat muted label="On annual leave" value={statValue(data.leaveApproved.length)} accent="brand" />
+        <Stat muted label="Off sick" value={statValue(data.sickToday.length)} accent="danger" />
+        <Stat muted={loading || !!loadError || data.unassigned.length === 0} attention={!loading && !loadError && data.unassigned.length > 0} label="Unassigned shifts" value={statValue(data.unassigned.length)} accent="warn" hint="Need cover" />
+        <Stat muted={loading || !!loadError || data.pendingLeave.length === 0} attention={!loading && !loadError && data.pendingLeave.length > 0} label="Pending requests" value={statValue(data.pendingLeave.length)} accent="warn" />
       </div>
 
       <div className={s.cols}>
@@ -450,7 +450,7 @@ function ManagerDashboard() {
           </DashboardContent>
         </Card>
 
-        <Card title="Pending leave requests" subtitle="Awaiting your review">
+        <Card className={!loading && !loadError && data.pendingLeave.length > 0 ? s.attentionCard : undefined} title="Pending leave requests" subtitle="Awaiting your review">
           <DashboardContent loading={loading} error={loadError} label="Loading pending leave requests">
           {data.pendingLeave.length === 0 ? (
             <EmptyState title="All caught up" description="No requests need attention." />
@@ -471,7 +471,7 @@ function ManagerDashboard() {
           </DashboardContent>
         </Card>
 
-        <Card title="Coverage gaps" subtitle="Upcoming unassigned shifts">
+        <Card className={!loading && !loadError && data.unassigned.length > 0 ? s.attentionCard : undefined} title="Coverage gaps" subtitle="Upcoming unassigned shifts">
           <DashboardContent loading={loading} error={loadError} label="Loading coverage gaps">
           {data.unassigned.length === 0 ? (
             <EmptyState title="Fully covered" description="No gaps in the published rota." />

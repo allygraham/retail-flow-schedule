@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { ScrollCue } from '@/components/common/ScrollCue';
+import { useEffect, useRef, useState } from 'react';
 import { Building2, Users, CalendarDays, Palette } from 'lucide-react';
 import { useAuth } from '@/features/auth/authContext';
 import { Card } from '@/components/common/Card';
@@ -22,6 +23,7 @@ const STORAGE_KEY = 'settings.activeSection';
 
 export default function Settings() {
   const { business, role } = useAuth();
+  const tabsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<SectionKey>(() => {
     if (typeof window === 'undefined') return 'business';
     const saved = window.sessionStorage.getItem(STORAGE_KEY) as SectionKey | null;
@@ -43,7 +45,7 @@ export default function Settings() {
       </header>
 
       {/* Mobile tabs */}
-      <div className={s.tabs} role="tablist" aria-label="Settings sections">
+      <div className={s.tabsWrap}><div ref={tabsRef} className={s.tabs} role="tablist" aria-label="Settings sections">
         {SECTIONS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -57,7 +59,7 @@ export default function Settings() {
             <span>{label}</span>
           </button>
         ))}
-      </div>
+      </div><ScrollCue target={tabsRef} label="settings" /></div>
 
       <div className={s.shell}>
         {/* Desktop / tablet side nav */}

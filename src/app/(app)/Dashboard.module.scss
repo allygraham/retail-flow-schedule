@@ -166,3 +166,5 @@
   border-radius: $r-sm;
   background: var(--color-surface-muted, $ink-100);
 }
+
+.attentionCard { border-color: var(--color-warning, $warning); box-shadow: inset 0 2px 0 var(--color-warning, $warning), $shadow-sm; }

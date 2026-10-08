@@ -131,3 +131,5 @@
   color: var(--color-text-primary, #{$text});
   strong { font-weight: $fw-semibold; color: var(--color-text-primary, #{$text}); margin-right: 6px; }
 }
+
+.tabsWrap { min-width: 0; @media (min-width: 900px) { display: none; } }

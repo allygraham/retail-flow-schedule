@@ -1,5 +1,5 @@
 import { Avatar } from '@/components/common/Avatar';
-import { ArrowLeft, CalendarDays, HeartPulse, Info, Plane } from 'lucide-react';
+import { ArrowLeft, CalendarDays, HeartPulse, Info } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/authContext';
@@ -59,7 +59,7 @@ export default function StaffHistory() {
     <span>{count ?? '—'}</span><span className={s.entitlement}>/ {data?.entitlement ?? '—'}</span>
   </span>;
   const recordPanel = (type: 'annual' | 'sick') => (
-<Card className={type === 'annual' ? s.annualRecord : s.sickRecord} role="region" aria-label={type === 'annual' ? 'Annual leave record' : 'Sickness record'} title={<span className={s.recordHeading}>{type === 'annual' ? <Plane size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
+<Card className={type === 'annual' ? s.annualRecord : s.sickRecord} role="region" aria-label={type === 'annual' ? 'Annual leave record' : 'Sickness record'} title={<span className={s.recordHeading}>{type === 'annual' ? <CalendarDays size={17} aria-hidden /> : <HeartPulse size={17} aria-hidden />}{type === 'annual' ? 'Annual leave record' : 'Sickness record'}</span>} subtitle={period.label}>
         {loading ? <LoadingSkeleton label={`Loading ${type} history`} /> : error ? <p className={s.note}>History unavailable</p> : records.filter(row => row.leave_type === type).length === 0 ? <EmptyState title="No records this year" /> :
           <ul className={s.list}>{records.filter(row => row.leave_type === type).map(row => {
             const meta = parseSicknessMeta(row.sickness_meta);
@@ -89,7 +89,7 @@ export default function StaffHistory() {
     {error && <DataLoadError message={error} retry={reload} />}
     <div className={s.contentGrid}>
       <section className={`${s.summarySection} ${s.annualSummary}`} aria-labelledby="leave-summary-title">
-        <div className={s.sectionHead}><span className={s.sectionIcon}><Plane size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
+        <div className={s.sectionHead}><span className={s.sectionIcon}><CalendarDays size={18} aria-hidden /></span><div><h2 id="leave-summary-title">Annual leave</h2><p>{period.label} · working days</p></div></div>
         <div className={s.stats}>
       <Stat compact label="Taken" value={leaveValue(summary?.taken)} hint="Approved through today" />
       <Stat compact label="Booked" value={leaveValue(summary?.booked)} hint="Approved future days" />

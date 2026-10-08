@@ -35,7 +35,7 @@ import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
-import { CalendarDays, HeartPulse, Plane, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen, MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
+import { CalendarDays, HeartPulse, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen, MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
@@ -77,7 +77,7 @@ const INITIAL_LEAVE_FILTERS: LeaveFilterState = {
 
 function TypeIcon({ type }: { type: LeaveType }) {
   if (type === 'sick') return <HeartPulse size={14} className={s.typeIcon} aria-hidden />;
-  if (type === 'annual') return <Plane size={14} className={s.typeIcon} aria-hidden />;
+  if (type === 'annual') return <CalendarDays size={14} className={s.typeIcon} aria-hidden />;
   if (type === 'unpaid') return <Coins size={14} className={s.typeIcon} aria-hidden />;
   return <CalendarDays size={14} className={s.typeIcon} aria-hidden />;
 }

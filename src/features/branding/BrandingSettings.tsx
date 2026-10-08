@@ -1,6 +1,6 @@
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Lock, Upload, Trash2 } from 'lucide-react';
+import { Check, Lock, Upload, Trash2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -133,9 +133,10 @@ export function BrandingSettings() {
                 className={`${s.themeCard} ${selected ? s.themeCardActive : ''}`}
                 onClick={() => applyPreset(preset.key)}
                 disabled={!canEdit || saving || uploading}
+                aria-label={preset.name}
                 aria-pressed={selected}
               >
-                <div className={s.themePreview} style={buildThemeStyle(themeFromPreset(preset.key))}>
+                <div aria-hidden="true" className={s.themePreview} style={buildThemeStyle(themeFromPreset(preset.key))}>
                   <div className={s.themePreviewSidebar}>
                     <span className={s.previewLogoMark} />
                     <span className={s.previewNavItem} />
@@ -172,6 +173,8 @@ export function BrandingSettings() {
           })}
         </div>
 
+        <details className={s.customisation}>
+          <summary>Theme details and workspace logo <ChevronDown size={16} aria-hidden /></summary>
         <div className={s.detailGrid}>
           <div className={s.section}>
             <div className={s.sectionTitle}>Live theme summary</div>
@@ -249,6 +252,8 @@ export function BrandingSettings() {
             </div>
           </div>
         </div>
+
+        </details>
 
         {error && <div className={s.error}>{error}</div>}
 
