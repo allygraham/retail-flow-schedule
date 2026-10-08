@@ -94,3 +94,27 @@ test('highlighted sticky name and hours columns remain opaque while scrolling', 
   }
   await page.screenshot({ path: test.info().outputPath('highlighted-sticky-columns.png'), fullPage: true });
 });
+
+
+test('Today badge sits beside the date and the column uses an outline without a tint', async ({ page }) => {
+  await stubApi(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/rota');
+  await expect(page.getByLabel('Weekly rota')).toHaveAttribute('aria-busy', 'false');
+  const header = page.locator('[data-today="true"]');
+  const badge = header.getByText('Today', { exact: true });
+  const date = header.getByText('5 Oct', { exact: true });
+  const badgeBox = await badge.boundingBox();
+  const dateBox = await date.boundingBox();
+  expect(badgeBox!.x).toBeGreaterThanOrEqual(dateBox!.x + dateBox!.width);
+  expect(Math.abs((badgeBox!.y + badgeBox!.height / 2) - (dateBox!.y + dateBox!.height / 2))).toBeLessThan(2);
+  const todayCell = page.locator(`[data-rota-cell="${employeeId}|2026-10-05"]`);
+  const tomorrowCell = page.locator(`[data-rota-cell="${employeeId}|2026-10-06"]`);
+  expect(await todayCell.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(await tomorrowCell.evaluate(el => getComputedStyle(el).backgroundColor));
+  expect(await todayCell.evaluate(el => getComputedStyle(el).boxShadow)).not.toBe('none');
+  for (const day of ['2026-10-10', '2026-10-11']) {
+    const weekend = page.locator(`[data-rota-cell="${employeeId}|${day}"]`);
+    expect(await weekend.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(await tomorrowCell.evaluate(el => getComputedStyle(el).backgroundColor));
+  }
+  await page.screenshot({ path: test.info().outputPath('today-column-outline.png'), fullPage: true });
+});

@@ -473,9 +473,9 @@ export default function Rota() {
               const dStr = isoDate(d);
               const hol = holidays.get(dStr);
               return (
-                <div key={dStr} className={`${s.gridHead} ${s.gridHeadDay} ${hol ? s.gridHeadDayHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''} ${d.getDay() === 0 || d.getDay() === 6 ? s.weekend : ''}`} data-today={dStr === isoDate(new Date()) || undefined}>
-                  <div className={s.dayName}>{format(d, 'EEE')}{dStr === isoDate(new Date()) && <span className={s.todayLabel}>Today</span>}</div>
-                  <div className={s.dayDate}>{format(d, 'd MMM')}</div>
+                <div key={dStr} className={`${s.gridHead} ${s.gridHeadDay} ${hol ? s.gridHeadDayHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''}`} data-today={dStr === isoDate(new Date()) || undefined}>
+                  <div className={s.dayName}>{format(d, 'EEE')}</div>
+                  <div className={s.dayDate}><span>{format(d, 'd MMM')}</span>{dStr === isoDate(new Date()) && <span className={s.todayLabel}>Today</span>}</div>
                   {!isMobile && isMgr && <div className={s.dailySummary} aria-label={`Summary for ${dStr}`}>
                     {gridBusy ? <span className={s.totalSkeleton} aria-hidden="true" /> : <>{dailySummary[dStr]?.people.size ?? 0} scheduled{(dailySummary[dStr]?.open ?? 0) > 0 && <span className={s.needsCover}>{(dailySummary[dStr]?.open ?? 0)} open</span>}</>}
                   </div>}
@@ -510,7 +510,7 @@ export default function Rota() {
                   const confirmed = relevantStores.length > 0 && relevantStores.every(id => publication.some(status => status.store_id === id && status.is_published));
                   return (
                     <DroppableCell key={dStr} id={`${p.user_id}|${dStr}`} disabled={gridBusy || !isMgr || !!onLeave}
-                      className={`${hol ? s.cellHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''} ${d.getDay() === 0 || d.getDay() === 6 ? s.weekend : ''}`}
+                      className={`${hol ? s.cellHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''}`}
                       onClick={() => !gridBusy && isMgr && cell.length === 0 && !onLeave && openCreate(dStr, p.user_id)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
                       {!gridBusy && !onLeave && cell.length === 0 && <span className={s.dayOff}>{confirmed ? 'Day off' : 'To be confirmed'}</span>}
@@ -555,7 +555,7 @@ export default function Rota() {
                   const hol = holidays.get(dStr);
                   return (
                     <DroppableCell key={dStr} id={`unassigned|${dStr}`} disabled={gridBusy || !isMgr}
-                      className={`${hol ? s.cellHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''} ${d.getDay() === 0 || d.getDay() === 6 ? s.weekend : ''}`}
+                      className={`${hol ? s.cellHoliday : ''} ${dStr === isoDate(new Date()) ? s.today : ''}`}
                       onClick={() => !gridBusy && isMgr && openCreate(dStr)}>
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
                       {!gridBusy && cell.map(sh => (

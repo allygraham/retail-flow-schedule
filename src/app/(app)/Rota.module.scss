@@ -75,7 +75,7 @@
   border-bottom-color: color-mix(in srgb, var(--color-warning, #d97706) 40%, transparent);
 }
 .dayName { color: var(--color-text-primary, $text); font-weight: $fw-bold; text-transform: none; letter-spacing: 0; font-size: $fs-sm; }
-.dayDate { color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
+.dayDate { display: flex; align-items: center; gap: 4px; min-height: 18px; white-space: nowrap; color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; margin-top: 2px; text-transform: none; letter-spacing: 0; font-weight: $fw-medium; }
 .holidayLabel {
   display: inline-flex;
   align-items: center;
@@ -184,9 +184,13 @@
 .staffFilters { display: flex; gap: $sp-3; align-items: center; flex-wrap: wrap; > input { max-width: 260px; } > select { max-width: 220px; } }
 .gridHeadTotal, .totalCell { background: var(--color-surface, $surface); position: sticky; right: 0; z-index: 2; box-shadow: -3px 0 5px rgb(0 0 0 / 4%); }
 .gridHeadTotal { z-index: 4; text-transform: none; letter-spacing: 0; }
-.today { background: color-mix(in srgb, var(--color-primary, #{$brand-500}) 7%, var(--color-surface, #{$surface})); }
-.weekend:not(.today):not(.cellHoliday):not(.gridHeadDayHoliday) { background: color-mix(in srgb, var(--color-text-secondary, #{$text-muted}) 3%, var(--color-surface, #{$surface})); }
-.todayLabel { display: block; font-size: 12px; color: var(--color-primary, $brand-500); margin-top: 4px; }
+.today {
+  --today-outline: color-mix(in srgb, var(--color-primary, #{$brand-500}) 65%, var(--color-surface, #{$surface}));
+  box-shadow: inset 1px 0 var(--today-outline), inset -1px 0 var(--today-outline);
+}
+.gridHeadDay.today { box-shadow: inset 1px 0 var(--today-outline), inset -1px 0 var(--today-outline), inset 0 1px var(--today-outline); }
+.contents:last-child > .cell.today { box-shadow: inset 1px 0 var(--today-outline), inset -1px 0 var(--today-outline), inset 0 -1px var(--today-outline); }
+.todayLabel { display: inline-flex; align-items: center; height: 18px; padding: 0 4px; border-radius: 999px; font-size: 12px; font-weight: $fw-semibold; line-height: 1; color: var(--color-primary, $brand-500); background: color-mix(in srgb, var(--color-primary, #{$brand-500}) 8%, var(--color-surface, #{$surface})); }
 .dailySummary { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 12px; font-weight: $fw-medium; text-transform: none; letter-spacing: 0; min-height: 18px; }
 .needsCover { color: var(--color-danger-text, #991b1b); }
 .contents:hover > .cell, .contents:focus-within > .cell { background-color: var(--color-row-hover, $brand-50); }
@@ -208,4 +212,3 @@
   background-color: var(--color-surface, $surface);
   background-image: linear-gradient(var(--color-surface-muted, #{$ink-50}), var(--color-surface-muted, #{$ink-50}));
 }
-.contents:hover > .cell.weekend, .contents:focus-within > .cell.weekend { background: var(--color-row-hover, $brand-50); }
