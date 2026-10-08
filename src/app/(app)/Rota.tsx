@@ -6,7 +6,7 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
 import type { ShiftRow } from '@/types/rows';
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/authContext';
@@ -94,6 +94,13 @@ export default function Rota() {
   const loadError = reference.error || week.error;
   const load = async () => { await Promise.all([reference.reload(), week.reload()]); };
   const { stores, roles, people } = reference.data ?? { stores: [], roles: [], people: [] };
+  const soleStoreId = stores.length === 1 ? stores[0].id : null;
+  useEffect(() => {
+    if (soleStoreId && storeFilter !== soleStoreId) {
+      setStoreFilter(soleStoreId);
+      sessionStorage.setItem('rota.storeFilter', soleStoreId);
+    }
+  }, [soleStoreId, storeFilter]);
   const { shifts, leave, publication } = useMemo(() => week.data ?? { shifts: [], leave: [], publication: [] }, [week.data]);
   const gridBusy = loading || holidays.loading;
   const gridRef = useRef<HTMLDivElement>(null);
@@ -380,11 +387,11 @@ export default function Rota() {
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(weekStartFor(new Date()))}>Current week</button>
             <button type="button" className={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
           </div>
-          <StoreSelect
+          {stores.length > 1 && <StoreSelect
             value={storeFilter}
             options={stores.map(st => ({ id: st.id, name: st.name }))}
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
-          />
+          />}
         </div>
         {isMgr && <div className={s.editActions} role="group" aria-label="Schedule actions">
           <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={gridBusy || !!loadError || !!holidays.error}>Copy previous week</Button>

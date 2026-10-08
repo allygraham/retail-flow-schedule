@@ -34,7 +34,7 @@ for (const width of [320, 390, 1280]) {
     await expect(navigation.getByRole('button', { name: 'Previous week' })).toBeVisible();
     await expect(actions.getByRole('button', { name: 'Copy previous week' })).toBeVisible();
     await expect(actions.getByRole('button', { name: 'Publish', exact: true })).toBeVisible();
-    await expect(controls.getByRole('button', { name: 'Main Store' })).toBeVisible();
+    await expect(controls.getByRole('button', { name: 'Main Store' })).toHaveCount(0);
     if (width <= 540) {
       expect((await actions.boundingBox())!.y).toBeGreaterThan((await navigation.boundingBox())!.y);
       for (const label of ['Previous week', 'Current week', 'Next week']) {
@@ -54,6 +54,6 @@ test('employees have week and store controls without manager actions', async ({ 
   await authenticate(page, employeeId); await stubApi(page);
   await page.goto('/rota');
   await expect(page.getByRole('group', { name: 'Week navigation' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Main Store' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Main Store' })).toHaveCount(0);
   await expect(page.getByRole('group', { name: 'Schedule actions' })).toHaveCount(0);
 });

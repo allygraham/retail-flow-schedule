@@ -189,6 +189,8 @@ test('failed validation download keeps the shift editor open and performs no wri
 
 test('week loading preserves the store, staff rows and seven-day grid', async ({ page }) => {
   const state = await open(page); state.shifts = [shift()];
+  await page.addInitScript(id => sessionStorage.setItem('rota.storeFilter', id), storeId);
+  await page.route('**/rest/v1/store_locations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ id: storeId, name: 'Main Store', is_active: true }, { id: 'second-store', name: 'Second Store', is_active: true }]) }));
   let storeReads = 0;
   page.on('request', request => { if (request.url().includes('/rest/v1/store_locations')) storeReads++; });
   await page.goto('/rota');
@@ -228,6 +230,8 @@ test('week loading preserves the store, staff rows and seven-day grid', async ({
 
 test('drag refresh keeps the grid visible without skeletons or reloading stores', async ({ page }) => {
   const state = await open(page); state.shifts = [shift()];
+  await page.addInitScript(id => sessionStorage.setItem('rota.storeFilter', id), storeId);
+  await page.route('**/rest/v1/store_locations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ id: storeId, name: 'Main Store', is_active: true }, { id: 'second-store', name: 'Second Store', is_active: true }]) }));
   let storeReads = 0;
   page.on('request', request => { if (request.url().includes('/rest/v1/store_locations')) storeReads++; });
   await page.goto('/rota');
@@ -349,4 +353,30 @@ for (const type of ['annual', 'sick']) test(`${type} details appear before the b
     finish();
     if (type === 'sick') await expect(dialog.getByLabel('Average weekly earnings (£)', { exact: true })).toBeVisible();
   } finally { finish(); }
+});
+
+
+for (const width of [390, 1280]) test(`sole store stays selected without a dropdown at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await open(page);
+  await page.addInitScript(() => sessionStorage.setItem('rota.storeFilter', 'old-store'));
+  await page.goto('/rota');
+  await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByRole('button', { name: 'Main Store', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'All stores', exact: true })).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('rota.storeFilter'))).toBe(storeId);
+  await expect(page.getByLabel('Weekly rota', { exact: true }).getByText('Test Employee', { exact: true })).toBeVisible();
+});
+
+for (const width of [390, 1280]) test(`multiple stores keep the rota filter at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await open(page);
+  await page.route('**/rest/v1/store_locations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ id: storeId, name: 'Main Store', is_active: true }, { id: 'second-store', name: 'Second Store', is_active: true }]) }));
+  await page.goto('/rota');
+  await page.getByRole('button', { name: 'All stores', exact: true }).click();
+  await page.getByRole('option', { name: 'Main Store', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Main Store', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('rota.storeFilter'))).toBe(storeId);
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Main Store', exact: true })).toBeVisible();
 });
