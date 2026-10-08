@@ -8,6 +8,7 @@ for (const width of [320, 390]) test(`calendar and rota remain usable at ${width
   await authenticate(page); const state = await stubApi(page);
   state.shifts = [{ id: shiftId, business_id: businessId, store_id: storeId, role_id: null, assigned_user_id: employeeId, shift_date: '2026-10-05', start_time: '09:00:00', end_time: '17:00:00', break_minutes: 30, status: 'scheduled', is_published: false, updated_at: '2026-10-04T00:00:00Z', notes: null }];
   await page.goto('/rota');
+  await page.getByRole('button', { name: 'Day', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Rota day' })).toBeVisible();
   await expect(page.locator('[data-rota-cell]')).toHaveCount(2);
   const card = page.locator(`[data-shift-id="${shiftId}"]`);

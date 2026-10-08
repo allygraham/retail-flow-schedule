@@ -1,0 +1,74 @@
+@use '@/styles/tokens' as *;
+@use '@/styles/mixins' as *;
+.root { @include col; gap: $sp-3; min-width: 0; }
+.card { @include card; box-shadow: none; min-width: 0; overflow: hidden; }
+.weekHeading, .openHeading { @include col; gap: $sp-1; padding-bottom: $sp-3;
+  h2 { margin: 0; font-size: $fs-md; font-weight: $fw-semibold; }
+  > span { font-size: $fs-sm; color: var(--color-text-secondary, $text-muted); }
+}
+.openHeading { padding: $sp-4; }
+.person { display: flex; align-items: center; gap: $sp-2; width: 100%; padding: $sp-4; min-height: 64px; border: none; background: transparent; cursor: pointer; text-align: left; color: var(--color-text-primary, $text);
+  &:focus-visible { @include focus-ring; }
+  &:hover { background: var(--color-surface-muted, $ink-50); }
+  > svg { flex-shrink: 0; color: var(--color-text-secondary, $text-muted); }
+}
+.name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: $fs-sm; font-weight: $fw-semibold; }
+.hours { white-space: nowrap; font-size: $fs-sm; font-weight: $fw-semibold; font-variant-numeric: tabular-nums; }
+.expanded { transform: rotate(180deg); }
+.summary { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--color-border, $border);
+  > li { min-width: 0; padding: $sp-2 2px; border-right: 1px solid var(--color-border, $border); text-align: center; &:last-child { border-right: 0; } }
+  time { display: flex; flex-direction: column; gap: 2px; font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); margin-bottom: $sp-2; }
+}
+.statuses { @include col; gap: 3px; }
+.status { display: block; padding: 3px 0; border-radius: 4px; background: var(--color-surface-muted, $ink-50); color: var(--color-text-secondary, $text-muted); font-size: $fs-xs; line-height: $lh-snug; overflow-wrap: anywhere; }
+.workStatus { background: var(--color-success-bg, #dcfce7); color: var(--color-success-text, #166534); }
+.leaveStatus { background: var(--color-row-hover, $brand-50); color: var(--color-primary, $brand-600); }
+.sickStatus { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); }
+.draftStatus { font-size: $fs-xs; line-height: $lh-snug; color: var(--color-warning-text, #92400e); background: var(--color-warning-bg, #fef3c7); border-radius: 4px; overflow-wrap: anywhere; }
+.conflictStatus { font-size: $fs-xs; line-height: $lh-snug; color: var(--color-danger-text, #991b1b); overflow-wrap: anywhere; }
+.agenda { list-style: none; padding: 0; margin: 0; }
+.day { display: flex; gap: $sp-3; min-height: 64px; padding: $sp-3; border-top: 1px solid var(--color-border, $border); }
+.staffWeek .day:first-child { border-top: 0; }
+.date { width: 36px; flex-shrink: 0; display: flex; flex-direction: column; gap: $sp-1; color: var(--color-text-secondary, $text-muted); font-size: $fs-xs;
+  strong { font-size: $fs-md; font-weight: $fw-medium; color: var(--color-text-primary, $text); }
+}
+.dayBody { min-width: 0; flex: 1; @include col; gap: $sp-2; }
+.shift { display: flex; align-items: center; justify-content: space-between; gap: $sp-2; width: 100%; min-height: 44px; text-align: left; padding: $sp-1 0; border: none; background: transparent; color: var(--color-text-primary, $text); cursor: pointer; touch-action: auto;
+  &:focus-visible { @include focus-ring; }
+  > svg { flex-shrink: 0; color: var(--color-text-secondary, $text-muted); }
+}
+.shiftMain { min-width: 0; @include col; gap: 3px; overflow-wrap: anywhere;
+  strong { font-size: $fs-md; font-weight: $fw-semibold; }
+  > span { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
+}
+.badges { display: flex; gap: $sp-1; flex-wrap: wrap; &:empty { display: none; } }
+.cancelled { .shiftMain > strong { text-decoration: line-through; } }
+.absence { display: flex; align-items: center; gap: $sp-2; width: 100%; min-height: 44px; border: 0; border-radius: $r-sm; padding: $sp-2; background: var(--color-row-hover, $brand-50); color: var(--color-primary, $brand-600); text-align: left; font-size: $fs-sm; font-weight: $fw-medium; cursor: pointer;
+  span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  svg { flex-shrink: 0; }
+  &:focus-visible { @include focus-ring; }
+}
+.sick { background: var(--color-danger-bg, #fee2e2); color: var(--color-danger-text, #991b1b); }
+.emptyDay { display: flex; align-items: center; justify-content: space-between; gap: $sp-2; min-height: 44px; color: var(--color-text-secondary, $text-muted); font-size: $fs-sm;
+  > span { min-width: 0; }
+  button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; font-size: $fs-xs; font-weight: $fw-medium; }
+}
+.emptyDay button, .addAnother, .addOpen { min-height: 44px; border: 0; border-radius: $r-sm; background: transparent; color: var(--color-primary, $brand-600); cursor: pointer;
+  &:focus-visible { @include focus-ring; }
+  &:hover { background: var(--color-row-hover, $brand-50); }
+}
+.addAnother { align-self: flex-start; font-size: $fs-xs; }
+.addOpen { display: inline-flex; align-items: center; gap: $sp-2; padding: $sp-2 $sp-4; font-size: $fs-sm; }
+.unassigned { border-color: var(--color-warning, $warning); .openHeading { background: var(--color-warning-bg, #fef3c7); } }
+.openShift { padding: $sp-3 $sp-4; border-top: 1px solid var(--color-border, $border); > span { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); } }
+.holiday { font-size: $fs-xs; font-weight: $fw-medium; color: var(--color-warning-text, #92400e); }
+.skeleton, .miniSkeleton, .hoursSkeleton { display: inline-block; border-radius: $r-sm; background: var(--color-surface-muted, $ink-100); }
+.skeleton { height: 52px; width: 100%; }
+.miniSkeleton { height: 22px; width: 90%; }
+.hoursSkeleton { height: 16px; width: 36px; }
+.detail { @include col; gap: $sp-3; p { margin: 0; overflow-wrap: anywhere; } }
+
+.avatarSkeleton, .nameSkeleton { display: inline-block; background: var(--color-surface-muted, $ink-100); }
+.avatarSkeleton { width: 36px; height: 36px; border-radius: 50%; }
+.nameSkeleton { height: 16px; flex: 1; border-radius: $r-sm; }
+.summarySkeleton { display: flex; flex-direction: column; gap: $sp-2; align-items: center; padding: $sp-3 2px; }

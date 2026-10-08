@@ -171,3 +171,12 @@
 }
 
 .dayOff { font-size: $fs-xs; font-weight: $fw-medium; color: var(--color-text-secondary, #{$text-muted}); padding: 6px 8px; }
+
+.mobileTabs { display: flex; width: 100%; gap: 4px; padding: 4px; background: var(--color-surface-muted, $ink-50); border-radius: $r-md;
+  button { flex: 1; min-height: 44px; padding: $sp-2 $sp-3; border: 0; border-radius: $r-sm; color: var(--color-text-secondary, $text-muted); background: transparent; font-size: $fs-sm; font-weight: $fw-semibold; cursor: pointer;
+    &[aria-pressed="true"] { background: var(--color-primary, $brand-600); color: var(--color-on-primary, $white); }
+    &:focus-visible { @include focus-ring; }
+  }
+}
+
+.mobilePublication { min-height: 24px; padding-top: 4px; }

@@ -41,6 +41,7 @@ for (const scenario of scenarios) test(`${scenario.path} stays within mobile loa
       await expect(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
       if (scenario.signedIn) {
         await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
+        if (scenario.path === '/rota') await expect(page.getByLabel('Weekly rota', { exact: true })).toHaveAttribute('aria-busy', 'false');
         await expect(page.getByRole('status', { name: scenario.loading, exact: true })).toHaveCount(0);
       } else await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled();
       const readyMs = await page.evaluate(() => performance.now());

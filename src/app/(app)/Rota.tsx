@@ -1,3 +1,4 @@
+import MobileRota from '@/features/rota/MobileRota';
 import { Info } from 'lucide-react';
 import { ScrollCue } from '@/components/common/ScrollCue';
 import RotaAbsenceDetails from '@/features/leave/RotaAbsenceDetails';
@@ -31,8 +32,9 @@ import { planShiftDrop } from '@/features/rota/shiftMoves';
 
 
 export default function Rota() {
-  const { business, user, hasPermission } = useAuth();
+  const { business, user, fullName, hasPermission } = useAuth();
   const isMobile = useIsMobile();
+  const [mobileView, setMobileView] = useState<'people' | 'day'>('people');
   const absenceOpener = useRef<HTMLButtonElement | null>(null);
   const [absenceId, setAbsenceId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState((new Date().getDay() + 6) % 7);
@@ -110,7 +112,7 @@ export default function Rota() {
   const gridBusy = loading || holidays.loading;
   const gridRef = useRef<HTMLDivElement>(null);
   const gridHeight = useRef(0);
-  const gridContext = `${business?.id}:${isMgr}:${isMobile}:${storeFilter}`;
+  const gridContext = `${business?.id}:${isMgr}:${isMobile}:${storeFilter}:${mobileView}`;
   const previousGridContext = useRef(gridContext);
   if (previousGridContext.current !== gridContext) {
     previousGridContext.current = gridContext;
@@ -133,6 +135,9 @@ export default function Rota() {
     }
     return Object.fromEntries(Object.entries(minutes).map(([id, total]) => [id, +(total / 60).toFixed(2)]));
   }, [filteredShifts]);
+
+  const personalShifts = useMemo(() => filteredShifts.filter(shift => shift.assigned_user_id === user?.id && shift.is_published), [filteredShifts, user?.id]);
+  const personalHours = useMemo(() => +(personalShifts.filter(shift => shift.status !== 'cancelled').reduce((total, shift) => total + minutesBetween(shift.start_time, shift.end_time, shift.break_minutes ?? 0), 0) / 60).toFixed(2), [personalShifts]);
 
   const peopleById = useMemo(() => Object.fromEntries(people.map(p => [p.user_id, p])), [people]);
   const storeById = useMemo(() => Object.fromEntries(stores.map(s => [s.id, s])), [stores]);
@@ -374,12 +379,16 @@ export default function Rota() {
     }
   };
 
+  const selectedStoreIds = storeFilter === 'all' ? stores.map(store => store.id) : [storeFilter];
+  const mobilePublication = gridBusy ? null : selectedStoreIds.length > 0 && selectedStoreIds.every(id => publication.some(status => status.store_id === id && status.is_published)) && draftCount === 0
+    ? 'Published' : isMgr && draftCount > 0 ? 'Draft' : filteredShifts.some(shift => shift.is_published) ? 'Published shifts' : 'Awaiting schedule';
   const pageHeader = (
     <>
       <header className={s.header}>
         <div>
           <span className={s.eye}>Rota</span>
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
+          {isMobile && <div className={s.mobilePublication}>{mobilePublication && <Badge tone={mobilePublication === 'Draft' ? 'warning' : mobilePublication === 'Awaiting schedule' ? 'neutral' : 'success'}>{mobilePublication}</Badge>}</div>}
         </div>
       </header>
       <div className={s.controls} role="group" aria-label="Rota controls">
@@ -395,6 +404,10 @@ export default function Rota() {
             onChange={(v) => { setStoreFilter(v); sessionStorage.setItem('rota.storeFilter', v); }}
           />}
         </div>
+        {isMobile && isMgr && <div className={s.mobileTabs} role="group" aria-label="Mobile rota view">
+          <button type="button" aria-pressed={mobileView === 'people'} onClick={() => setMobileView('people')}>People</button>
+          <button type="button" aria-pressed={mobileView === 'day'} onClick={() => setMobileView('day')}>Day</button>
+        </div>}
         {isMgr && <div className={s.editActions} role="group" aria-label="Schedule actions">
           <Button variant="outline" onClick={copyPreviousWeek} loading={copying} disabled={copyDisabled} title={weekHasSchedule ? "Copying is available only for an empty, unpublished week." : !gridBusy && !loadError && !hasPreviousShifts ? "No shifts to copy from the previous week." : undefined}>Copy previous week</Button>
           {!holidays.error && (
@@ -406,7 +419,7 @@ export default function Rota() {
       </div>
     </>
   );
-  const dayControl = (isMobile && <Field label="Rota day">
+  const dayControl = (isMobile && isMgr && mobileView === 'day' && <Field label="Rota day">
         <Select aria-label="Rota day" value={selectedDay} onChange={event => setSelectedDay(Number(event.target.value))}>
           {days.map((day, index) => <option key={index} value={index}>{fmtDate(day, 'EEEE d MMM')}</option>)}
         </Select>
@@ -414,7 +427,7 @@ export default function Rota() {
       </Field>);
   if (holidays.error) return <div className={s.page}>{pageHeader}<DataLoadError message={holidays.error} retry={holidays.reload} /></div>;
   if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
-  if (!reference.data) return <div className={s.page}>{pageHeader}{dayControl}<Card padded={false}><LoadingSkeleton layout="rota-content" label="Loading rota" /></Card></div>;
+  if (!reference.data && (!isMobile || (isMgr && mobileView === 'day'))) return <div className={s.page}>{pageHeader}{dayControl}<Card padded={false}><LoadingSkeleton layout="rota-content" label="Loading rota" /></Card></div>;
 
   return (
     <div className={s.page}>
@@ -422,7 +435,16 @@ export default function Rota() {
 
 
       {dayControl}
-      <Card padded={false}>
+      {isMobile && (!isMgr || mobileView === 'people') ? <MobileRota key={`${business?.id}:${user?.id}:${storeFilter}`}
+        gridRef={gridRef} minHeight={gridHeight.current} days={days} manager={isMgr} loading={gridBusy} context={`${business?.id}:${user?.id}:${storeFilter}:${isoDate(weekStart)}`}
+        people={isMgr ? visiblePeople : [{ ...(peopleById[user!.id] ?? { user_id: user!.id, primary_role_id: null, primary_store_id: null, store_ids: stores.map(store => store.id) }), name: fullName ?? peopleById[user!.id]?.name ?? 'You' }]}
+        shifts={isMgr ? filteredShifts : personalShifts}
+        leave={isMgr ? leave : leave.filter(row => row.user_id === user?.id)} hours={isMgr ? weeklyHours : { [user!.id]: personalHours }}
+        confirmed={person => { const ids = storeFilter === 'all' ? person.store_ids : [storeFilter]; return ids.length > 0 && ids.every(id => publication.some(status => status.store_id === id && status.is_published)); }}
+        holiday={date => holidays.get(date)?.name} roleName={id => roleById[id ?? '']?.name} storeName={id => storeById[id]?.name} multipleStores={stores.length > 1}
+        onEdit={openEdit} onCreate={openCreate} conflicts={conflictsFor}
+        onAbsence={(id, opener) => { absenceOpener.current = opener; setAbsenceId(id); }}
+      /> : <Card padded={false}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div ref={gridRef} aria-label="Weekly rota" aria-busy={gridBusy} style={{ minHeight: gridBusy ? gridHeight.current : undefined }} className={`${s.grid} ${!isMgr ? s.gridEmployee : ''} ${isMobile ? s.gridMobile : ''}`}>
             {isMgr && <div className={`${s.gridHead} ${s.gridHeadStaff}`}>Staff</div>}
@@ -536,12 +558,12 @@ export default function Rota() {
           </DragOverlay>
         </DndContext>
         <ScrollCue target={gridRef} label={isMgr ? "rota columns and totals" : "rota days"} />
-      </Card>
+      </Card>}
 
       {!gridBusy && filteredShifts.length === 0 && (
         <div className={s.emptyBanner}>
           <Info size={16} className={s.emptyIcon} aria-hidden />
-          <span className={s.emptyText}>{isMgr ? 'No shifts this week — click any cell to add one.' : publication.some(status => status.is_published) ? 'No shifts scheduled for you this week.' : 'Your manager hasn\'t published this week yet.'}</span>
+          <span className={s.emptyText}>{isMgr ? isMobile && mobileView === 'people' ? 'No shifts this week — expand an employee to add one.' : 'No shifts this week — click any cell to add one.' : publication.some(status => status.is_published) ? 'No shifts scheduled for you this week.' : 'Your manager hasn\'t published this week yet.'}</span>
         </div>
       )}
 
