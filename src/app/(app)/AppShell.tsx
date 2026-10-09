@@ -164,7 +164,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   const renderWorkspace = (onClick?: () => void) => (
     <Link className={`${s.workspaceIdentity} ${theme.logoUrl ? s.workspaceWithLogo : ''}`} to="/dashboard" onClick={onClick} aria-label={workspaceName}>
       {theme.logoUrl ? <img className={s.workspaceLogo} src={theme.logoUrl} alt="" /> : <Avatar name={workspaceName} />}
-      <span className={s.workspaceCopy}><span className={s.workspaceName}>{workspaceName}</span><span className={s.workspaceRole}>{role ?? 'Member'}</span></span>
+      {!theme.logoUrl && <span className={s.workspaceName}>{workspaceName}</span>}
     </Link>
   );
 

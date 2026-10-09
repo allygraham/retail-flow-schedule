@@ -13,10 +13,9 @@ for (const width of [320, 390, 1440]) {
     await expect(sidebar.getByRole('link', { name: 'The Top Drawer', exact: true })).toHaveCount(1);
     const identity = sidebar.getByRole('link', { name: 'The Top Drawer', exact: true });
     const logo = await identity.locator('img').boundingBox();
-    const name = await identity.getByText('The Top Drawer', { exact: true }).boundingBox();
     expect(logo!.width).toBeGreaterThanOrEqual(120);
-    expect(name!.y).toBeGreaterThanOrEqual(logo!.y + logo!.height);
-    await expect(identity.getByText('Owner', { exact: false })).toHaveText('owner');
+    await expect(identity).toHaveText('');
+    await expect(sidebar.getByText('owner', { exact: true })).toHaveCount(1);
     const nav = sidebar.getByRole('navigation', { name: 'Primary navigation' });
     for (const label of ['Work', 'Manage', 'Account']) await expect(nav.getByRole('group', { name: label })).toBeVisible();
     const active = nav.getByRole('link', { name: 'Team', exact: true });
@@ -34,6 +33,8 @@ for (const width of [320, 390, 1440]) {
 test('employee navigation preserves permissions and hides empty management groups', async ({ page }) => {
   await authenticate(page, employeeId); const state = await stubApi(page); state.role = 'employee';
   await page.goto('/dashboard'); await expect(page.getByRole('heading', { name: /Good/ })).toBeVisible();
+  const identity = page.getByRole('complementary').getByRole('link', { name: 'Test Shop', exact: true });
+  await expect(identity.getByText('Test Shop', { exact: true })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Primary navigation' });
   await expect(nav.getByRole('group', { name: 'Work' })).toBeVisible();
   await expect(nav.getByRole('group', { name: 'Account' })).toBeVisible();

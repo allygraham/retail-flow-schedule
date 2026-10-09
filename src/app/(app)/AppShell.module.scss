@@ -287,9 +287,7 @@
 .workspaceIdentity { display: flex; align-items: flex-start; gap: 12px; min-width: 0; flex: 1; padding: 4px; color: var(--color-sidebar-text); border-radius: 8px; &:focus-visible { @include focus-ring; } }
 .workspaceWithLogo { flex-direction: column; gap: 10px; }
 .workspaceLogo { width: 140px; max-width: 100%; height: 44px; flex-shrink: 0; object-fit: contain; object-position: left center; }
-.workspaceCopy { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .workspaceName { font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
-.workspaceRole { font-size: 12px; line-height: 1.5; white-space: nowrap; color: var(--color-sidebar-text-muted); &::first-letter { text-transform: uppercase; } }
 .nav { gap: 24px; padding-bottom: 24px; }
 .navGroup { display: flex; flex-direction: column; gap: 4px; }
 .groupLabel { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-sidebar-text-muted); margin: 0 12px 6px; }
@@ -298,4 +296,3 @@
 .linkBadge { font-size: 12px; background: var(--color-warning); color: #111827; }
 .closeBtn { flex-shrink: 0; }
 .drawer { width: min(320px, calc(100vw - 40px)); padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-.sideBrand .workspaceRole, .drawerHead .workspaceRole { color: var(--color-sidebar-text-muted) !important; }
