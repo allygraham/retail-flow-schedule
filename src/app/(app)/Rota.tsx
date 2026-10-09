@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import MobileRota from '@/features/rota/MobileRota';
 import { Info } from 'lucide-react';
 import { ScrollCue } from '@/components/common/ScrollCue';
@@ -407,7 +407,6 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
           {isMobile && <div className={s.mobilePublication}>{mobilePublication && <Badge tone={mobilePublication === 'Draft' ? 'warning' : mobilePublication === 'Awaiting schedule' ? 'neutral' : 'success'}>{mobilePublication}</Badge>}</div>}
         </div>
-        <Link to="/shift-changes">Shift changes</Link>
       </header>
       <div className={s.controls} role="group" aria-label="Rota controls">
         <div className={s.contextControls}>
