@@ -178,7 +178,7 @@
 .user { display: flex; align-items: center; gap: 12px; padding: 0 12px 12px; }
 .userInfo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .userName { color: var(--color-sidebar-text); font-size: 14px; font-weight: 500; @include truncate; }
-.userRole { align-self: flex-start; text-transform: capitalize; }
+.userInfo .userRole { align-self: flex-start; text-transform: none; background: var(--color-surface-muted, #f3f4f6); color: var(--color-primary, #6366f1); border-color: transparent; }
 .signoutButton { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 8px; font: inherit; font-size: 14px; color: var(--color-sidebar-text); background: var(--color-sidebar-hover); cursor: pointer; &:hover { background: color-mix(in srgb, var(--color-sidebar-text) 16%, var(--color-sidebar)); } &:focus-visible { @include focus-ring; } }
 
 .backdrop {

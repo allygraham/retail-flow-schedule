@@ -146,7 +146,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
     <div className={s.accountFooter}>
       <div className={s.user}>
         <Avatar name={fullName} />
-        <span className={s.userInfo}><span className={s.userName}>{fullName ?? 'You'}</span><Badge className={s.userRole}>{role ?? 'Member'}</Badge></span>
+        <span className={s.userInfo}><span className={s.userName}>{fullName ?? 'You'}</span><Badge tone="brand" dot className={s.userRole}>{role ?? 'Member'}</Badge></span>
       </div>
     <button type="button" aria-label="Sign out" className={s.signoutButton} onClick={async () => {
       try { await signOut(); nav('/login', { replace: true }); } catch (error) {
