@@ -42,7 +42,7 @@ const App = () => (
           <PageBoundary fullPage>
           <Routes>
             {/* Home resolves through the same account checks as protected pages. */}
-            <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute fullPage><Navigate to="/dashboard" replace /></ProtectedRoute>} />
             <Route path="/features" element={<Features />} />
             <Route path="/pricing" element={<Pricing />} />
 
@@ -54,7 +54,7 @@ const App = () => (
             <Route path="/accept-invite" element={<AcceptInvite />} />
 
             {/* The shell stays mounted while only protected page content loads. */}
-            <Route element={<AppShell><ProtectedRoute><Outlet /></ProtectedRoute></AppShell>}>
+            <Route element={<ProtectedRoute fullPage><AppShell><Outlet /></AppShell></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/rota" element={<Rota />} />
               <Route path="/leave" element={<Leave />} />

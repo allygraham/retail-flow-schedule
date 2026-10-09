@@ -1,3 +1,4 @@
+import { InitialPageLoader } from '@/components/common/InitialPageLoader';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -10,6 +11,7 @@ import type { AppPermission } from './permissions';
 import s from './ProtectedRoute.module.scss';
 
 interface Props {
+  fullPage?: boolean;
   children: ReactNode;
   roles?: AppRole[];
   permission?: AppPermission;
@@ -17,12 +19,12 @@ interface Props {
   fallback?: 'redirect' | 'denied';
 }
 
-export function ProtectedRoute({ children, roles, permission, redirectTo = '/dashboard', fallback = 'redirect' }: Props) {
+export function ProtectedRoute({ children, fullPage = false, roles, permission, redirectTo = '/dashboard', fallback = 'redirect' }: Props) {
   const { loading, error, user, business, role, hasPermission } = useAuth();
 
   if (loading) {
     return (
-      <LoadingSkeleton label="Loading account" />
+      fullPage ? <InitialPageLoader /> : <LoadingSkeleton label="Loading account" />
     );
   }
   if (error) return <div className={s.denied}><AccountLoadError /></div>;

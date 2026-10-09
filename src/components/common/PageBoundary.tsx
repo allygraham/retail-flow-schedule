@@ -1,3 +1,4 @@
+import { InitialPageLoader } from './InitialPageLoader';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { Component, Suspense, type ReactNode } from 'react';
 import { Button } from './Button';
@@ -36,7 +37,7 @@ export function PageBoundary({ children, fullPage = false }: { children: ReactNo
   return (
     <PageLoadError fullPage={fullPage}>
       <Suspense fallback={
-        <LoadingSkeleton label="Loading page" />
+        fullPage ? <InitialPageLoader /> : <LoadingSkeleton label="Loading page" />
       }>
         {children}
       </Suspense>
