@@ -4,7 +4,6 @@ import { ScrollCue } from '@/components/common/ScrollCue';
 import RotaAbsenceDetails from '@/features/leave/RotaAbsenceDetails';
 import { parseSicknessMeta, type SicknessLifecycleStatus } from '@/features/leave/sickness';
 import type { LeaveSource } from '@/types/domain';
-import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
 import { DataLoadError } from '@/components/common/DataLoadError';
@@ -443,7 +442,6 @@ export default function Rota() {
       </Field>);
   if (holidays.error) return <div className={s.page}>{pageHeader}<DataLoadError message={holidays.error} retry={holidays.reload} /></div>;
   if (loadError) return <div className={s.page}>{pageHeader}<DataLoadError message={loadError} retry={load} /></div>;
-  if (!reference.data && (!isMobile || (isMgr && mobileView === 'day'))) return <div className={s.page}>{pageHeader}{dayControl}<Card padded={false}><LoadingSkeleton layout="rota-content" label="Loading rota" /></Card></div>;
 
   return (
     <div className={s.page}>
@@ -488,6 +486,13 @@ export default function Rota() {
               );
             })}
             {isMgr && <div className={`${s.gridHead} ${s.gridHeadTotal}`}>Scheduled hours</div>}
+            {!reference.data && Array.from({ length: 4 }, (_, row) => (
+              <div key={`loading-${row}`} className={s.contents} aria-hidden="true">
+                {isMgr && <div className={s.staffCell}><span className={s.cellSkeleton} /></div>}
+                {visibleDays.map(day => <DroppableCell key={isoDate(day)} id={`loading-${row}|${isoDate(day)}`} disabled><div className={s.cellSkeleton} /></DroppableCell>)}
+                {isMgr && <div className={s.totalCell}><span className={s.totalSkeleton} /></div>}
+              </div>
+            ))}
             {/* per-employee rows */}
             {(isMobile ? visiblePeople : desktopPeople).map(p => (
               <div key={p.user_id} className={s.contents}>
@@ -541,7 +546,7 @@ export default function Rota() {
                 </div>}
               </div>
             ))}
-            {!isMobile && isMgr && desktopPeople.length === 0 && <div className={s.noMatches}>No employees match these filters.</div>}
+            {!gridBusy && !isMobile && isMgr && desktopPeople.length === 0 && <div className={s.noMatches}>No employees match these filters.</div>}
             {/* Unassigned row — managers only */}
             {isMgr && (
               <div className={s.contents}>

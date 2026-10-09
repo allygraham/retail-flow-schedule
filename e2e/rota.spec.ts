@@ -452,3 +452,22 @@ test('previous-week lookup failure disables copying and reports a retryable load
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Copy previous week', exact: true })).toBeDisabled();
 });
+
+
+test('initial rota loading keeps the day headers visible', async ({ page }) => {
+  await open(page);
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/rest/v1/rpc/get_rota_people*', async route => { await pending; await route.fallback(); });
+  await page.goto('/rota');
+  const grid = page.getByLabel('Weekly rota', { exact: true });
+  try {
+    await expect(grid).toHaveAttribute('aria-busy', 'true');
+    for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) await expect(grid.getByText(day, { exact: true })).toBeVisible();
+    await expect(grid.getByText('Staff', { exact: true })).toBeVisible();
+    await expect(grid.getByText('Scheduled hours', { exact: true })).toBeVisible();
+    await expect(grid.getByText('No employees match these filters.')).toHaveCount(0);
+  } finally { release(); }
+  await expect(grid).toHaveAttribute('aria-busy', 'false');
+  await expect(grid.getByText('Test Employee', { exact: true })).toBeVisible();
+});
