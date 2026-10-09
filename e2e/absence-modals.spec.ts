@@ -45,7 +45,13 @@ test('recording sickness opens relevant fields immediately and annual leave hide
   await dialog.getByLabel('Leave type').selectOption('sick');
   await expect(dialog.getByLabel('Category')).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Sickness details/ })).toHaveAttribute('aria-expanded', 'true');
+  await expect(dialog.getByRole('button', { name: /Additional options/ })).toHaveAttribute('aria-expanded', 'false');
+  await dialog.getByRole('button', { name: /Additional options/ }).click();
   await dialog.getByLabel('Self-certified', { exact: true }).check();
+  await dialog.getByRole('button', { name: /Additional options/ }).click();
+  await expect(dialog.getByRole('button', { name: /Additional options/ })).toContainText('1 selected');
+  await dialog.getByRole('button', { name: /Additional options/ }).click();
+  await expect(dialog.getByLabel('Self-certified', { exact: true })).toBeChecked();
   const dateTrigger = dialog.getByRole('button', { name: 'Dates', exact: true });
   await dateTrigger.click();
   const calendar = page.getByRole('dialog', { name: 'Choose date', exact: true });
@@ -56,6 +62,7 @@ test('recording sickness opens relevant fields immediately and annual leave hide
   await expect(dateTrigger).toBeFocused();
   await dialog.getByRole('button', { name: 'Save as approved' }).scrollIntoViewIfNeeded();
   await expect(dialog.getByRole('button', { name: 'Save as approved' })).toBeInViewport();
+  await page.screenshot({ path: test.info().outputPath('compact-sickness-mobile.png') });
   await dialog.getByLabel('Leave type').selectOption('annual');
   await expect(dialog.getByLabel('Category')).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath('record-absence-mobile.png') });
@@ -90,4 +97,22 @@ test('annual leave keeps the overview compact without sickness controls', async 
   expect((await dialog.boundingBox())!.height).toBeLessThan(600);
   for (let i = 0; i < 10; i++) { await page.keyboard.press('Tab'); expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true); }
   await page.screenshot({ path: test.info().outputPath('annual-leave-desktop.png') });
+});
+
+
+test('desktop absence form groups essentials and keeps administration compact', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await authenticate(page); await stubApi(page); await page.goto('/leave');
+  await page.getByRole('button', { name: 'Add leave', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add leave or absence' });
+  await dialog.getByLabel('Leave type').selectOption('sick');
+  await expect(dialog.getByLabel('Sickness status')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Additional options/ })).toHaveAttribute('aria-expanded', 'false');
+  await dialog.getByRole('button', { name: /Additional options/ }).click();
+  await dialog.getByLabel('Fit note received', { exact: true }).check();
+  await dialog.getByLabel('Paid absence', { exact: true }).check();
+  await dialog.getByRole('button', { name: /Additional options/ }).click();
+  await expect(dialog.getByRole('button', { name: /Additional options/ })).toContainText('3 selected');
+  await expect(dialog.getByRole('button', { name: 'Save as approved' })).toBeInViewport();
+  await page.screenshot({ path: test.info().outputPath('compact-absence-desktop.png') });
 });

@@ -36,7 +36,7 @@ import { CollapsibleSection } from '@/components/common/CollapsibleSection';
 import { fmtDate, isoDate } from '@/lib/datetime';
 import { leaveSchema, managementLeaveSchema } from '@/lib/validation';
 import type { LeaveSource, LeaveStatus, LeaveType } from '@/types/domain';
-import { CalendarDays, HeartPulse, Coins, AlertCircle, Stethoscope, FileText, Briefcase, Repeat2, Activity, NotebookPen, MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
+import { CalendarDays, HeartPulse, Coins, AlertCircle, Stethoscope, FileText, Activity, NotebookPen, MoreHorizontal, SlidersHorizontal, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import s from './Leave.module.scss';
@@ -83,15 +83,6 @@ function TypeIcon({ type }: { type: LeaveType }) {
   return <CalendarDays size={14} className={s.typeIcon} aria-hidden />;
 }
 
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <label className={s.toggle}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className={s.toggleTrack}><span className={s.toggleKnob} /></span>
-      <span className={s.toggleLabel}>{label}</span>
-    </label>
-  );
-}
 
 export default function Leave() {
   const { user, role } = useAuth();
@@ -988,7 +979,6 @@ export default function Leave() {
         }
       >
         <div className={`${s.form} ${s.absenceForm}`}>
-          <div className={s.recordFields}>
           <Field label="Employee">
             <Select value={mgmtForm.user_id} onChange={e => setMgmtForm({ ...mgmtForm, user_id: e.target.value })}>
               <option value="">Select employee…</option>
@@ -999,7 +989,7 @@ export default function Leave() {
               ))}
             </Select>
           </Field>
-
+          <div className={s.recordFields}>
             <Field label="Leave type">
               <Select value={mgmtForm.leave_type} onChange={e => setMgmtForm({ ...mgmtForm, leave_type: e.target.value as typeof mgmtForm.leave_type })}>
                 <option value="annual">Annual leave</option>
@@ -1007,35 +997,20 @@ export default function Leave() {
                 <option value="unpaid">Unpaid leave</option>
               </Select>
             </Field>
-            {isSicknessForm ? (
-              <Field label="Sickness status">
-                <Select
-                  value={mgmtForm.lifecycle_status}
-                  onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value as SicknessLifecycleStatus })}
-                >
-                  {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </Select>
-              </Field>
-            ) : (
-              <Field label="Status">
-                <Input value="Approved / recorded" disabled readOnly />
-              </Field>
-            )}
+
+            <Field label="Dates">
+              <DatePicker
+                mode="range"
+                value={{ from: parseISODate(mgmtForm.start_date), to: parseISODate(mgmtForm.end_date) }}
+                onChange={(r) => setMgmtForm({
+                  ...mgmtForm,
+                  start_date: toISODate(r.from),
+                  end_date: toISODate(r.to) || toISODate(r.from),
+                })}
+                placeholder="Pick a date range"
+              />
+            </Field>
           </div>
-          <Field label="Dates">
-            <DatePicker
-              mode="range"
-              value={{ from: parseISODate(mgmtForm.start_date), to: parseISODate(mgmtForm.end_date) }}
-              onChange={(r) => setMgmtForm({
-                ...mgmtForm,
-                start_date: toISODate(r.from),
-                end_date: toISODate(r.to) || toISODate(r.from),
-              })}
-              placeholder="Pick a date range"
-            />
-          </Field>
 
           {isSicknessForm && (
             <CollapsibleSection
@@ -1057,6 +1032,17 @@ export default function Leave() {
                       ))}
                     </Select>
                   </Field>
+                  <Field label="Sickness status">
+                    <Select
+                      value={mgmtForm.lifecycle_status}
+                      onChange={e => setMgmtForm({ ...mgmtForm, lifecycle_status: e.target.value as SicknessLifecycleStatus })}
+                    >
+                      {SICKNESS_LIFECYCLE_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
                   <Field label="Return-to-work date" hint="Optional">
                     <DatePicker
                       value={parseISODate(mgmtForm.sickness_meta?.return_to_work_date ?? '')}
@@ -1064,28 +1050,16 @@ export default function Leave() {
                       placeholder="Expected back"
                     />
                   </Field>
-                </div>
 
-                <div className={s.toggleGroup}>
-                  <div className={s.toggleGroupLabel}><FileText size={12} /> Documentation</div>
-                  <div className={s.toggleGrid}>
-                    <Toggle checked={!!mgmtForm.sickness_meta?.self_certified} onChange={(v) => updateMgmtMeta({ self_certified: v })} label="Self-certified" />
-                    <Toggle checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={(v) => updateMgmtMeta({ fit_note_received: v })} label="Fit note received" />
+                <CollapsibleSection title="Additional options" tone="subtle" icon={<FileText size={14} />} meta={`${[mgmtForm.sickness_meta?.self_certified, mgmtForm.sickness_meta?.fit_note_received, mgmtForm.sickness_meta?.paid_absence, mgmtForm.sickness_meta?.work_related_injury, mgmtForm.sickness_meta?.return_to_work_interview_required].filter(Boolean).length} selected`}>
+                  <div className={s.absenceOptions}>
+                    <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.self_certified} onChange={event => updateMgmtMeta({ self_certified: event.target.checked })} /><span>Self-certified</span></label>
+                    <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={event => updateMgmtMeta({ fit_note_received: event.target.checked })} /><span>Fit note received</span></label>
+                    <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={event => updateMgmtMeta({ paid_absence: event.target.checked })} /><span>Paid absence</span></label>
+                    <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={event => updateMgmtMeta({ work_related_injury: event.target.checked })} /><span>Work-related injury</span></label>
+                    <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={event => updateMgmtMeta({ return_to_work_interview_required: event.target.checked })} /><span>Return-to-work interview required</span></label>
                   </div>
-                </div>
-                <div className={s.toggleGroup}>
-                  <div className={s.toggleGroupLabel}><Briefcase size={12} /> Employment</div>
-                  <div className={s.toggleGrid}>
-                    <Toggle checked={!!mgmtForm.sickness_meta?.paid_absence} onChange={(v) => updateMgmtMeta({ paid_absence: v })} label="Paid absence" />
-                    <Toggle checked={!!mgmtForm.sickness_meta?.work_related_injury} onChange={(v) => updateMgmtMeta({ work_related_injury: v })} label="Work-related injury" />
-                  </div>
-                </div>
-                <div className={s.toggleGroup}>
-                  <div className={s.toggleGroupLabel}><Repeat2 size={12} /> Follow-up</div>
-                  <div className={s.toggleGrid}>
-                    <Toggle checked={!!mgmtForm.sickness_meta?.return_to_work_interview_required} onChange={(v) => updateMgmtMeta({ return_to_work_interview_required: v })} label="Return-to-work interview required" />
-                  </div>
-                </div>
+                </CollapsibleSection>
 
                 {mgmtForm.user_id && (() => {
                   const window = 56;

@@ -643,5 +643,14 @@
   > section > button { min-height: 48px; }
 }
 
-.recordFields { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; align-items: start; }
+.recordFields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; align-items: start; }
 @media (max-width: 640px) { .recordFields { grid-template-columns: 1fr; } }
+
+.absenceForm .row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.absenceOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+.absenceOption { display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 1.4; cursor: pointer;
+  input { appearance: auto; position: static; opacity: 1; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--color-primary); }
+  input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  &:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) { .absenceOptions, .absenceForm .row2 { grid-template-columns: 1fr; } }
