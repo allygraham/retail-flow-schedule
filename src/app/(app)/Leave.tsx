@@ -524,16 +524,6 @@ export default function Leave() {
             </Field>
 
             {isMgr && (
-              <Field label="Employee name">
-                <Input
-                  value={filters.employeeQuery}
-                  onChange={(e) => setLeaveFilter('employeeQuery', e.target.value)}
-                  placeholder="Search employee"
-                />
-              </Field>
-            )}
-
-            {isMgr && (
               <Field label="Store / location">
                 <Select value={filters.storeName} onChange={(e) => setLeaveFilter('storeName', e.target.value)}>
                   <option value="">All stores</option>
@@ -674,7 +664,7 @@ export default function Leave() {
             return (
               <div className={s.requestList}>
                 {filtered.map(r => {
-                  const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
+                  const canReviewPending = isMgr && r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
                   const meta = parseSicknessMeta(r.sickness_meta);
                   const isSick = r.leave_type === 'sick';
                   const linked = isSick && detectLinkedSickness(r);
@@ -769,7 +759,7 @@ export default function Leave() {
               </div>
             );
           })() : (() => {
-            const hasAnyActions = isMgr && filtered.some(r => r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id)));
+            const hasAnyActions = filtered.some(r => canCancelLeave(role, user?.id, r) || (isMgr && r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id))));
             return (
             <div className={s.tableWrap}><table className={s.table}>
               <thead>
@@ -787,7 +777,7 @@ export default function Leave() {
               <tbody>
                 {filtered.map(r => {
                   const isRowClickable = true;
-                  const canReviewPending = r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
+                  const canReviewPending = isMgr && r.status === 'pending' && (!!user && (role === 'owner' || r.user_id !== user.id));
                   const meta = parseSicknessMeta(r.sickness_meta);
                   const isSick = r.leave_type === 'sick';
                   const linked = isSick && detectLinkedSickness(r);
@@ -844,18 +834,7 @@ export default function Leave() {
                               <AlertCircle size={12} /> Linked to recent sickness
                             </span>
                           )}
-                          {canCancelLeave(role, user?.id, r) && (
-                            <button
-                              type="button"
-                              className={s.noteButton}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                cancel(r.id);
-                              }}
-                            >
-                              {isMgr ? 'Cancel leave' : 'Withdraw request'}
-                            </button>
-                          )}
+
                         </div>
                       </td>
                       <td>
@@ -902,8 +881,20 @@ export default function Leave() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
-                          ) : (
+                          ) : !canCancelLeave(role, user?.id, r) ? (
                             <span className={s.actionsEmpty} aria-hidden>—</span>
+                          ) : null}
+                          {canCancelLeave(role, user?.id, r) && (
+                            <button
+                              type="button"
+                              className={s.noteButton}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                cancel(r.id);
+                              }}
+                            >
+                              {isMgr ? 'Cancel leave' : 'Withdraw request'}
+                            </button>
                           )}
                         </td>
                       )}
