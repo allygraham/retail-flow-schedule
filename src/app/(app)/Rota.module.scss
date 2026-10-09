@@ -208,7 +208,7 @@
 .cell:hover .addShift, .cell:focus-within .addShift { opacity: 1; }
 .noMatches { grid-column: 1 / -1; padding: $sp-4; color: var(--color-text-secondary, $text-muted); }
 
-.gridHeadStaff {
+.gridHeadStaff, .gridHeadTotal {
   background-color: var(--color-surface, $surface);
   background-image: linear-gradient(var(--color-surface-muted, #{$ink-50}), var(--color-surface-muted, #{$ink-50}));
 }
