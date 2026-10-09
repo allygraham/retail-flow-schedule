@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/authContext';
 import { Logo } from '@/components/common/Logo';
+import { Badge } from '@/components/common/Badge';
 import { Avatar } from '@/components/common/Avatar';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
 import { useBranding, buildThemeStyle } from '@/features/branding/brandingContext';
@@ -145,7 +146,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
     <div className={s.accountFooter}>
       <div className={s.user}>
         <Avatar name={fullName} />
-        <span className={s.userInfo}><span className={s.userName}>{fullName ?? 'You'}</span><span className={s.userRole}>{role ?? 'Member'}</span></span>
+        <span className={s.userInfo}><span className={s.userName}>{fullName ?? 'You'}</span><Badge className={s.userRole}>{role ?? 'Member'}</Badge></span>
       </div>
     <button type="button" aria-label="Sign out" className={s.signoutButton} onClick={async () => {
       try { await signOut(); nav('/login', { replace: true }); } catch (error) {
