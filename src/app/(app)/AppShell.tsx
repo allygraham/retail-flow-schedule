@@ -6,7 +6,7 @@ import { PageBoundary } from "@/components/common/PageBoundary";
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Menu, X, LogOut, LayoutDashboard, Calendar, CalendarDays, Users, MapPin, User, Settings, History,
+  Menu, X, LogOut, LayoutDashboard, Calendar, CalendarDays, Users, MapPin, User, Settings, History, FileDown,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/authContext';
 import { Logo } from '@/components/common/Logo';
@@ -26,6 +26,7 @@ const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof Layo
   { key: 'rota', to: '/rota', label: 'Rota', icon: Calendar },
   { key: 'leave', to: '/leave', label: 'Leave & absence', icon: CalendarDays },
   { key: 'team', to: '/team', label: 'Team', icon: Users },
+  { key: 'payroll', to: '/payroll', label: 'Payroll', icon: FileDown },
   { key: 'history', to: '/history', label: 'Change history', icon: History },
   { key: 'stores', to: '/stores', label: 'Stores', icon: MapPin },
   { key: 'profile', to: '/profile', label: 'My profile', icon: User },
@@ -34,7 +35,7 @@ const NAV: Array<{ key: AppNavItem; to: string; label: string; icon: typeof Layo
 
 const NAV_GROUPS: Array<{ label: string; keys: AppNavItem[] }> = [
   { label: 'Work', keys: ['dashboard', 'rota', 'leave'] },
-  { label: 'Manage', keys: ['team', 'stores', 'history'] },
+  { label: 'Manage', keys: ['team', 'stores', 'payroll', 'history'] },
   { label: 'Account', keys: ['profile', 'settings'] },
 ];
 

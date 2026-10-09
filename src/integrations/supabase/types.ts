@@ -881,6 +881,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_payroll_export: {
+        Args: { _business_id: string; _start_date: string; _end_date: string }
+        Returns: { user_id: string; full_name: string; email: string; shift_count: number; scheduled_minutes: number; annual_leave_days: number; sickness_days: number }[]
+      }
       set_business_role: { Args: { _business_id: string; _user_id: string; _role: Database["public"]["Enums"]["app_role"] }; Returns: undefined }
       release_coverage_shifts: {
         Args: { _business_id: string; _shifts: Json }
