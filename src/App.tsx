@@ -20,6 +20,7 @@ const Rota = lazy(() => import("@/app/(app)/Rota"));
 const Leave = lazy(() => import("@/app/(app)/Leave"));
 const StaffHistory = lazy(() => import("@/app/(app)/StaffHistory"));
 const Team = lazy(() => import("@/app/(app)/Team"));
+const ShiftChanges = lazy(() => import("@/app/(app)/ShiftChanges"));
 const Payroll = lazy(() => import("@/app/(app)/Payroll"));
 const ChangeHistory = lazy(() => import("@/app/(app)/ChangeHistory"));
 const Stores = lazy(() => import("@/app/(app)/Stores"));
@@ -59,6 +60,7 @@ const App = () => (
             <Route element={<ProtectedRoute fullPage><AppShell><Outlet /></AppShell></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/rota" element={<Rota />} />
+              <Route path="/shift-changes" element={<ShiftChanges />} />
               <Route path="/leave" element={<Leave />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/team" element={<ProtectedRoute permission="manage_staff"><Team /></ProtectedRoute>} />

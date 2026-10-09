@@ -4,7 +4,7 @@ import { DEFAULT_THEME, type BrandingTheme } from './types';
 const KEY = 'lavoro:theme:v1';
 export interface CachedTheme { userId: string; businessId: string; theme: BrandingTheme }
 const presets = new Set(['default', 'midnight', 'forest', 'sunset', 'slate', 'topdrawer']);
-export const isWorkspacePath = (path: string) => /^\/(dashboard|rota|leave|profile|team|stores|settings|history|payroll)(\/|$)/.test(path);
+export const isWorkspacePath = (path: string) => /^\/(dashboard|rota|leave|profile|team|stores|settings|history|payroll|shift-changes)(\/|$)/.test(path);
 
 export function readThemeCache(userId?: string): CachedTheme | null {
   try {

@@ -881,6 +881,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_shift_change_requests: { Args: { _business_id: string }; Returns: import('@/features/rota/shiftChangeTypes').ShiftChangeRequest[] }
+      change_shift_request: { Args: { _business_id: string; _action: string; _request_id?: string; _shift_id?: string; _reason?: string; _replacement_user_id?: string; _swap_shift_id?: string; _manager_note?: string; _expected_updated_at?: string }; Returns: string }
+
       get_payroll_export: {
         Args: { _business_id: string; _start_date: string; _end_date: string }
         Returns: { user_id: string; full_name: string; email: string; shift_count: number; scheduled_minutes: number; annual_leave_days: number; sickness_days: number }[]

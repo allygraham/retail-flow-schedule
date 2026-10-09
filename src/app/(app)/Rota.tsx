@@ -1,3 +1,4 @@
+import { Link, useNavigate } from 'react-router-dom';
 import MobileRota from '@/features/rota/MobileRota';
 import { Info } from 'lucide-react';
 import { ScrollCue } from '@/components/common/ScrollCue';
@@ -31,6 +32,7 @@ import { planShiftDrop } from '@/features/rota/shiftMoves';
 
 
 export default function Rota() {
+  const navigate = useNavigate();
   const { business, user, fullName, hasPermission } = useAuth();
   const isMobile = useIsMobile();
   const [staffSearch, setStaffSearch] = useState('');
@@ -405,6 +407,7 @@ export default function Rota() {
           <h1 className={s.h1}>Week of {fmtDate(weekStart, 'd MMM yyyy')}</h1>
           {isMobile && <div className={s.mobilePublication}>{mobilePublication && <Badge tone={mobilePublication === 'Draft' ? 'warning' : mobilePublication === 'Awaiting schedule' ? 'neutral' : 'success'}>{mobilePublication}</Badge>}</div>}
         </div>
+        <Link to="/shift-changes">Shift changes</Link>
       </header>
       <div className={s.controls} role="group" aria-label="Rota controls">
         <div className={s.contextControls}>
@@ -527,7 +530,7 @@ export default function Rota() {
                       {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
                           <button type="button" disabled={!isMgr} className={`${s.shift} ${s.shiftButton} ${sh.status === 'cancelled' ? s.cancelled : ''} ${!sh.is_published ? s.draft : ''}`}
-                            onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}
+                            onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); else navigate(`/shift-changes?shift=${sh.id}`); }}
                             style={{ borderLeftColor: roleById[sh.role_id ?? '']?.color ?? undefined }}
                           >
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
@@ -565,7 +568,7 @@ export default function Rota() {
                       {gridBusy && <div className={s.cellSkeleton} aria-hidden="true" />}
                       {!gridBusy && cell.map(sh => (
                         <DraggableShift key={sh.id} id={sh.id} disabled={!isMgr || isMobile || moving || sh.status === 'cancelled'}>
-                          <button type="button" className={`${s.shift} ${s.shiftButton} ${sh.status === 'cancelled' ? s.cancelled : s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); }}>
+                          <button type="button" className={`${s.shift} ${s.shiftButton} ${sh.status === 'cancelled' ? s.cancelled : s.openShift}`} onClick={(e) => { e.stopPropagation(); if (isMgr) openEdit(sh); else navigate(`/shift-changes?shift=${sh.id}`); }}>
                             <div className={s.shiftTime}>{fmtTime(sh.start_time)}–{fmtTime(sh.end_time)}</div>
                             <div className={s.shiftMeta}>{stores.length > 1 && <>{storeById[sh.store_id]?.name} · </>}{roleById[sh.role_id ?? '']?.name ?? 'Floor'}</div>
                             {sh.status === 'cancelled' ? <Badge>Cancelled</Badge> : <Badge tone="unassigned" dot>Needs cover</Badge>}

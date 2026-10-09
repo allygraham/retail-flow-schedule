@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { CalendarDays, ChevronDown, ChevronRight, HeartPulse, Plus } from 'lucide-react';
 import { Avatar } from '@/components/common/Avatar';
@@ -122,6 +123,7 @@ export default function MobileRota(props: Props) {
         <p>{hoursBetween(selected.start_time, selected.end_time, selected.break_minutes ?? 0)} scheduled hours · {selected.break_minutes ?? 0} minute break</p>
         {selected.status === 'cancelled' && <Badge tone="neutral">Cancelled</Badge>}
         {selected.notes && <p>{selected.notes}</p>}
+        {selected.status !== 'cancelled' && <Link to={`/shift-changes?shift=${selected.id}`}>Request a shift change</Link>}
       </div>}
     </Modal>
   </div>;

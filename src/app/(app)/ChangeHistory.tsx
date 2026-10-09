@@ -10,7 +10,7 @@ import { Button } from '@/components/common/Button';
 import { Field, Select, Input } from '@/components/common/Field';
 import { DatePicker, parseISODate, toISODate } from '@/components/common/DatePicker';
 import s from './ChangeHistory.module.scss';
-const entities: Record<string, string> = { shifts: 'Shift', rota_week_publications: 'Rota publication', leave_requests: 'Leave / absence', user_roles: 'Access role', memberships: 'Membership', employee_profiles: 'Employment details', store_locations: 'Store', roles_catalog: 'Job role', businesses: 'Business settings', business_branding: 'Branding', custom_holidays: 'Company holiday', invitations: 'Invitation' };
+const entities: Record<string, string> = { shift_change_requests: 'Shift change request', shifts: 'Shift', rota_week_publications: 'Rota publication', leave_requests: 'Leave / absence', user_roles: 'Access role', memberships: 'Membership', employee_profiles: 'Employment details', store_locations: 'Store', roles_catalog: 'Job role', businesses: 'Business settings', business_branding: 'Branding', custom_holidays: 'Company holiday', invitations: 'Invitation' };
 function display(value: unknown) { return value == null ? '—' : Array.isArray(value) ? value.join(', ') : String(value); }
 export default function ChangeHistory() {
   const { business, hasPermission } = useAuth();

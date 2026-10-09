@@ -17,11 +17,12 @@ export const PERMISSIONS: Record<string, readonly AppRole[]> = {
 
 export type AppPermission = keyof typeof PERMISSIONS;
 
-export type AppNavItem = 'dashboard' | 'rota' | 'leave' | 'team' | 'stores' | 'profile' | 'settings' | 'history' | 'payroll';
+export type AppNavItem = 'dashboard' | 'rota' | 'leave' | 'team' | 'stores' | 'profile' | 'settings' | 'history' | 'payroll' | 'shift-changes';
 
 export const NAV_PERMISSIONS: Partial<Record<AppNavItem, AppPermission>> = {
   dashboard: 'view_own_schedule',
   rota: 'view_own_schedule',
+  'shift-changes': 'view_own_requests',
   leave: 'view_leave',
   history: 'view_change_history',
   payroll: 'view_reports',
