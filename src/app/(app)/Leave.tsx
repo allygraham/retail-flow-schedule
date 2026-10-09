@@ -1016,7 +1016,7 @@ export default function Leave() {
             <CollapsibleSection
               title="Sickness details"
               defaultOpen
-              tone="subtle"
+              tone="plain"
               icon={<Stethoscope size={14} />}
               meta={SICKNESS_CATEGORY_LABEL[(mgmtForm.sickness_meta?.category ?? 'cold_flu') as keyof typeof SICKNESS_CATEGORY_LABEL]}
             >
@@ -1051,7 +1051,7 @@ export default function Leave() {
                     />
                   </Field>
 
-                <CollapsibleSection title="Additional options" tone="subtle" icon={<FileText size={14} />} meta={`${[mgmtForm.sickness_meta?.self_certified, mgmtForm.sickness_meta?.fit_note_received, mgmtForm.sickness_meta?.paid_absence, mgmtForm.sickness_meta?.work_related_injury, mgmtForm.sickness_meta?.return_to_work_interview_required].filter(Boolean).length} selected`}>
+                <CollapsibleSection title="Additional options" tone="plain" icon={<FileText size={14} />} meta={`${[mgmtForm.sickness_meta?.self_certified, mgmtForm.sickness_meta?.fit_note_received, mgmtForm.sickness_meta?.paid_absence, mgmtForm.sickness_meta?.work_related_injury, mgmtForm.sickness_meta?.return_to_work_interview_required].filter(Boolean).length} selected`}>
                   <div className={s.absenceOptions}>
                     <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.self_certified} onChange={event => updateMgmtMeta({ self_certified: event.target.checked })} /><span>Self-certified</span></label>
                     <label className={s.absenceOption}><input type="checkbox" checked={!!mgmtForm.sickness_meta?.fit_note_received} onChange={event => updateMgmtMeta({ fit_note_received: event.target.checked })} /><span>Fit note received</span></label>
@@ -1084,10 +1084,11 @@ export default function Leave() {
             <CollapsibleSection
               title="Operational impact"
               icon={<Activity size={14} />}
-              tone="subtle"
+              tone="plain"
               meta="Affected shifts & open cover"
             >
               <OperationalImpactCard
+                embedded
                 userId={mgmtForm.user_id}
                 startDate={mgmtForm.start_date}
                 endDate={mgmtForm.end_date}
@@ -1098,7 +1099,7 @@ export default function Leave() {
           <CollapsibleSection
             title="Internal notes"
             icon={<NotebookPen size={14} />}
-            tone="subtle"
+            tone="plain"
             meta="Reason · manager note"
           >
             <div className={s.form}>

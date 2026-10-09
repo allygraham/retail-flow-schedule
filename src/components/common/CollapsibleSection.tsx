@@ -14,7 +14,7 @@ interface Props {
   onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   /** Visual emphasis: 'default' (cards w/ border) | 'subtle' (ghost). */
-  tone?: 'default' | 'subtle';
+  tone?: 'default' | 'subtle' | 'plain';
 }
 
 /**

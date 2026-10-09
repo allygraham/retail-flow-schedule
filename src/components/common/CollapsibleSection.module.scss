@@ -70,3 +70,11 @@
   from { opacity: 0; transform: translateY(-2px); }
   to { opacity: 1; transform: none; }
 }
+
+.plain {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  .head { padding: 6px 4px; border-radius: $r-sm; }
+  .body { padding: 0 4px $sp-2; }
+}

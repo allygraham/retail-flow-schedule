@@ -22,3 +22,5 @@
   display: flex; flex-direction: column; gap: 2px;
 }
 .line { font-size: $fs-xs; color: var(--color-text-secondary, $text-muted); }
+
+.embedded { border: 0; padding: 4px 0; border-radius: 0; }

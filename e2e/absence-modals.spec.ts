@@ -114,5 +114,9 @@ test('desktop absence form groups essentials and keeps administration compact', 
   await dialog.getByRole('button', { name: /Additional options/ }).click();
   await expect(dialog.getByRole('button', { name: /Additional options/ })).toContainText('3 selected');
   await expect(dialog.getByRole('button', { name: 'Save as approved' })).toBeInViewport();
+  await dialog.getByRole('button', { name: /Operational impact/ }).click();
+  await expect(dialog.getByText('Operational impact', { exact: true })).toHaveCount(1);
+  await expect(dialog.getByRole('status')).toHaveCSS('border-top-width', '0px');
+  await expect(dialog.getByRole('button', { name: /Operational impact/ }).locator('..')).toHaveCSS('box-shadow', 'none');
   await page.screenshot({ path: test.info().outputPath('compact-absence-desktop.png') });
 });

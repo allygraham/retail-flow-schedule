@@ -8,6 +8,7 @@ import { daysBetween } from './useLeaveBalance';
 import s from './OperationalImpact.module.scss';
 
 interface Props {
+  embedded?: boolean;
   userId: string;
   startDate: string;
   endDate: string;
@@ -25,7 +26,7 @@ interface Impact {
  * Lists affected shift count + uncovered hours and reminds the manager that
  * shifts are returned to open coverage. Non-alarming styling.
  */
-export function OperationalImpactCard({ userId, startDate, endDate }: Props) {
+export function OperationalImpactCard({ userId, startDate, endDate, embedded = false }: Props) {
   const { business } = useAuth();
   const fetchImpact = useCallback(async (): Promise<Impact | null> => {
     if (!business || !userId || !startDate || !endDate || endDate < startDate) return null;
@@ -47,8 +48,8 @@ export function OperationalImpactCard({ userId, startDate, endDate }: Props) {
   const days = daysBetween(startDate, endDate);
 
   return (
-    <div className={s.card} role="status" aria-live="polite">
-      <div className={s.eyebrow}>Operational impact</div>
+    <div className={`${s.card} ${embedded ? s.embedded : ''}`} role="status" aria-live="polite">
+      {!embedded && <div className={s.eyebrow}>Operational impact</div>}
       {error ? <DataLoadError message={error} retry={reload} /> : loading ? (
         <div className={s.line}>Calculating cover…</div>
       ) : (
