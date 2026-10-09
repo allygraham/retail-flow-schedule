@@ -140,7 +140,7 @@
   align-items: center;
   gap: $sp-2;
   flex-wrap: wrap;
-  padding: $sp-3 $sp-5 0;
+  padding: $sp-3 $sp-4;
 }
 
 .loading {
@@ -455,7 +455,7 @@
     justify-content: space-between;
   }
   .activeFiltersRow {
-    padding: $sp-3 $sp-3 0;
+    padding: $sp-3;
   }
   .actions {
     min-width: 0;
