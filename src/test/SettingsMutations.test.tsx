@@ -23,7 +23,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: (table: str
   }; return q;
 } } }));
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.refresh.mockResolvedValue(undefined);
+  vi.resetAllMocks(); mocks.refresh.mockResolvedValue(undefined);
   mocks.read.mockImplementation((table: string) => ({ data: table === 'roles_catalog' ? [{ id: 'role', name: 'Cashier', color: null }] : [], error: null }));
   mocks.write.mockResolvedValue({ data: [{ id: 'saved', business_id: 'shop' }], error: null });
 });
@@ -98,10 +98,10 @@ it.each(['rejected', 'empty'])('store save retains the dialog on %s failure', as
   render(<Stores />); fireEvent.click(screen.getByRole('button', { name: 'Add store' }));
   const dialog = screen.getByRole('dialog', { name: 'Add store' });
   fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'New location' } });
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Add store' }));
   await within(dialog).findByText(kind === 'rejected' ? 'Offline' : /Store was not saved/);
   expect(within(dialog).getByLabelText('Name')).toHaveValue('New location');
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Add store' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });
 it('blocks duplicate store submissions', async () => {
@@ -109,7 +109,7 @@ it('blocks duplicate store submissions', async () => {
   render(<Stores />); fireEvent.click(screen.getByRole('button', { name: 'Add store' }));
   const dialog = screen.getByRole('dialog', { name: 'Add store' });
   fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'New location' } });
-  act(() => { fireEvent.click(within(dialog).getByRole('button', { name: 'Save' })); fireEvent.click(within(dialog).getByRole('button', { name: 'Save' })); });
+  act(() => { fireEvent.click(within(dialog).getByRole('button', { name: 'Add store' })); fireEvent.click(within(dialog).getByRole('button', { name: 'Add store' })); });
   await waitFor(() => expect(mocks.write).toHaveBeenCalledTimes(1));
   await act(async () => finish({ data: [{ id: 'store' }], error: null }));
 });
