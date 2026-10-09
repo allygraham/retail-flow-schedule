@@ -18,7 +18,7 @@ export function LeaveYearSettings() {
   const busy = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  if (role !== 'owner') return null;
+  if (role !== 'owner' && role !== 'admin') return null;
   const preview = mode !== 'financial' || start ? leavePeriodForDate({ leave_year_mode: mode, leave_year_start_date: start }, isoDate(new Date())) : null;
   const save = async () => {
     if (!business || busy.current) return;

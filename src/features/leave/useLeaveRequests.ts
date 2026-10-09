@@ -63,7 +63,7 @@ export function useLeaveRequests() {
 
       let rows: LeaveRequestRow[] = (data ?? []).map((r) => ({ ...r, source: r.source as LeaveSource, sickness_meta: r.sickness_meta === null ? null : parseSicknessMeta(r.sickness_meta), lifecycle_status: r.lifecycle_status as SicknessLifecycleStatus | null }));
       const requestUserIds = Array.from(new Set(rows.map(r => r.user_id)));
-      const [empResult, profsResult, membersResult] = await Promise.all([
+      const [empResult, profsResult, membersResult, adminResult] = await Promise.all([
         isMgr
           ? supabase
               .from('employee_profiles')
@@ -76,10 +76,11 @@ export function useLeaveRequests() {
         isMgr
           ? supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('is_active', true)
           : Promise.resolve({ data: [] }),
+        isMgr ? supabase.from('user_roles').select('user_id').eq('business_id', business.id).eq('role', 'admin') : Promise.resolve({ data: [] }),
       ]);
 
       if (request !== sequence.current) return;
-      for (const result of [empResult, profsResult, membersResult]) if ('error' in result && result.error) throw result.error;
+      for (const result of [empResult, profsResult, membersResult, adminResult]) if ('error' in result && result.error) throw result.error;
       const emp = empResult.data, profs = profsResult.data, members = membersResult.data;
       setWorkingDaysByUser(Object.fromEntries((emp ?? []).map(e => [e.user_id, e.working_days ?? null])));
       const nameById: Record<string, string | null> = Object.fromEntries(
@@ -93,7 +94,7 @@ export function useLeaveRequests() {
         primary_store: storeByUser[r.user_id] ?? null,
       }));
       if (isMgr) {
-        const memberIds = Array.from(new Set((members ?? []).map((m) => m.user_id)));
+        const memberIds = Array.from(new Set((members ?? []).filter(m => !(adminResult.data ?? []).some(a => a.user_id === m.user_id)).map((m) => m.user_id)));
         const missingIds = memberIds.filter(id => !(id in nameById));
         const missingResult = missingIds.length
           ? await supabase.from('profiles').select('id, full_name').in('id', missingIds)

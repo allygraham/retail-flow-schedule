@@ -17,7 +17,7 @@ const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']
 export function BrandingSettings() {
   const { business, user, role } = useAuth();
   const { theme, savedTheme, refresh, previewTheme, clearPreviewTheme } = useBranding();
-  const canEdit = role === 'owner';
+  const canEdit = role === 'owner' || role === 'admin';
   const canViewOnly = role === 'manager' || role === 'employee';
 
   const [draft, setDraft] = useState<BrandingTheme>(savedTheme);

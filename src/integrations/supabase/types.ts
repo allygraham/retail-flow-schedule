@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      change_events: {
+        Row: { id: string; business_id: string; occurred_at: string; actor_user_id: string | null; actor_name: string; entity_type: string; entity_id: string; action: string; subject: string | null; before_values: Json; after_values: Json; schema_version: number }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -875,6 +881,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      set_business_role: { Args: { _business_id: string; _user_id: string; _role: Database["public"]["Enums"]["app_role"] }; Returns: undefined }
       release_coverage_shifts: {
         Args: { _business_id: string; _shifts: Json }
         Returns: number
@@ -976,7 +983,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "owner" | "manager" | "employee"
+      app_role: "owner" | "admin" | "manager" | "employee"
       employment_type: "full_time" | "part_time" | "casual" | "contractor"
       invitation_status: "pending" | "accepted" | "revoked" | "expired"
       leave_status: "pending" | "approved" | "rejected" | "cancelled"
@@ -1110,7 +1117,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "manager", "employee"],
+      app_role: ["owner", "admin", "manager", "employee"],
       employment_type: ["full_time", "part_time", "casual", "contractor"],
       invitation_status: ["pending", "accepted", "revoked", "expired"],
       leave_status: ["pending", "approved", "rejected", "cancelled"],

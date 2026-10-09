@@ -26,7 +26,7 @@ import s from './Profile.module.scss';
 
 export default function Profile() {
   const { user, fullName, role, business, refresh } = useAuth();
-  const { balance, loading: balanceLoading } = useLeaveBalance();
+  const { balance, loading: balanceLoading } = useLeaveBalance(undefined, undefined, role !== 'admin');
   const { submit } = useLeaveRequests();
   const [name, setName] = useState(fullName ?? '');
   const holidays = useHolidays();
@@ -111,8 +111,8 @@ export default function Profile() {
   if (profileError) return <div className={s.page}>{pageHeader}<DataLoadError message={profileError} retry={reloadProfile} /></div>;
   if (profileLoading) return <div className={s.page}>{pageHeader}<div className={s.grid}>
     <Card title="Personal info"><LoadingSkeleton layout="form" label="Loading profile" /></Card>
-    <LeaveBalanceCard balance={balance} loading={balanceLoading} />
-    <Card title="Upcoming shifts" subtitle="Next 10 published"><LoadingSkeleton label="Loading upcoming shifts" /></Card>
+    {role !== 'admin' && <LeaveBalanceCard balance={balance} loading={balanceLoading} />}
+    {role !== 'admin' && <Card title="Upcoming shifts" subtitle="Next 10 published"><LoadingSkeleton label="Loading upcoming shifts" /></Card>}
   </div></div>;
 
   return (
@@ -146,7 +146,7 @@ export default function Profile() {
             </div>
           )}
         </Card>
-        <div className={s.col}>
+        {role !== 'admin' && <div className={s.col}>
           <LeaveBalanceCard
             balance={balance}
             loading={balanceLoading}
@@ -178,7 +178,7 @@ export default function Profile() {
             </ul>
           )}
         </Card>
-        </div>
+        </div>}
       </div>
 
       <Modal

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Team from './Team';
 const mocks = vi.hoisted(() => ({ owner: true, business: { id: 'shop' }, user: { id: 'owner' }, rpc: vi.fn(), success: vi.fn(), error: vi.fn() }));
-vi.mock('@/features/auth/authContext', () => ({ useAuth: () => ({ business: mocks.business, user: mocks.user, hasPermission: (permission: string) => permission === 'manage_settings' ? mocks.owner : true }) }));
+vi.mock('@/features/auth/authContext', () => ({ useAuth: () => ({ business: mocks.business, user: mocks.user, role: mocks.owner ? 'owner' : 'manager', hasPermission: (permission: string) => permission === 'manage_settings' ? mocks.owner : true }) }));
 vi.mock('@/features/leave/useLeaveRequests', () => ({ useLeaveRequests: () => ({ addForEmployee: vi.fn() }) }));
 vi.mock('sonner', () => ({ toast: { success: mocks.success, error: mocks.error } }));
 // Menu mechanics have separate browser coverage; keep these tests focused on employee editing.

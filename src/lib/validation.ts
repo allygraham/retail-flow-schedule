@@ -77,14 +77,14 @@ export const inviteEmployeeSchema = z.object({
   first_name: z.string().trim().min(1, 'First name is required').max(60),
   last_name: z.string().trim().min(1, 'Last name is required').max(60),
   email: z.string().trim().toLowerCase().email('Enter a valid email').max(255),
-  role: z.enum(['employee', 'manager', 'owner']),
-  primary_store_id: z.string().uuid('Pick a primary store'),
+  role: z.enum(['employee', 'manager', 'owner', 'admin']),
+  primary_store_id: z.string().uuid('Pick a primary store').nullable(),
   primary_role_id: z.string().uuid().optional().nullable(),
   contracted_hours: z.coerce.number().min(0).max(168).optional().nullable(),
   hire_date: z.string().optional().nullable(),
   phone: z.string().trim().max(40).optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
-});
+}).refine(data => data.role === 'admin' || !!data.primary_store_id, { message: 'Pick a primary store', path: ['primary_store_id'] });
 export type InviteEmployeeInput = z.infer<typeof inviteEmployeeSchema>;
 
 export const acceptInviteSchema = z.object({

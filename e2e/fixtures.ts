@@ -11,8 +11,8 @@ export async function authenticate(page: Page, personId = ownerId) {
   await page.addInitScript(value => localStorage.setItem('sb-example-auth-token', JSON.stringify({ ...value, expires_at: Math.floor(Date.now() / 1000) + 3600 })), { ...session, user: { ...user, id: personId, email: personId === ownerId ? user.email : 'employee@example.test' } });
 }
 export type StubState = {
-  logoutFailure: boolean; passwordFailure: boolean; recoveryFailure: boolean; inviteFailure: boolean; inviteUpdateFailure: boolean; memberFailure: boolean; editFailure: boolean; employeeActive: boolean; employeeRole: 'employee' | 'manager'; hours: number; invites: Record<string, unknown>[];
-  hasWorkspace: boolean; role: 'owner' | 'employee'; holidayFailure: boolean; notificationFailure: boolean; readFailure: boolean; read: boolean;
+  logoutFailure: boolean; passwordFailure: boolean; recoveryFailure: boolean; inviteFailure: boolean; inviteUpdateFailure: boolean; memberFailure: boolean; editFailure: boolean; employeeActive: boolean; employeeRole: 'employee' | 'manager' | 'admin'; hours: number; invites: Record<string, unknown>[];
+  hasWorkspace: boolean; role: 'owner' | 'admin' | 'manager' | 'employee'; holidayFailure: boolean; notificationFailure: boolean; readFailure: boolean; read: boolean;
   shiftFailure: string | null; holidays: Record<string, unknown>[]; batches: Record<string, unknown>[][]; shifts: Record<string, unknown>[]; leaves: Record<string, unknown>[];
   writes: { endpoint: string; body: Record<string, unknown> }[];
 };
@@ -49,6 +49,11 @@ export async function stubApi(page: Page, shared?: StubState) {
     if (endpoint === 'memberships' && url.searchParams.get('user_id') === `eq.${employeeId}` && !state.employeeActive) return reply([]);
     if (endpoint === 'memberships' && !state.hasWorkspace) return reply([]);
     if (endpoint === 'memberships') return reply(single ? { business_id: businessId, businesses: business } : url.searchParams.get('select')?.includes('businesses') ? [{ business_id: businessId, businesses: business }] : [{ user_id: employeeId, is_active: state.employeeActive }]);
+    if (endpoint === 'set_business_role') {
+      if (state.editFailure) return reply({ message: 'Access update failed' }, 400);
+      state.employeeRole = body?._role as StubState['employeeRole']; return reply(null);
+    }
+    if (endpoint === 'user_roles' && url.searchParams.get('role') === 'eq.admin') return reply(state.employeeRole === 'admin' ? [{ user_id: employeeId, role: 'admin' }] : []);
     if (endpoint === 'user_roles') return url.searchParams.get('select')?.includes('user_id') ? reply([{ user_id: employeeId, role: state.employeeRole }]) : reply([{ role: url.searchParams.get('user_id') === `eq.${employeeId}` ? state.employeeRole : state.role }]);
     if (endpoint === 'business_branding') return reply(null);
     if (endpoint === 'custom_holidays') return state.holidayFailure ? reply({ message: 'Holiday service unavailable' }, 400) : reply(state.holidays);

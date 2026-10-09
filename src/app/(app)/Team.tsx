@@ -46,7 +46,7 @@ interface Row {
   invitation_id?: string;
   full_name: string;
   email: string;
-  role: 'owner' | 'manager' | 'employee';
+  role: AppRole;
   store_id?: string | null;
   store_name: string;
   job_id?: string | null;
@@ -75,14 +75,15 @@ const STATUS_LABEL: Record<AccountStatus, string> = {
 };
 
 export default function Team() {
-  const { business, user, hasPermission } = useAuth();
+  const { business, user, role, hasPermission } = useAuth();
   const canManageStaff = hasPermission('manage_staff');
-  const isOwner = hasPermission('manage_settings');
+  const isOwner = role === 'owner';
+  const canViewHistory = hasPermission('view_reports');
 
 
   // filters
   const [q, setQ] = useState('');
-  const [fRole, setFRole] = useState<'all' | 'owner' | 'manager' | 'employee'>('all');
+  const [fRole, setFRole] = useState<'all' | AppRole>('all');
   const [fStore, setFStore] = useState('all');
   const [fStatus, setFStatus] = useState<'all' | AccountStatus>('all');
 
@@ -97,7 +98,7 @@ export default function Team() {
   const [acceptUrl, setAcceptUrl] = useState<string | null>(null);
   const blankForm = {
     first_name: '', last_name: '', email: '',
-    role: 'employee' as 'owner' | 'manager' | 'employee',
+    role: 'employee' as AppRole,
     primary_store_id: '', primary_role_id: '',
     contracted_hours: '', hire_date: '', phone: '', notes: '',
   };
@@ -109,12 +110,30 @@ export default function Team() {
   const editSubmitting = useRef(false);
   const [editErr, setEditErr] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
-    role: 'employee' as 'owner' | 'manager' | 'employee',
+    role: 'employee' as AppRole,
     primary_store_id: '',
     primary_role_id: '',
     contracted_hours: '',
     working_days: [] as number[],
   });
+
+  const [accessRow, setAccessRow] = useState<Row | null>(null);
+  const [accessRole, setAccessRole] = useState<AppRole>('employee');
+  const [accessBusy, setAccessBusy] = useState(false);
+  const accessSubmitting = useRef(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const openAccess = (row: Row) => { setAccessRow(row); setAccessRole(row.role); setAccessError(null); };
+  const saveAccess = async (event: { preventDefault: () => void }) => {
+    event.preventDefault();
+    if (!isOwner || !business || !accessRow?.user_id || accessSubmitting.current) return;
+    accessSubmitting.current = true; setAccessBusy(true); setAccessError(null);
+    try {
+      const result = await supabase.rpc('set_business_role', { _business_id: business.id, _user_id: accessRow.user_id, _role: accessRole });
+      if (result.error) throw result.error;
+      setAccessRow(null); toast.success('Access updated'); await load();
+    } catch (error) { setAccessError(errorMessage(error, 'Could not update access. Please try again.')); }
+    finally { accessSubmitting.current = false; setAccessBusy(false); }
+  };
 
   // confirm deactivate
   const [confirmRow, setConfirmRow] = useState<Row | null>(null);
@@ -170,7 +189,7 @@ export default function Team() {
         store_name: storeMap[epMap[r.user_id]?.primary_store_id ?? ''] ?? '—',
         job_id: epMap[r.user_id]?.primary_role_id ?? null,
         job_name: jobMap[epMap[r.user_id]?.primary_role_id ?? ''] ?? '—',
-        contracted_hours: epMap[r.user_id]?.contracted_hours ?? null,
+        contracted_hours: r.role === 'admin' ? null : epMap[r.user_id]?.contracted_hours ?? null,
         employment_type: epMap[r.user_id]?.employment_type ?? '—',
         account_status: (isActive ? 'active' : 'disabled') as AccountStatus,
         working_days: epMap[r.user_id]?.working_days ?? null,
@@ -262,7 +281,7 @@ export default function Team() {
 
   const counts = useMemo(() => {
     const c = { active: 0, invited: 0, expired: 0, revoked: 0, disabled: 0 };
-    rows.forEach(r => { c[r.account_status]++; });
+    rows.filter(r => r.role !== 'admin').forEach(r => { c[r.account_status]++; });
     return c;
   }, [rows]);
 
@@ -302,6 +321,7 @@ export default function Team() {
       phone: form.phone || null,
       notes: form.notes || null,
       primary_role_id: form.primary_role_id || null,
+      primary_store_id: form.role === 'admin' ? null : form.primary_store_id,
     });
     if (!parsed.success) { setInviteErr(parsed.error.issues[0].message); return; }
 
@@ -434,20 +454,21 @@ export default function Team() {
 
   const canEdit = (row: Row) => {
     if (!canManageStaff || row.kind !== 'member') return false;
-    if (row.role === 'owner' && !isOwner) return false;
+    if (row.role === 'admin') return false;
+    if ((row.role === 'owner') && !isOwner) return false;
     return true;
   };
   const canDeactivate = (row: Row) => {
     if (!canManageStaff || row.kind !== 'member') return false;
     if (row.user_id === user?.id) return false; // can't disable self
-    if (row.role === 'owner' && !isOwner) return false;
+    if ((row.role === 'owner' || row.role === 'admin') && !isOwner) return false;
     return true;
   };
 
   const openLeave = (row: Row) => { setLeaveRow(row); };
 
   const renderEntitlement = (row: Row) => <>
-                    {row.kind === 'invite' ? (
+                    {row.kind === 'invite' || row.role === 'admin' ? (
                       <span className={s.muted}>—</span>
                     ) : canManageStaff && editingId === row.user_id ? (
                       <span className={t.inlineEdit}>
@@ -484,7 +505,7 @@ export default function Team() {
                         {row.annual_leave_entitlement} days {canManageStaff && <Pencil size={13} aria-hidden="true" />}
                       </button>
                     )}
-                    {row.kind === 'member' && !row.working_days?.length && <div className={t.attention}>Working days not set</div>}
+                    {row.kind === 'member' && row.role !== 'admin' && !row.working_days?.length && <div className={t.attention}>Working days not set</div>}
   </>;
 
   const pageHeader = (
@@ -493,7 +514,8 @@ export default function Team() {
           <span className={s.eye}>Team</span>
           <h1 className={s.h1}>Your people</h1>
           <p className={s.sub} hidden={loading || !data}>
-            {counts.active} active · {counts.invited} invited
+            {counts.active} active staff · {counts.invited} invited
+            {rows.some(row => row.role === 'admin') ? ` · ${rows.filter(row => row.role === 'admin').length} admins` : ''}
             {counts.disabled > 0 ? ` · ${counts.disabled} disabled` : ''}
             {counts.expired > 0 ? ` · ${counts.expired} expired` : ''}
           </p>
@@ -517,7 +539,7 @@ export default function Team() {
           </div>
           {!isCompact && filtersOpen && <div className={t.filterGrid}>
             <Field label="Role"><Select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
-              <option value="all">All roles</option><option value="owner">Owner</option><option value="manager">Manager</option><option value="employee">Employee</option>
+              <option value="all">All roles</option><option value="admin">Admin</option><option value="owner">Owner</option><option value="manager">Manager</option><option value="employee">Employee</option>
             </Select></Field>
             {showStore && <Field label="Store"><Select value={fStore} onChange={e => setFStore(e.target.value)}>
               <option value="all">All stores</option>{stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
@@ -548,7 +570,7 @@ export default function Team() {
               const canRenewInvite = m.kind === 'invite' && m.account_status === 'expired';
               const canRevokeInvite = m.kind === 'invite' && m.account_status !== 'revoked';
               const canEditRow = canEdit(m);
-              const canAddLeave = m.kind === 'member' && canManageStaff;
+              const canAddLeave = m.kind === 'member' && m.role !== 'admin' && canManageStaff;
               const canDeactivateRow = canDeactivate(m) && m.account_status === 'active';
               const canReactivateRow = canDeactivate(m) && m.account_status === 'disabled';
               const metaParts = [
@@ -564,7 +586,7 @@ export default function Team() {
                 >
                   <Avatar name={m.full_name} size="sm" />
                   <div className={t.memberMain}>
-                    {isOwner && m.kind === 'member' ? <Link className={t.staffLink} aria-label={m.full_name} to={`/team/${m.user_id}`}>
+                    {canViewHistory && m.role !== 'admin' && m.kind === 'member' ? <Link className={t.staffLink} aria-label={m.full_name} to={`/team/${m.user_id}`}>
                       <span className={t.memberName}>{m.full_name}</span>
                       {m.email && <span className={t.memberEmail}>{m.email}</span>}
                     </Link> : <><span className={t.memberName}>{m.full_name}</span>{m.email && <span className={t.memberEmail}>{m.email}</span>}</>}
@@ -594,7 +616,7 @@ export default function Team() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className={t.menuContent}>
-                        {isOwner && m.kind === 'member' && <DropdownMenuItem asChild><Link to={`/team/${m.user_id}`}>View leave details</Link></DropdownMenuItem>}
+                        {canViewHistory && m.role !== 'admin' && m.kind === 'member' && <DropdownMenuItem asChild><Link to={`/team/${m.user_id}`}>View leave details</Link></DropdownMenuItem>}
                         {m.kind === 'invite' && (
                           <>
                             <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>Copy link</DropdownMenuItem>
@@ -603,6 +625,7 @@ export default function Team() {
                             <DropdownMenuSeparator />
                           </>
                         )}
+                        {isOwner && m.kind === 'member' && m.account_status === 'active' && <DropdownMenuItem onSelect={() => openAccess(m)}>Change access</DropdownMenuItem>}
                         <DropdownMenuItem disabled={!canEditRow} onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
                         <DropdownMenuItem disabled={!canAddLeave} onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
                         {(canDeactivate(m) || m.account_status === 'active' || m.account_status === 'disabled') && (
@@ -635,7 +658,7 @@ export default function Team() {
               {loading || !data ? <tr><td colSpan={5 + Number(showStore) + Number(canManageStaff)}><LoadingSkeleton label="Loading team" rows={5} /></td></tr> : filtered.map(m => (
                 <tr key={m.key} className={m.account_status === 'disabled' ? t.rowDisabled : ''}>
                   <td>
-                    {isOwner && m.kind === 'member' ? <Link className={`${t.staffLink} ${t.staffLinkRow}`} aria-label={m.full_name} to={`/team/${m.user_id}`}>
+                    {canViewHistory && m.role !== 'admin' && m.kind === 'member' ? <Link className={`${t.staffLink} ${t.staffLinkRow}`} aria-label={m.full_name} to={`/team/${m.user_id}`}>
                       <Avatar name={m.full_name} size="sm" />
                       <span className={t.staffIdentity}><span className={t.memberName}>{m.full_name}</span><span className={t.memberEmail}>{m.email || '—'}</span></span>
                     </Link> : <div className={t.staffLinkRow}><Avatar name={m.full_name} size="sm" /><span className={t.staffIdentity}><span className={t.memberName}>{m.full_name}</span><span className={t.memberEmail}>{m.email || '—'}</span></span></div>}
@@ -652,7 +675,7 @@ export default function Team() {
                         const canRenewInvite = m.kind === 'invite' && m.account_status === 'expired';
                         const canRevokeInvite = m.kind === 'invite' && m.account_status !== 'revoked';
                         const canEditRow = canEdit(m);
-                        const canAddLeave = m.kind === 'member' && canManageStaff;
+                        const canAddLeave = m.kind === 'member' && m.role !== 'admin' && canManageStaff;
                         const canDeactivateRow = canDeactivate(m) && m.account_status === 'active';
                         const canReactivateRow = canDeactivate(m) && m.account_status === 'disabled';
 
@@ -665,7 +688,7 @@ export default function Team() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className={t.menuContent}>
-                        {isOwner && m.kind === 'member' && <DropdownMenuItem asChild><Link to={`/team/${m.user_id}`}>View leave details</Link></DropdownMenuItem>}
+                        {canViewHistory && m.role !== 'admin' && m.kind === 'member' && <DropdownMenuItem asChild><Link to={`/team/${m.user_id}`}>View leave details</Link></DropdownMenuItem>}
                             {m.kind === 'invite' && (
                               <>
                                 <DropdownMenuItem disabled={!canCopyInvite} onSelect={() => copyAccept(m.accept_token)}>
@@ -680,7 +703,8 @@ export default function Team() {
                                 <DropdownMenuSeparator />
                               </>
                             )}
-                            <DropdownMenuItem disabled={!canEditRow} onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
+                            {isOwner && m.kind === 'member' && m.account_status === 'active' && <DropdownMenuItem onSelect={() => openAccess(m)}>Change access</DropdownMenuItem>}
+                        <DropdownMenuItem disabled={!canEditRow} onSelect={() => openEdit(m)}>Edit details</DropdownMenuItem>
                             <DropdownMenuItem disabled={!canAddLeave} onSelect={() => openLeave(m)}>Add leave</DropdownMenuItem>
                             {(canDeactivate(m) || m.account_status === 'active' || m.account_status === 'disabled') && (
                               <>
@@ -711,6 +735,17 @@ export default function Team() {
       </Card>
 
       {/* Mobile/tablet filter sheet */}
+      <Modal open={!!accessRow} onClose={() => { if (!accessBusy) setAccessRow(null); }} title="Change access">
+        <form className={s.form} onSubmit={saveAccess}>
+          <p>{accessRow?.full_name}</p>
+          <Field label="Access role"><Select value={accessRole} onChange={e => setAccessRole(e.target.value as AppRole)} disabled={accessBusy}>
+            <option value="employee">Employee</option><option value="manager">Manager</option><option value="admin">Admin</option><option value="owner">Owner</option>
+          </Select></Field>
+          {accessRole === 'admin' && <p>Admins can manage the business but are excluded from staffing and leave entitlement. Remove upcoming shifts and leave before changing access.</p>}
+          {accessError && <p role="alert">{accessError}</p>}
+          <Button type="submit" disabled={accessBusy}>{accessBusy ? 'Saving…' : 'Save access'}</Button>
+        </form>
+      </Modal>
       <Modal
         open={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
@@ -733,7 +768,7 @@ export default function Team() {
           </Field>
           <Field label="Role">
             <Select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
-              <option value="all">All roles</option>
+              <option value="all">All roles</option><option value="admin">Admin</option>
               <option value="owner">Owner</option>
               <option value="manager">Manager</option>
               <option value="employee">Employee</option>
@@ -806,14 +841,14 @@ export default function Team() {
                 <Select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as AppRole })}>
                   <option value="employee">Employee</option>
                   <option value="manager">Manager</option>
-                  {isOwner && <option value="owner">Owner</option>}
+                  {isOwner && <><option value="admin">Admin</option><option value="owner">Owner</option></>}
                 </Select>
               </Field>
               <Field label="Primary store">
                 <Select
                   value={form.primary_store_id}
                   onChange={e => setForm({ ...form, primary_store_id: e.target.value })}
-                  required
+                  required={form.role !== 'admin'} disabled={form.role === 'admin'}
                 >
                   <option value="">Select…</option>
                   {stores.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}

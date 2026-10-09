@@ -20,6 +20,7 @@ const Rota = lazy(() => import("@/app/(app)/Rota"));
 const Leave = lazy(() => import("@/app/(app)/Leave"));
 const StaffHistory = lazy(() => import("@/app/(app)/StaffHistory"));
 const Team = lazy(() => import("@/app/(app)/Team"));
+const ChangeHistory = lazy(() => import("@/app/(app)/ChangeHistory"));
 const Stores = lazy(() => import("@/app/(app)/Stores"));
 const Profile = lazy(() => import("@/app/(app)/Profile"));
 const Settings = lazy(() => import("@/app/(app)/Settings"));
@@ -60,7 +61,8 @@ const App = () => (
               <Route path="/leave" element={<Leave />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/team" element={<ProtectedRoute permission="manage_staff"><Team /></ProtectedRoute>} />
-              <Route path="/team/:userId" element={<ProtectedRoute roles={['owner']} fallback="denied"><StaffHistory /></ProtectedRoute>} />
+              <Route path="/team/:userId" element={<ProtectedRoute roles={['owner', 'admin']} fallback="denied"><StaffHistory /></ProtectedRoute>} />
+              <Route path="/history" element={<ProtectedRoute permission="view_change_history" fallback="denied"><ChangeHistory /></ProtectedRoute>} />
               <Route path="/stores" element={<ProtectedRoute permission="manage_stores" fallback="denied"><Stores /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute permission="manage_settings" fallback="denied"><Settings /></ProtectedRoute>} />
             </Route>

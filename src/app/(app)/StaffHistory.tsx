@@ -30,7 +30,7 @@ export default function StaffHistory() {
   const [year, setYear] = useState(currentYear);
   const period = useMemo(() => leavePeriodForYear(business, year), [business, year]);
   const fetchData = useCallback(async () => {
-    if (!business || !userId || role !== 'owner') throw new Error('Access denied');
+    if (!business || !userId || !['owner', 'admin'].includes(role ?? '')) throw new Error('Access denied');
     const member = await supabase.from('memberships').select('user_id').eq('business_id', business.id).eq('user_id', userId).maybeSingle();
     assertQueryResults(member);
     if (!member.data) throw new Error('Staff member not found in this workspace');

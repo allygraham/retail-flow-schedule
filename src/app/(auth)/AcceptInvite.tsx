@@ -14,7 +14,7 @@ interface InviteRow {
   business_name: string;
   email: string;
   full_name: string | null;
-  role: 'owner' | 'manager' | 'employee';
+  role: 'owner' | 'admin' | 'manager' | 'employee';
   status: 'pending' | 'accepted' | 'revoked' | 'expired';
   expires_at: string;
 }

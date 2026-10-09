@@ -1,4 +1,4 @@
-// Manager-only edge function that creates an invitation row.
+// Management edge function that creates an invitation row.
 // JWT is verified so we know who is calling. Service role is used to validate
 // duplicate-membership in the SAME business (RLS would otherwise hide users
 // in other businesses).
@@ -19,7 +19,7 @@ interface Body {
   business_id: string;
   email: string;
   full_name?: string | null;
-  role?: 'owner' | 'manager' | 'employee';
+  role?: 'owner' | 'admin' | 'manager' | 'employee';
   primary_store_id?: string | null;
   primary_role_id?: string | null;
   contracted_hours?: number | null;
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const email = (body.email ?? '').trim().toLowerCase();
     if (!email || !isEmail(email)) return json({ error: 'A valid email is required' }, 400);
     const role = body.role ?? 'employee';
-    if (!['owner', 'manager', 'employee'].includes(role)) {
+    if (!['owner', 'admin', 'manager', 'employee'].includes(role)) {
       return json({ error: 'Invalid role' }, 400);
     }
 
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     if (membershipError) return json({ error: 'Could not verify membership' }, 500);
     if (!membership) return json({ error: 'Active business membership is required' }, 403);
 
-    // Caller must be manager/owner in this business.
+    // Caller must have active management access in this business.
     const { data: callerRoles, error: rolesError } = await admin
       .from('user_roles')
       .select('role')
@@ -78,10 +78,10 @@ Deno.serve(async (req) => {
     if (rolesError) return json({ error: 'Could not verify permissions' }, 500);
     const callerRole = (callerRoles ?? []).map((r) => r.role);
     const isOwner = callerRole.includes('owner');
-    const canManageStaff = isOwner || callerRole.includes('manager');
-    if (!canManageStaff) return json({ error: 'Only owners and managers can invite employees' }, 403);
-    if (role === 'owner' && !isOwner) {
-      return json({ error: 'Only the owner can invite another owner' }, 403);
+    const canManageStaff = isOwner || callerRole.includes('admin') || callerRole.includes('manager');
+    if (!canManageStaff) return json({ error: 'Only active management can invite employees' }, 403);
+    if ((role === 'owner' || role === 'admin') && !isOwner) {
+      return json({ error: 'Only owners can invite owners or admins' }, 403);
     }
 
     // Inactive members may receive a fresh invite. Exact server lookup handles
@@ -107,16 +107,18 @@ Deno.serve(async (req) => {
 
     // Mint token + insert
     const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-    const { data: inv, error: insErr } = await admin
+    // Write as the verified caller so RLS rechecks access and audit history
+    // records the person who created the invitation.
+    const { data: inv, error: insErr } = await userClient
       .from('invitations')
       .insert({
         business_id: body.business_id,
         email,
         full_name: body.full_name ?? null,
         role,
-        primary_store_id: body.primary_store_id ?? null,
+        primary_store_id: role === 'admin' ? null : body.primary_store_id ?? null,
         primary_role_id: body.primary_role_id ?? null,
-        contracted_hours: body.contracted_hours ?? null,
+        contracted_hours: role === 'admin' ? null : body.contracted_hours ?? null,
         hire_date: body.hire_date ?? null,
         phone: body.phone ?? null,
         notes: body.notes ?? null,

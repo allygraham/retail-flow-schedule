@@ -102,6 +102,8 @@ describe('account role and session race regressions', () => {
     { roles: ['employee', 'manager', 'owner'], expected: 'owner' },
     { roles: ['owner', 'employee', 'manager'], expected: 'owner' },
     { roles: ['employee', 'manager'], expected: 'manager' },
+    { roles: ['admin', 'manager', 'employee'], expected: 'admin' },
+    { roles: ['admin', 'owner'], expected: 'owner' },
     { roles: ['employee'], expected: 'employee' },
   ])('uses $expected access for role rows $roles', async ({ roles, expected }) => {
     mocks.responses.user_roles = { data: roles.map(role => ({ role })), error: null };

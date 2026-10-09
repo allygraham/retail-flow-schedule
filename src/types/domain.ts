@@ -1,4 +1,4 @@
-export type AppRole = 'owner' | 'manager' | 'employee';
+export type AppRole = 'owner' | 'admin' | 'manager' | 'employee';
 export type ScheduleStatus = 'draft' | 'published';
 export type ShiftStatus = 'scheduled' | 'unassigned' | 'cancelled';
 export type LeaveType = 'annual' | 'unpaid' | 'sick' | 'other';

@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (request !== tenancyRequest.current) return;
         if (roleError) throw roleError;
         const roles = (roleRows ?? []).map(r => r.role as AppRole);
-        best = roles.includes('owner') ? 'owner' : roles.includes('manager') ? 'manager' : roles.includes('employee') ? 'employee' : null;
+        best = roles.includes('owner') ? 'owner' : roles.includes('admin') ? 'admin' : roles.includes('manager') ? 'manager' : roles.includes('employee') ? 'employee' : null;
         if (!best) {
           if (background) { setRole(null); setError('Workspace role unavailable. Please reload your account.'); }
           throw new Error('Workspace role unavailable');
