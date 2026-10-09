@@ -120,3 +120,21 @@ test('desktop absence form groups essentials and keeps administration compact', 
   await expect(dialog.getByRole('button', { name: /Operational impact/ }).locator('..')).toHaveCSS('box-shadow', 'none');
   await page.screenshot({ path: test.info().outputPath('compact-absence-desktop.png') });
 });
+
+test('date range hover fills intermediate days before committing the end date', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-09T12:00:00Z'));
+  await authenticate(page); await stubApi(page); await page.goto('/leave');
+  await page.getByRole('button', { name: 'Add leave', exact: true }).click();
+  const form = page.getByRole('dialog', { name: 'Add leave or absence' });
+  await form.getByRole('button', { name: 'Dates', exact: true }).click();
+  const calendar = page.getByRole('dialog', { name: 'Choose date', exact: true });
+  await calendar.getByRole('button', { name: /October 12th, 2026/i }).click();
+  await calendar.getByRole('button', { name: /October 16th, 2026/i }).hover();
+  const middle = calendar.getByRole('button', { name: /October 14th, 2026/i }).locator('..');
+  await expect(middle).toHaveClass(/rangePreview/);
+  await expect(middle).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(form.getByRole('button', { name: 'Dates', exact: true })).toContainText('12 Oct 2026 – …');
+  await calendar.getByRole('button', { name: /October 16th, 2026/i }).click();
+  await expect(calendar).toHaveCount(0);
+  await expect(form.getByRole('button', { name: 'Dates', exact: true })).toContainText('12 Oct 2026 – 16 Oct 2026');
+});

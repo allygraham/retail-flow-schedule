@@ -74,3 +74,23 @@ it('starting a range earlier than its first day replaces the start before extend
   expect(screen.getByLabelText('Saved dates')).toHaveTextContent('2026-11-27 / 2026-11-30');
   expect(screen.queryByRole('dialog')).toBeNull();
 });
+
+
+it('previews the hovered end date without changing saved dates and clears on leaving', () => {
+  render(<Form />); november();
+  const start = screen.getByRole('button', { name: /November 25th, 2026/i });
+  fireEvent.click(start);
+  const end = screen.getByRole('button', { name: /November 28th, 2026/i });
+  fireEvent.mouseEnter(end);
+  for (const day of [25, 26, 27, 28]) {
+    expect(screen.getByRole('button', { name: new RegExp(`November ${day}th, 2026`, 'i') }).closest('td')?.className).toContain('rangePreview');
+  }
+  expect(screen.getByLabelText('Saved dates')).toHaveTextContent('2026-11-25 / 2026-11-25');
+  fireEvent.mouseEnter(screen.getByRole('button', { name: /November 24th, 2026/i }));
+  expect(end.closest('td')?.className).not.toContain('rangePreview');
+  fireEvent.mouseEnter(end);
+  fireEvent.mouseLeave(screen.getByRole('dialog'));
+  expect(end.closest('td')?.className).not.toContain('rangePreview');
+  fireEvent.mouseEnter(end); fireEvent.click(end);
+  expect(screen.getByLabelText('Saved dates')).toHaveTextContent('2026-11-25 / 2026-11-28');
+});

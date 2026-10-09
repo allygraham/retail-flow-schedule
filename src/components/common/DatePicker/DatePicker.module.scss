@@ -116,3 +116,9 @@
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 @media (prefers-reduced-motion: reduce) { .popover { animation: none; } }
+
+.rdp .rangePreview {
+  background: color-mix(in srgb, var(--color-primary, #{$brand-600}) 18%, var(--color-surface, #{$surface}));
+  border-radius: 0;
+  &:hover { background: color-mix(in srgb, var(--color-primary, #{$brand-600}) 25%, var(--color-surface, #{$surface})); }
+}

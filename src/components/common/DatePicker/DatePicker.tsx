@@ -50,6 +50,7 @@ export function DatePicker(props: DatePickerProps) {
   const isRange = props.mode === 'range';
 
   const [open, setOpen] = useState(false);
+  const [hoveredDay, setHoveredDay] = useState<Date | null>(null);
   const [draftRange, setDraftRange] = useState<DateRangeValue | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 8, top: 8, width: 320 });
@@ -94,7 +95,7 @@ export function DatePicker(props: DatePickerProps) {
   }, [open]);
 
   useEffect(() => {
-    if (!open && draftRange) setDraftRange(null);
+    if (!open) { setDraftRange(null); setHoveredDay(null); }
   }, [open, draftRange]);
 
   const disabledMatchers = useMemo<Matcher[]>(() => {
@@ -119,6 +120,7 @@ export function DatePicker(props: DatePickerProps) {
 
   const handleClear = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    setHoveredDay(null);
     if (isRange) {
       setDraftRange(null);
       (props as RangeProps).onChange({ from: null, to: null });
@@ -131,6 +133,7 @@ export function DatePicker(props: DatePickerProps) {
     if (d) setOpen(false);
   };
   const handleRangeSelect = (_range: DateRange | undefined, selectedDay: Date) => {
+    setHoveredDay(null);
     const current = draftRange ?? (props as RangeProps).value;
     const beginRange = () => {
       // The first click is a valid one-day range immediately. Keep the picker
@@ -190,7 +193,7 @@ export function DatePicker(props: DatePickerProps) {
 
       <Dialog.Portal>
         <Dialog.Content asChild aria-describedby={undefined}>
-        <div ref={popoverRef} className={s.popover} style={position} role="dialog" aria-label="Choose date" aria-modal="false" onClick={event => event.stopPropagation()}>
+        <div ref={popoverRef} className={s.popover} style={position} role="dialog" aria-label="Choose date" aria-modal="false" onClick={event => event.stopPropagation()} onMouseLeave={() => setHoveredDay(null)}>
           <Dialog.Title className={s.srOnly}>Choose date</Dialog.Title>
           {isRange ? (
             <DayPicker
@@ -200,6 +203,11 @@ export function DatePicker(props: DatePickerProps) {
                 to: rangeValue?.to ?? undefined,
               }}
               onSelect={handleRangeSelect}
+              onDayMouseEnter={(day, modifiers) => setHoveredDay(modifiers.disabled ? null : day)}
+              onMonthChange={() => setHoveredDay(null)}
+              modifiers={{ range_preview: rangeValue?.from && !rangeValue.to && hoveredDay && !isBefore(hoveredDay, rangeValue.from)
+                ? { from: rangeValue.from, to: hoveredDay } : [] }}
+              modifiersClassNames={{ range_preview: s.rangePreview }}
               defaultMonth={rangeValue?.from ?? minDate ?? new Date()}
               disabled={disabledMatchers.length ? disabledMatchers : undefined}
               numberOfMonths={1}
