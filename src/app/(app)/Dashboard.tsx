@@ -1,3 +1,4 @@
+import { DashboardOnboarding } from '@/features/onboarding/DashboardOnboarding';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { assertQueryResults } from '@/lib/queryResults';
@@ -137,6 +138,7 @@ function EmployeeDashboard({ userId, fullName, businessName, businessId }: {
   return (
     <div className={s.page}>
       {pageHeader}
+      <DashboardOnboarding />
       {loadError && <DataLoadError message={loadError} retry={load} />}
 
       {/* HERO: Next shift */}
@@ -407,6 +409,7 @@ function ManagerDashboard() {
   return (
     <div className={s.page}>
       {pageHeader}
+      <DashboardOnboarding />
       {loadError && <DataLoadError message={loadError} retry={load} />}
 
       {weekHolidays.length > 0 && (

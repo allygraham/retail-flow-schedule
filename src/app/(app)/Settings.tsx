@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { ScrollCue } from '@/components/common/ScrollCue';
 import { useEffect, useRef, useState } from 'react';
 import { Building2, Users, CalendarDays, Palette } from 'lucide-react';
@@ -23,12 +24,20 @@ const STORAGE_KEY = 'settings.activeSection';
 
 export default function Settings() {
   const { business, role } = useAuth();
+  const [params] = useSearchParams();
   const tabsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<SectionKey>(() => {
     if (typeof window === 'undefined') return 'business';
+    const section = params.get('section');
+    if (SECTIONS.some(s => s.key === section)) return section as SectionKey;
     const saved = window.sessionStorage.getItem(STORAGE_KEY) as SectionKey | null;
     return saved && SECTIONS.some(s => s.key === saved) ? saved : 'business';
   });
+
+  useEffect(() => {
+    const section = params.get('section');
+    if (SECTIONS.some(s => s.key === section)) setActive(section as SectionKey);
+  }, [params]);
 
   useEffect(() => {
     window.sessionStorage.setItem(STORAGE_KEY, active);

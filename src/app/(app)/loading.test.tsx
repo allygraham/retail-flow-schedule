@@ -29,7 +29,7 @@ vi.mock('@/integrations/supabase/client', () => {
     return chain;
   };
   const channel = { on: () => channel, subscribe: () => channel };
-  return { supabase: { from: query, rpc: query, channel: () => channel, removeChannel: vi.fn() } };
+  return { supabase: { from: query, rpc: (name: string) => name === 'get_onboarding_status' ? Promise.resolve({ data: { welcomed: true, hidden: true, completed: [] }, error: null }) : query(), channel: () => channel, removeChannel: vi.fn() } };
 });
 afterEach(cleanup);
 beforeEach(() => { mocks.query = 0; mocks.failure = null; mocks.reject = false; mocks.manager = true; });

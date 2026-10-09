@@ -881,6 +881,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_onboarding_status: { Args: { _business_id: string }; Returns: import('@/features/onboarding/steps').OnboardingState }
+      update_onboarding: { Args: { _business_id: string; _action: string; _step?: string }; Returns: import('@/features/onboarding/steps').OnboardingState }
+
       get_shift_change_requests: { Args: { _business_id: string }; Returns: import('@/features/rota/shiftChangeTypes').ShiftChangeRequest[] }
       change_shift_request: { Args: { _business_id: string; _action: string; _request_id?: string; _shift_id?: string; _reason?: string; _replacement_user_id?: string; _swap_shift_id?: string; _manager_note?: string; _expected_updated_at?: string }; Returns: string }
 

@@ -1,3 +1,4 @@
+import { useOnboardingVisits } from '@/features/onboarding/useOnboardingVisits';
 import * as Dialog from '@radix-ui/react-dialog';
 import { errorMessage } from '@/lib/errors';
 import { SignOutError } from '@/features/auth/signOut';
@@ -41,6 +42,7 @@ const NAV_GROUPS: Array<{ label: string; keys: AppNavItem[] }> = [
 ];
 
 export default function AppShell({ children }: { children?: ReactNode }) {
+  useOnboardingVisits();
   const { fullName, business, role, user, signOut, hasPermission, loading } = useAuth();
   const { theme } = useBranding();
   const workspaceName = theme.displayName || business?.name || 'Workspace';
