@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   activeMember: false as boolean | null, membership: true, role: 'manager', lookupError: false,
-  pendingError: false, rpc: vi.fn(), inserted: vi.fn(), listUsers: vi.fn(),
+  pendingError: false, dsn: undefined as string | undefined, sentryInit: vi.fn(), captureMessage: vi.fn(), flush: vi.fn().mockResolvedValue(true), rpc: vi.fn(), inserted: vi.fn(), listUsers: vi.fn(),
 }));
+vi.mock('npm:@sentry/deno@11.6.0', () => ({ init: mocks.sentryInit, captureMessage: mocks.captureMessage, flush: mocks.flush }));
 vi.mock('https://esm.sh/@supabase/supabase-js@2.45.0', () => ({ createClient: () => ({
   auth: { getUser: async () => ({ data: { user: { id: 'caller' } }, error: null }), admin: { listUsers: mocks.listUsers } },
   rpc: async (name: string, args: unknown) => {
@@ -26,13 +27,14 @@ vi.mock('https://esm.sh/@supabase/supabase-js@2.45.0', () => ({ createClient: ()
 let handle: (req: Request) => Promise<Response>;
 beforeAll(async () => {
   vi.stubGlobal('crypto', { randomUUID: () => '11111111-1111-4111-8111-111111111111' });
-  vi.stubGlobal('Deno', { env: { get: () => 'test-only' }, serve: (fn: typeof handle) => { handle = fn; } });
+  vi.stubGlobal('Deno', { env: { get: (key: string) => key === 'SENTRY_DSN' ? mocks.dsn : 'test-only' }, serve: (fn: typeof handle) => { handle = fn; } });
   const entry = '../../supabase/functions/invite-employee/index.ts';
   await import(entry);
 });
 afterAll(() => vi.unstubAllGlobals());
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.dsn = undefined; mocks.flush.mockResolvedValue(true);
   mocks.activeMember = false; mocks.membership = true; mocks.role = 'manager';
   mocks.lookupError = false; mocks.pendingError = false;
 });
@@ -73,4 +75,16 @@ it('requires an explicit membership lookup result before creating an invite', as
   mocks.activeMember = null;
   expect((await send()).status).toBe(500);
   expect(mocks.inserted).not.toHaveBeenCalled();
+});
+
+it('reports configured server failures with only a generic invitation message', async () => {
+ mocks.dsn = 'https://public@o0.ingest.sentry.io/1'; mocks.lookupError = true; expect((await send()).status).toBe(500);
+ expect(mocks.captureMessage).toHaveBeenCalledWith('Employee invitation function failed', 'error');
+ const filter = mocks.sentryInit.mock.calls[0][0].beforeSend;
+ const event = filter({ user: { email: 'private@example.test' }, request: { data: 'medical detail' }, message: 'private', extra: { token: 'secret' } });
+ expect(JSON.stringify(event)).not.toMatch(/private|medical|secret/);
+});
+it('a Sentry delivery failure preserves the original API error response', async () => {
+ mocks.dsn = 'https://public@o0.ingest.sentry.io/1'; mocks.lookupError = true; mocks.flush.mockRejectedValueOnce(new Error('offline'));
+ expect((await send()).status).toBe(500);
 });

@@ -1,3 +1,4 @@
+import { reportError } from '@/features/monitoring/monitoring';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Publish only a complete result from the latest load and current context. */
@@ -17,7 +18,8 @@ export function useAsyncData<T>(loader: () => Promise<T>, message: string) {
     try {
       const data = await loader();
       if (request === sequence.current) setState({ source: loader, data, error: null, loading: false });
-    } catch {
+    } catch (error) {
+      if (request === sequence.current) reportError(error, 'data-load');
       if (request === sequence.current) setState({ source: loader, data: null, error: message, loading: false });
     }
   }, [loader, message]);

@@ -2,6 +2,7 @@
 // JWT is verified so we know who is calling. Service role is used to validate
 // duplicate-membership in the SAME business (RLS would otherwise hide users
 // in other businesses).
+import { reportInvitationFailure } from '../_shared/monitoring.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -9,11 +10,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+const json = async (body: unknown, status = 200) => {
+  if (status >= 500) await reportInvitationFailure();
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+};
 
 interface Body {
   business_id: string;
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     const accept_url = origin ? `${origin}/accept-invite?token=${token}` : null;
 
     return json({ invitation: inv, accept_url });
-  } catch (e) {
-    return json({ error: (e as Error).message ?? 'Unknown error' }, 500);
+  } catch {
+    return json({ error: 'Could not create the invitation. Please try again.' }, 500);
   }
 });

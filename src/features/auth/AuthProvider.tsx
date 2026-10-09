@@ -1,3 +1,4 @@
+import { reportError } from '@/features/monitoring/monitoring';
 import { signOutChecked, SignOutError } from './signOut';
 import { Ctx } from './authContext';
 import { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
@@ -55,7 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       setFullName(profileResult.data?.full_name ?? null); setBusiness(previous => JSON.stringify(previous) === JSON.stringify(biz ?? null) ? previous : biz ?? null); setRole(best);
-    } catch {
+    } catch (error) {
+      if (request === tenancyRequest.current) reportError(error, 'account-load');
       if (request === tenancyRequest.current && !background) setError('Could not load your account. Please try again.');
     } finally {
       if (request === tenancyRequest.current) setLoading(false);
@@ -74,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(currentSession); setUser(currentSession?.user ?? null);
       if (currentSession?.user) await loadTenancy(currentSession.user.id);
       else { tenancyRequest.current++; setBusiness(null); setRole(null); setFullName(null); setLoading(false); }
-    } catch { if (request === tenancyRequest.current) { setError('Could not load your account. Please try again.'); setLoading(false); } }
+    } catch (error) { if (request === tenancyRequest.current) { reportError(error, 'session-load'); setError('Could not load your account. Please try again.'); setLoading(false); } }
   }, [loadTenancy]);
 
   useEffect(() => {

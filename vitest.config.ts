@@ -13,6 +13,6 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(import.meta.dirname, "./src") },
+    alias: { "@": path.resolve(import.meta.dirname, "./src"), "npm:@sentry/deno@11.6.0": path.resolve(import.meta.dirname, "./src/test/sentryDenoAdapter.ts") },
   },
 });

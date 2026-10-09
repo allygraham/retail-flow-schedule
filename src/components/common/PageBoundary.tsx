@@ -1,3 +1,4 @@
+import { reportError } from '@/features/monitoring/monitoring';
 import { InitialPageLoader } from './InitialPageLoader';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { Component, Suspense, type ReactNode } from 'react';
@@ -10,6 +11,8 @@ class PageLoadError extends Component<{ children: ReactNode; fullPage: boolean }
   static getDerivedStateFromError() {
     return { failed: true };
   }
+
+  componentDidCatch(error: Error) { reportError(error, 'page-render'); }
 
   render() {
     if (this.state.failed) {
