@@ -1,14 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { authenticate, stubApi } from './fixtures';
-async function setup(page: Page, role: 'owner'|'admin'|'manager'|'employee' = 'owner') {
+async function setup(page: Page, role: 'owner'|'admin'|'manager'|'employee' = 'owner', complete = false) {
  await authenticate(page);const api=await stubApi(page);api.role=role;
  await page.route('**/rest/v1/business_branding*',route=>route.fulfill({json:{theme_key:'topdrawer',primary_color:'#747C61',secondary_color:'#4C4E56',accent_color:'#747C61',surface_color:'#FFFFFF'}}));
- let state={welcomed:false,hidden:false,completed:role==='employee'?[]:['stores']};
+ let state={welcomed:complete,hidden:false,dismissed:false,completed:complete?['stores','policy','team','publish']:role==='employee'?[]:['stores']};
  const actions:Record<string,unknown>[]=[];
  await page.route('**/rest/v1/rpc/get_onboarding_status',route=>route.fulfill({json:state}));
  await page.route('**/rest/v1/rpc/update_onboarding',route=>{
   const body=route.request().postDataJSON();actions.push(body);
-  state={...state,welcomed:state.welcomed||body._action==='welcome',hidden:body._action==='hide'?true:body._action==='show'?false:state.hidden,completed:body._action==='explore'?[...new Set([...state.completed,body._step])]:state.completed};
+  state={...state,dismissed:state.dismissed||body._action==='dismiss',welcomed:state.welcomed||body._action==='welcome',hidden:body._action==='hide'?true:body._action==='show'?false:state.hidden,completed:body._action==='explore'?[...new Set([...state.completed,body._step])]:state.completed};
   return route.fulfill({json:state});
  });
  return {actions,get state(){return state;}};
@@ -53,4 +53,25 @@ test('failed preference save stays visible and can retry without getting stuck',
 for(const role of ['manager','admin'] as const)test(`${role} gets appropriate guidance`,async({page})=>{
  await setup(page,role);await page.goto('/dashboard');await page.getByRole('dialog').getByRole('button',{name:'Explore dashboard'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
  if(role==='manager'){await expect(page.getByText('Review your team',{exact:true})).toBeVisible();await expect(page.getByText('Set your leave policy')).toHaveCount(0);}else{await expect(page.getByText('Set your leave policy',{exact:true})).toBeVisible();}
+});
+
+for (const width of [1280, 390]) test(`completed onboarding can be permanently hidden at ${width}px`, async ({ page }) => {
+ await page.setViewportSize({ width, height: 900 });
+ const fixture = await setup(page, 'owner', true);
+ await page.goto('/dashboard');
+ const dismiss = page.getByRole('button', { name: 'Hide onboarding permanently' });
+ await expect(dismiss).toBeVisible();
+ expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+ await dismiss.click();
+ await expect(dismiss).toHaveCount(0);
+ await expect(page.getByRole('button', { name: 'View setup checklist' })).toHaveCount(0);
+ expect(fixture.state.dismissed).toBe(true);
+ fixture.state.completed = [];
+ const reloaded = page.waitForResponse('**/rest/v1/rpc/get_onboarding_status');
+ await page.reload(); await reloaded;
+ await expect(page.getByRole('heading', { name: /Good/ })).toBeVisible();
+ await expect(page.getByRole('status', { name: 'Loading setup progress' })).toHaveCount(0);
+ await expect(page.getByText('Setup guidance is hidden.')).toHaveCount(0);
+ await expect(page.getByRole('button', { name: 'View setup checklist' })).toHaveCount(0);
+ await expect(page.getByRole('region', { name: 'Get your workspace ready' })).toHaveCount(0);
 });

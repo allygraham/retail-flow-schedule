@@ -1,5 +1,5 @@
 import type { AppRole } from '@/types/domain';
-export interface OnboardingState { welcomed: boolean; hidden: boolean; completed: string[] }
+export interface OnboardingState { welcomed: boolean; hidden: boolean; dismissed: boolean; completed: string[] }
 export interface OnboardingStep { id: string; title: string; description: string; action: string; to: string }
 export function onboardingSteps(role: AppRole): OnboardingStep[] {
  if (role === 'owner' || role === 'admin') return [
@@ -23,6 +23,7 @@ export function onboardingSteps(role: AppRole): OnboardingStep[] {
 export function readOnboardingState(value: unknown): OnboardingState {
  if (!value || typeof value !== 'object') throw new Error('Invalid onboarding progress');
  const state = value as Partial<OnboardingState>;
+ if (state.dismissed !== undefined && typeof state.dismissed !== 'boolean') throw new Error('Invalid onboarding preference');
  if (typeof state.welcomed !== 'boolean' || typeof state.hidden !== 'boolean' || !Array.isArray(state.completed) || !state.completed.every(step => typeof step === 'string')) throw new Error('Invalid onboarding progress');
- return { welcomed: state.welcomed, hidden: state.hidden, completed: state.completed };
+ return { welcomed: state.welcomed, hidden: state.hidden, dismissed: state.dismissed ?? false, completed: state.completed };
 }

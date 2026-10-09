@@ -83,6 +83,7 @@ await db.query('DELETE FROM availability WHERE business_id=$1',[business]);
 
 await load('20261007200000_business_leave_year.sql');
 await load('20261009150000_workspace_onboarding.sql');
+await load('20261009200000_dismiss_completed_onboarding.sql');
 let passed=0;
 const check=async(name,task)=>{await task();console.log('PASS:',name);passed++;};
 const status=async(actor=owner,tenant=business)=>(await act(actor,'SELECT get_onboarding_status($1) data',[tenant])).rows[0].data;
@@ -142,5 +143,23 @@ await check('admins have setup guidance without staff exploration milestones',as
 });
 await check('anonymous users cannot access onboarding RPCs',async()=>{
  await db.exec('SET ROLE anon');try {await assert.rejects(()=>db.query('SELECT get_onboarding_status($1)',[business]),e=>e.code==='42501');}finally{await db.exec('RESET ROLE');}
+});
+await check('permanent dismissal requires completion and persists without affecting other users',async()=>{
+ await assert.rejects(()=>update('dismiss',employee),e=>e.code==='23514');
+ await update('explore',employee,'leave');
+ assert.equal((await update('dismiss',employee)).dismissed,true);
+ assert.equal((await status()).dismissed,false);
+ await update('show',employee); assert.equal((await status(employee)).dismissed,true);
+ await update('dismiss'); assert.equal((await status()).dismissed,true);
+ await db.query('UPDATE shifts SET is_published=false WHERE business_id=$1',[business]);
+ assert.equal((await status()).completed.includes('publish'),false);
+ assert.equal((await status()).dismissed,true);
+ await update('dismiss'); assert.equal((await status()).dismissed,true);
+ await assert.rejects(()=>update('dismiss',inactiveOwner),e=>e.code==='42501');
+ await assert.rejects(()=>update('dismiss',employee,null,otherBusiness),e=>e.code==='42501');
+});
+await check('permanent-dismissal migration is repeatable',async()=>{
+ await load('20261009200000_dismiss_completed_onboarding.sql');
+ assert.equal((await status()).dismissed,true);
 });
 console.log(`All ${passed} onboarding database checks passed.`);await db.close();

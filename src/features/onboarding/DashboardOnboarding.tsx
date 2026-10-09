@@ -39,7 +39,7 @@ function Checklist() {
  const next = steps.find(step => !state?.completed.includes(step.id));
  const allDone = complete === steps.length;
  const welcomeOpen = !!state && !state.welcomed && !allDone;
- const update = async (action: 'welcome' | 'hide' | 'show', destination?: string) => {
+ const update = async (action: 'welcome' | 'hide' | 'show' | 'dismiss', destination?: string) => {
   if (pending.current) return;
   pending.current = true; setBusy(true); setProblem(null);
   try {
@@ -52,10 +52,16 @@ function Checklist() {
  };
  if (error) return <section className={s.recovery} aria-label="Get started"><span>Setup guidance is unavailable. Your dashboard is still ready to use.</span><Button variant="ghost" size="sm" onClick={() => void reload()}>Retry setup guidance</Button></section>;
  if (loading && !state) return <section className={s.card} aria-label="Get started"><h2>Get started</h2><LoadingSkeleton label="Loading setup progress" rows={2} /></section>;
- if (!state) return null;
+ if (!state || state.dismissed) return null;
  const icons = employee ? [User, Calendar, CalendarDays] : [Building2, CalendarDays, Users];
  return <>
-  {state.hidden || allDone ? <div className={s.restore}><span>{allDone ? employee ? 'You’re ready to find your way around.' : 'Your workspace is ready.' : 'Setup guidance is hidden.'}</span><Button variant="ghost" size="sm" disabled={busy} onClick={() => { setExpanded(true); void update('show'); }}>{allDone && expanded && !state.hidden ? 'Checklist shown' : 'View setup checklist'}</Button></div> : null}
+  {state.hidden || allDone ? <div className={s.restore}>
+   <span>{allDone ? employee ? 'You’re ready to find your way around.' : 'Your workspace is ready.' : 'Setup guidance is hidden.'}</span>
+   <div className={s.restoreActions}>
+    <Button variant="ghost" size="sm" disabled={busy} onClick={() => { setExpanded(true); void update('show'); }}>{allDone && expanded && !state.hidden ? 'Checklist shown' : 'View setup checklist'}</Button>
+    {allDone && <Button variant="ghost" size="sm" disabled={busy} onClick={() => void update('dismiss')}>Hide onboarding permanently</Button>}
+   </div>
+  </div> : null}
   {(!state.hidden && (!allDone || expanded)) && <section className={`${s.card} ${employee ? s.employee : ''} ${expanded ? s.expanded : ''}`} aria-labelledby="onboarding-title">
    <div className={s.head}><div><h2 id="onboarding-title">{employee ? 'Find your way around' : 'Get your workspace ready'}</h2>{!employee && <p>A few small steps before your first rota.</p>}</div><div className={s.tools}><span className={s.count}>{complete} of {steps.length} {employee ? 'explored' : 'complete'}</span><Button variant="ghost" size="sm" disabled={busy} onClick={() => void update('hide')}>Hide for now</Button></div></div>
    <div className={s.progress} role="progressbar" aria-label={employee ? 'Pages explored' : 'Workspace setup'} aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={complete}><span style={{ width: `${complete / steps.length * 100}%` }} /></div>
