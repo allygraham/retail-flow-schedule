@@ -9,7 +9,20 @@
   @include md { grid-template-columns: repeat(2, 1fr); }
   @include lg { grid-template-columns: repeat(3, 1fr); }
 }
-.meta { color: $text-soft; font-size: $fs-sm; line-height: $lh-normal; }
+.meta { color: var(--color-text-secondary, $text-soft); font-size: $fs-sm; line-height: $lh-normal; }
 .form { @include col; gap: $sp-4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: $sp-3; }
 .err { background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: $r-sm; font-size: $fs-sm; }
+
+.intro { margin-top: 8px; font-size: $fs-sm; color: var(--color-text-secondary, $text-muted); }
+.storeCard { display: flex; flex-direction: column; align-items: stretch; text-align: left; gap: 12px; padding: 20px; border: 1px solid var(--color-border, $border); border-radius: $r-md; background: var(--color-surface, $surface); color: var(--color-text-primary, $text); font: inherit; cursor: pointer; min-width: 0;
+  &:hover { border-color: var(--color-primary, $brand-500); background: var(--color-row-hover, $ink-50); }
+  &:focus-visible { outline: 2px solid var(--color-primary, $brand-500); outline-offset: 3px; }
+}
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.locationIcon { display: inline-flex; padding: 10px; border-radius: $r-md; color: var(--color-primary, $brand-600); background: var(--color-surface-muted, $ink-50); }
+.status { font-size: 12px; color: var(--color-text-secondary, $text-muted); }
+.storeName { font-size: $fs-lg; font-weight: $fw-semibold; overflow-wrap: anywhere; }
+.meta { min-height: 42px; overflow-wrap: anywhere; }
+.editCue { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; margin-top: auto; border-top: 1px solid var(--color-border, $border); color: var(--color-primary, $brand-600); font-size: $fs-sm; font-weight: $fw-medium; }
+@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
